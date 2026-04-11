@@ -2,37 +2,29 @@
 
 ## Without hardware
 - `AppViewModel` uses `FakeBleTransport` by default.
-- Scan returns deterministic sample families.
-- Fake transport supports scripted RX payloads to replay parser and transfer flows.
+- Fake transport supports scripted RX payloads/raw frames for transfer and parser-path replay.
 
 Commands:
 ```bash
-./gradlew testDebugUnitTest
+gradle testDebugUnitTest
 ```
 
-Coverage in unit tests now includes:
+Current unit coverage includes:
 - frame codec and escaping round-trips
 - CRC determinism
 - chunk packet structure + XOR validation
-- typed parser vectors (password/device/transfer/alarm/reminder/temp-humidity)
-- LZSS encode/decode parity checks
-- family-specific typed start-header trailer verification
-- transfer state machine transitions
-- clock command opcode builder checks
+- parser vectors (password/device/transfer/alarm/reminder/temp-humidity)
+- malformed/unknown parser fallthrough handling
+- LZSS encode/decode and literal-flag vector checks
+- family header behavior (`02` typed trailer + `1A` alternate)
+- advanced clock/mode builder opcode checks (`13 03`, `0F 02`, `10 02`)
+- `ProgramComposer` compressed packaging checks
+- transfer state-machine transitions (success, nack retries, exhaustion)
+- fake transport scripted RX + raw I/O event behavior
 
 ## With hardware
-1. Switch transport wiring to `AndroidBleTransport`.
-2. Grant Bluetooth runtime permissions.
-3. Scan and connect to `CoolLED*` / `iLedClock*` targets.
-4. Validate in order:
-   - notify readiness
-   - MTU negotiation
-   - info query response
-   - power + brightness + mode controls
-   - password check/set
-   - clock class queries (alarm/reminder/night/tomato/temp)
-   - transfer start/chunk ack progression
+See `docs/REAL_DEVICE_VALIDATION.md` for step-by-step real-device flows.
 
-## Known BLE caveats
-- Android BLE callbacks are asynchronous and OEM-fragile; reconnection and write queue robustness still require on-device soak testing.
-- Some devices may require stricter inter-packet spacing than current generic path.
+## Known environment caveat in this repo container
+- Gradle wrapper (`./gradlew`) is not present.
+- `gradle testDebugUnitTest` may still fail without a configured Android SDK.

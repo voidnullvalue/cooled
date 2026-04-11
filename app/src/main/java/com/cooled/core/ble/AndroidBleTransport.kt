@@ -29,11 +29,13 @@ class AndroidBleTransport(private val context: Context) : BleTransport {
     private val _mtu = MutableStateFlow(23)
     private val _rx = MutableStateFlow(RxFrame(byteArrayOf()))
     private val _scan = MutableStateFlow(emptyList<ScanDevice>())
+    private val _io = MutableStateFlow(BleIoEvent(System.currentTimeMillis(), BleIoDirection.RX, byteArrayOf(), "init"))
 
     override val connectionState: Flow<ConnectionState> = _state.asStateFlow()
     override val mtu: Flow<Int> = _mtu.asStateFlow()
     override val rxFrames: Flow<RxFrame> = _rx.asStateFlow()
     override val scanResults: Flow<List<ScanDevice>> = _scan.asStateFlow()
+    override val ioEvents: Flow<BleIoEvent> = _io.asStateFlow()
 
     private val callback = object : BluetoothGattCallback() {
         override fun onConnectionStateChange(g: BluetoothGatt, status: Int, newState: Int) {
@@ -58,6 +60,7 @@ class AndroidBleTransport(private val context: Context) : BleTransport {
 
         override fun onCharacteristicChanged(gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic, value: ByteArray) {
             _rx.value = RxFrame(value)
+            _io.value = BleIoEvent(System.currentTimeMillis(), BleIoDirection.RX, value, "notify")
         }
 
         override fun onMtuChanged(gatt: BluetoothGatt, mtu: Int, status: Int) { _mtu.value = mtu }
@@ -94,6 +97,7 @@ class AndroidBleTransport(private val context: Context) : BleTransport {
         val service = g.getService(BleProtocolConstants.serviceUuid) ?: return
         val ch = service.getCharacteristic(BleProtocolConstants.commandCharacteristicUuid) ?: return
         ch.value = bytes
+        _io.value = BleIoEvent(System.currentTimeMillis(), BleIoDirection.TX, bytes, "write")
         g.writeCharacteristic(ch)
     }
 }

@@ -2,12 +2,14 @@ package com.cooled.ui
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.cooled.core.ble.BleIoDirection
 import com.cooled.core.ble.ConnectionState
 import com.cooled.core.ble.FakeBleTransport
 import com.cooled.core.model.CapabilityMap
 import com.cooled.core.model.DeviceFamily
 import com.cooled.core.protocol.AlarmCommand
 import com.cooled.core.protocol.ParsedPayload
+import com.cooled.core.protocol.ProgramContent
 import com.cooled.core.protocol.ProgramStartRequest
 import com.cooled.core.protocol.TransferState
 import com.cooled.core.protocol.TransferStateMachine
@@ -41,7 +43,25 @@ class AppViewModel : ViewModel() {
         viewModelScope.launch {
             repo.parsedRx.collect { p ->
                 transferMachine.onParsed(p)
-                appendEvent("RX parsed: $p")
+                val kind = when (p) {
+                    is ParsedPayload.Unknown, is ParsedPayload.ParseError -> "unknown"
+                    else -> "parsed"
+                }
+                appendEvent("${ts()} RX $kind: $p")
+            }
+        }
+        viewModelScope.launch {
+            repo.connectionState.collect {
+                if (it == ConnectionState.DISCONNECTED) {
+                    transferMachine.cancel()
+                    appendEvent("${ts()} Transfer cleanup on disconnect")
+                }
+            }
+        }
+        viewModelScope.launch {
+            fake.ioEvents.collect { evt ->
+                val dir = if (evt.direction == BleIoDirection.TX) "TX" else "RX"
+                appendEvent("${evt.timestampMs} $dir raw(${evt.bytes.size}): ${evt.bytes.toHex()} ${evt.note.orEmpty()}")
             }
         }
     }
@@ -52,6 +72,7 @@ class AppViewModel : ViewModel() {
         val f = repo.detectFamily(name)
         family.value = f
         capabilities.value = CapabilityMap.forFamily(f)
+        appendEvent("${ts()} Device family=$f caps=${capabilities.value}")
     }
 
     fun queryInfo() = viewModelScope.launch { repo.sendQueryInfo() }
@@ -59,6 +80,7 @@ class AppViewModel : ViewModel() {
     fun brightness(v: Int) = viewModelScope.launch { repo.sendBrightness(v) }
     fun speed(v: Int) = viewModelScope.launch { repo.sendRhythm(v) }
     fun mirror(v: Int) = viewModelScope.launch { repo.sendMirror(v) }
+    fun colorMode(v: Int) = viewModelScope.launch { repo.sendColorMode(v) }
     fun checkPassword(p: String) = viewModelScope.launch { repo.sendCheckPassword(p) }
     fun setPassword(p: String) = viewModelScope.launch { repo.sendSetPassword(p) }
 
@@ -73,6 +95,21 @@ class AppViewModel : ViewModel() {
     fun queryAlarms() = viewModelScope.launch { repo.sendQueryAlarms() }
     fun setNightMode() = viewModelScope.launch { repo.sendNightMode(true, 22, 0, 6, 0) }
     fun queryReminderList() = viewModelScope.launch { repo.sendQueryReminderList() }
+    fun resetCountdown() = viewModelScope.launch { repo.resetCountdown() }
+    fun resetStopwatch() = viewModelScope.launch { repo.resetStopwatch() }
+
+    fun sendTextProgram() = viewModelScope.launch {
+        val pack = repo.sendComposedProgram(
+            family = family.value,
+            content = ProgramContent.Text("HELLO", speed = 3, effect = 1),
+            index = 0,
+            count = 1,
+            showCount = 1,
+            programType = if (family.value == DeviceFamily.ILEDCLOCK) 14 else null,
+            extraTypeByte = 1
+        )
+        appendEvent("${ts()} Program queued compressed=${pack.metadata.compressedSize} chunks=${pack.metadata.chunkCount}")
+    }
 
     fun startFakeTransfer() = viewModelScope.launch {
         val compressed = ByteArray(2500) { (it % 17).toByte() }
@@ -82,11 +119,37 @@ class AppViewModel : ViewModel() {
             family.value,
             ProgramStartRequest(compressed = compressed, index = 0, count = 1, showCount = 1, programType = 14, extraTypeByte = 1)
         )
-        fake.enqueueRxPayload(byteArrayOf(0x02, 0x00))
+        fake.enqueueRxPayload(byteArrayOf(0x02, 0x00), "start-ack")
         chunks.forEachIndexed { idx, c ->
             repo.sendDataChunk(0x03, compressed.size, idx, c)
-            fake.enqueueRxPayload(byteArrayOf(0x03, 0x00, ((idx shr 8) and 0xFF).toByte(), (idx and 0xFF).toByte(), 0x00))
+            fake.enqueueRxPayload(byteArrayOf(0x03, 0x00, ((idx shr 8) and 0xFF).toByte(), (idx and 0xFF).toByte(), 0x00), "chunk-ack")
         }
+    }
+
+    fun scriptTransferScenario(name: String) {
+        fake.clearScripted()
+        when (name) {
+            "happy" -> {
+                fake.enqueueRxPayload(byteArrayOf(0x02, 0x00), "start-ok")
+                repeat(6) { i -> fake.enqueueRxPayload(byteArrayOf(0x03, 0x00, 0x00, i.toByte(), 0x00), "chunk-ok-$i") }
+            }
+            "delayed_ack" -> {
+                fake.enqueueRawFrame(byteArrayOf(0x7E, 0x00, 0x7E), "unexpected-frame")
+                fake.enqueueRxPayload(byteArrayOf(0x02, 0x00), "late-start-ok")
+            }
+            "nack_then_success" -> {
+                fake.enqueueRxPayload(byteArrayOf(0x02, 0x00), "start-ok")
+                fake.enqueueRxPayload(byteArrayOf(0x03, 0x00, 0x00, 0x00, 0x01), "nack-1")
+                fake.enqueueRxPayload(byteArrayOf(0x03, 0x00, 0x00, 0x00, 0x01), "nack-2")
+                fake.enqueueRxPayload(byteArrayOf(0x03, 0x00, 0x00, 0x00, 0x00), "finally-ok")
+            }
+            "retry_exhaust" -> {
+                fake.enqueueRxPayload(byteArrayOf(0x02, 0x00), "start-ok")
+                repeat(5) { fake.enqueueRxPayload(byteArrayOf(0x03, 0x00, 0x00, 0x00, 0x01), "nack") }
+            }
+            "unexpected_packet" -> fake.enqueueRawFrame(byteArrayOf(0x7E, 0x01, 0x02, 0x03), "garbage")
+        }
+        appendEvent("${ts()} Loaded transfer script=$name")
     }
 
     fun setSampleAlarm() = viewModelScope.launch {
@@ -95,15 +158,20 @@ class AppViewModel : ViewModel() {
 
     fun timeoutTransfer() {
         transferMachine.onTimeout()
-        appendEvent("Transfer timeout tick -> ${transferMachine.state.value}")
+        appendEvent("${ts()} Transfer timeout tick -> ${transferMachine.state.value}")
     }
 
     fun cancelTransfer() {
         transferMachine.cancel()
-        appendEvent("Transfer cancelled")
+        appendEvent("${ts()} Transfer cancelled")
     }
 
+    fun copyDebugLog(): String = events.value.joinToString("\n")
+
     private fun appendEvent(text: String) {
-        _events.value = (listOf(text) + _events.value).take(80)
+        _events.value = (listOf(text) + _events.value).take(200)
     }
+
+    private fun ByteArray.toHex(): String = joinToString(" ") { "%02X".format(it) }
+    private fun ts() = Instant.now().toString()
 }

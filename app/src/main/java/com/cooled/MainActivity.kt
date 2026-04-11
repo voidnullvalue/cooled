@@ -68,6 +68,7 @@ fun AppScreen(vm: AppViewModel = viewModel()) {
             Button(onClick = { vm.speed(2) }) { Text("Mic") }
             Button(onClick = { vm.mirror(1) }) { Text("Mirror") }
             Button(onClick = { vm.mirror(0) }) { Text("Rotate0") }
+            Button(onClick = { vm.colorMode(5) }, enabled = caps.supportsColorModes) { Text("ColorMode 5") }
         }
 
         TextField(value = password, onValueChange = { password = it }, modifier = Modifier.fillMaxWidth(), label = { Text("Password (hex-ish digits)") })
@@ -85,7 +86,9 @@ fun AppScreen(vm: AppViewModel = viewModel()) {
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Button(onClick = { vm.countdown(true) }, enabled = caps.supportsCountdown) { Text("Countdown Start") }
+                Button(onClick = { vm.resetCountdown() }, enabled = caps.supportsCountdown) { Text("Countdown Reset") }
                 Button(onClick = { vm.stopwatch(true) }, enabled = caps.supportsStopwatch) { Text("Stopwatch Start") }
+                Button(onClick = { vm.resetStopwatch() }, enabled = caps.supportsStopwatch) { Text("Stopwatch Reset") }
                 Button(onClick = { vm.scoreboard(true) }, enabled = caps.supportsScoreboard) { Text("Scoreboard Start") }
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -102,8 +105,15 @@ fun AppScreen(vm: AppViewModel = viewModel()) {
 
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Button(onClick = vm::startFakeTransfer) { Text("Start Transfer") }
+            Button(onClick = vm::sendTextProgram) { Text("Upload Text Program") }
             Button(onClick = vm::timeoutTransfer) { Text("Timeout Tick") }
             Button(onClick = vm::cancelTransfer) { Text("Cancel Transfer") }
+        }
+
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Button(onClick = { vm.scriptTransferScenario("happy") }) { Text("Script Happy") }
+            Button(onClick = { vm.scriptTransferScenario("nack_then_success") }) { Text("Script NACK") }
+            Button(onClick = { vm.scriptTransferScenario("retry_exhaust") }) { Text("Script Exhaust") }
         }
 
         Text("Parsed packet: $parsed")

@@ -19,6 +19,12 @@ object CommandBuilders {
     fun setScoreboardRunning(running: Boolean): ByteArray = FrameCodec.encode(byteArrayOf(0x11.toByte(), 0x04, (if (running) 1 else 0).toByte()))
     fun setVolume(value: Int): ByteArray = FrameCodec.encode(byteArrayOf(0x1E.toByte(), 0x03, value.coerceIn(0, 100).toByte()))
 
+
+    fun setColorMode(modeIndex: Int): ByteArray =
+        FrameCodec.encode(byteArrayOf(0x13.toByte(), 0x03, modeIndex.toByte()))
+
+    fun resetCountdown(): ByteArray = FrameCodec.encode(byteArrayOf(0x0F.toByte(), 0x02))
+    fun resetStopwatch(): ByteArray = FrameCodec.encode(byteArrayOf(0x10.toByte(), 0x02))
     fun queryTomato(): ByteArray = FrameCodec.encode(byteArrayOf(0x15.toByte(), 0x02))
     fun queryTemperatureHumidity(type: Int = 1): ByteArray = FrameCodec.encode(byteArrayOf(0x19.toByte(), type.toByte()))
 

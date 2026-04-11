@@ -87,6 +87,12 @@ class ProtocolCoreTest {
     }
 
     @Test
+    fun parser_unknownAndMalformedFrames() {
+        assertTrue(ProtocolParsers.parseFrame(FrameCodec.encode(byteArrayOf(0x66, 0x01))) is ParsedPayload.Unknown)
+        assertTrue(ProtocolParsers.parseFrame(FrameCodec.encode(byteArrayOf(0x03, 0x00, 0x00))) is ParsedPayload.ParseError)
+    }
+
+    @Test
     fun lzss_roundTrip() {
         val src = "HELLO HELLO HELLO COOLLED".encodeToByteArray()
         val compressed = LzssCodec.compress(src)
@@ -95,7 +101,7 @@ class ProtocolCoreTest {
     }
 
     @Test
-    fun lzss_knownLiteralVector() {
+    fun lzss_knownLiteralVector_lsbConfirmed() {
         val compressed = byteArrayOf(0x07, 'A'.code.toByte(), 'B'.code.toByte(), 'C'.code.toByte())
         val decompressed = LzssCodec.decompress(compressed)
         assertArrayEquals("ABC".encodeToByteArray(), decompressed)
@@ -112,6 +118,20 @@ class ProtocolCoreTest {
     }
 
     @Test
+    fun familySpecific_altOpcodeForUFamily() {
+        val req = ProgramStartRequest(compressed = ByteArray(8) { 1 }, index = 2, useAlternateOpcode = true)
+        val payload = FrameCodec.decode(CommandBuilders.buildProgramStartHeader(DeviceFamily.COOLLEDU, req))
+        assertEquals(0x1A, payload[0].toInt() and 0xFF)
+    }
+
+    @Test
+    fun commandBuilders_advancedClockAndModeOpcodes() {
+        assertEquals(0x13, FrameCodec.decode(CommandBuilders.setColorMode(5))[0].toInt() and 0xFF)
+        assertEquals(0x0F, FrameCodec.decode(CommandBuilders.resetCountdown())[0].toInt() and 0xFF)
+        assertEquals(0x10, FrameCodec.decode(CommandBuilders.resetStopwatch())[0].toInt() and 0xFF)
+    }
+
+    @Test
     fun transferStateMachine_transitions() {
         val sm = TransferStateMachine()
         sm.startSession(chunks = 2)
@@ -121,6 +141,32 @@ class ProtocolCoreTest {
         assertTrue(sm.state.value is TransferState.SendingChunk)
         sm.onParsed(ParsedPayload.TransferChunkResponse(0x03, 1, 0x00))
         assertTrue(sm.state.value is TransferState.Completed)
+    }
+
+    @Test
+    fun transferStateMachine_nackThenExhaustion() {
+        val sm = TransferStateMachine(maxChunkRetries = 2)
+        sm.startSession(chunks = 1)
+        sm.onParsed(ParsedPayload.TransferStartResponse(0x02, 0x00))
+        sm.onParsed(ParsedPayload.TransferChunkResponse(0x03, 0, 0x01))
+        sm.onParsed(ParsedPayload.TransferChunkResponse(0x03, 0, 0x01))
+        sm.onParsed(ParsedPayload.TransferChunkResponse(0x03, 0, 0x01))
+        assertTrue(sm.state.value is TransferState.Failed)
+    }
+
+    @Test
+    fun programComposer_buildsCompressedProgramAndChunks() {
+        val pack = ProgramComposer.compose(
+            family = DeviceFamily.COOLLEDX,
+            content = ProgramContent.Text("ABCD", speed = 1, effect = 2),
+            index = 0,
+            count = 1,
+            showCount = 1
+        )
+        assertTrue(pack.metadata.usedCompression)
+        assertTrue(pack.chunkFrames.isNotEmpty())
+        val start = FrameCodec.decode(pack.startHeaderFrame)
+        assertEquals(0x02, start[0].toInt() and 0xFF)
     }
 
     @Test
