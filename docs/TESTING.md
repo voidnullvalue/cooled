@@ -6,7 +6,7 @@
 
 Commands:
 ```bash
-gradle testDebugUnitTest
+./gradlew testDebugUnitTest
 ```
 
 Current unit coverage includes:
@@ -26,5 +26,6 @@ Current unit coverage includes:
 See `docs/REAL_DEVICE_VALIDATION.md` for step-by-step real-device flows.
 
 ## Known environment caveat in this repo container
-- Gradle wrapper (`./gradlew`) is not present.
-- `gradle testDebugUnitTest` may still fail without a configured Android SDK.
+- Android/Gradle tasks require Android SDK + build tools installed and reachable via `ANDROID_HOME`/`ANDROID_SDK_ROOT`.
+- In restricted CI containers, dependency resolution can fail if Google Maven access is blocked by network/proxy policy.
+- Use JDK 21 (or 17). JDK 25 fails early in Kotlin DSL parsing.

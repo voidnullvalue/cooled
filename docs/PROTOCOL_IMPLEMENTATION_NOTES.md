@@ -45,3 +45,8 @@ Flag bit order is now locked to **LSB-first** based on decompiled compressor loo
 - Full high-level program-content parity for every OEM composition class (especially animation/gif/complex grouped modes) is still partial.
 - CoolLEDX/CoolLEDS runtime behavior still needs broader on-device validation.
 - Transfer timing constants still need physical-device tuning.
+
+
+## Build integration notes
+- App module applies `com.android.application`, `org.jetbrains.kotlin.android`, and `org.jetbrains.kotlin.plugin.compose` together to keep Compose/Kotlin wiring explicit and avoid implicit plugin coupling.
+- Wrapper/plugin baseline is pinned to AGP `8.7.3` + Gradle `8.7` + Kotlin `2.0.21` for a coherent local build setup.

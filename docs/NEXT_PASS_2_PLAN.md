@@ -46,7 +46,7 @@
 - [x] Surface family + capability summary in debug event feed.
 
 ### Phase 7: tests + docs
-- [ ] Add focused tests for new composer/builders and transfer scripts.
-- [ ] Run unit tests and fix failures.
-- [ ] Update README / ARCHITECTURE / PROTOCOL_IMPLEMENTATION_NOTES / TESTING.
-- [ ] Add REAL_DEVICE_VALIDATION.md with exact high-risk hardware checks.
+- [x] Add focused tests for new composer/builders and transfer scripts.
+- [ ] Run unit tests and fix failures. _(Blocked in this environment when Google Maven access is restricted.)_
+- [x] Update README / ARCHITECTURE / PROTOCOL_IMPLEMENTATION_NOTES / TESTING.
+- [x] Add REAL_DEVICE_VALIDATION.md with exact high-risk hardware checks.
