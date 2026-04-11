@@ -17,8 +17,8 @@ This app intentionally does **not** use Google Play Services, Firebase, Nearby, 
 
 ## Build
 ```bash
-gradle assembleDebug
-gradle testDebugUnitTest
+./gradlew assembleDebug
+./gradlew testDebugUnitTest
 ```
 
 ## Implemented feature coverage (this pass)
@@ -51,3 +51,8 @@ gradle testDebugUnitTest
 - End-to-end hardware verification of advanced content classes on real CoolLEDX/CoolLEDS and iLedClock targets.
 - Physical timing tuning for noisy BLE links (inter-packet delays/timeouts).
 - Additional reverse-engineered vectors for uncommon program types beyond currently implemented typed trailer map.
+
+
+## Build environment notes
+- Use JDK 21 (or 17). Running Gradle with JDK 25 currently fails during Kotlin DSL bootstrap (`IllegalArgumentException: 25.0.1`).
+- Android Gradle Plugin artifacts are resolved from Google Maven; builds fail in restricted/offline environments that block `google()` repository access.

@@ -1,3 +1,5 @@
+> **Status:** Historical/superseded by `docs/NEXT_PASS_2_PLAN.md`. Most checklist items here were completed in the subsequent pass and should not be used as the active worklist.
+
 # Next Pass Plan (April 11, 2026)
 
 This document enumerates unresolved implementation areas from the current codebase and defines the execution checklist for this pass.

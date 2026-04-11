@@ -36,3 +36,10 @@
 - ViewModel appends raw + parsed timeline entries.
 - Parser fallthrough is explicitly shown as `Unknown` / `ParseError`.
 - Transfer-state transitions are visible in UI and event feed.
+
+
+## Build/tooling baseline
+- Android Gradle Plugin: `8.7.3`
+- Kotlin plugins: `2.0.21` (`org.jetbrains.kotlin.android` + Compose compiler plugin)
+- Gradle wrapper: `8.7`
+- Recommended runtime JDK for builds/tests: `21`
