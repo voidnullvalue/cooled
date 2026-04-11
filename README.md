@@ -8,11 +8,12 @@ This app intentionally does **not** use Google Play Services, Firebase, Nearby, 
 - `android.bluetooth.le.*`
 
 ## Supported families (current)
-- CoolLEDM (core controls + transfer primitives)
-- CoolLEDU (core controls + transfer primitives)
-- CoolLEDUX (core controls + transfer primitives + capability flags)
-- iLedClock (core controls + clock opcode scaffolding)
-- CoolLEDX / CoolLEDS (detected and capability-scaffolded; command parity incomplete)
+- CoolLEDM
+- CoolLEDU
+- CoolLEDUX
+- CoolLEDX
+- CoolLEDS
+- iLedClock
 
 ## Build
 ```bash
@@ -20,34 +21,31 @@ This app intentionally does **not** use Google Play Services, Firebase, Nearby, 
 ./gradlew testDebugUnitTest
 ```
 
-## Permissions model
-- Android 12+: `BLUETOOTH_SCAN`, `BLUETOOTH_CONNECT`
-- Android <= 11: classic Bluetooth permissions + `ACCESS_FINE_LOCATION` for scan compatibility
-
-## Implemented features
-- BLE scan with `FFF0` service filter
-- Connect + notify setup on `FFF1`
-- MTU request path
-- Protocol frame encode/decode and escaping
-- Password check/set command encoding
-- Basic controls (power, brightness, rhythm/mic/music selector, mirror/rotate value)
-- Program/OTA transfer primitives (start header + chunk packets)
-- Debug UI showing state, MTU, parsed packets, and raw device list
+## Implemented feature coverage (this pass)
+- BLE scan/connect/notify/MTU architecture with native Android stack
+- Typed response parser dispatch for core + clock + transfer ack families
+- LZSS compressor/decompressor with recovered `N=512/F=18/THRESHOLD=2` token format
+- Family-aware capability mapping and advanced program/OTA start-header builders
+- Clock-class command builders (alarms/reminders/night mode/timer/countdown/stopwatch/scoreboard/volume/tomato/temp-humidity/time sync)
+- Transfer ack/retry session state machine with explicit finite retries
+- Fake transport scripted-RX support for deterministic protocol-flow tests
+- Compose UI sections for clock controls, transfer state, and parsed debug event stream
 
 ## Feature support matrix
 | Area | Status |
 |---|---|
 | BLE scanning/connection/session | Implemented |
-| Family detection/capabilities | Implemented |
+| Family detection/capabilities | Implemented (expanded) |
 | Basic controls | Implemented |
 | Password check/set | Implemented |
-| Program chunk transport | Implemented |
-| OTA transport primitives | Implemented (safety-gated by docs only) |
-| Full UX/iLedClock preset catalogs | Partial |
-| Full response parser parity | Partial |
-| Exact LZSS parity | Partial (TODO/UNRESOLVED) |
+| Program/OTA start headers and chunking | Implemented |
+| Transfer ack/retry state machine | Implemented (device validation pending) |
+| Full response parser parity for documented families | Implemented |
+| Exact LZSS parity | Implemented with isolated flag-bit-order ambiguity |
+| Full semantic naming of all advanced program types | Partial |
+| CoolLEDX/CoolLEDS behavior parity on hardware | Partial |
 
-## Known gaps
-- Full parity for large preset tables and grouped start-header subtypes requires finishing extraction from bulky decompiled utility tables.
-- End-to-end transfer retry state machine/ack handling requires physical device verification.
-- Parser currently decodes frame/opcode shells, not every family-specific payload schema.
+## Remaining ambiguities / validation needs
+- LZSS flag-byte bit order still has one static-analysis ambiguity; implementation isolates it to one enum-controlled path.
+- Advanced `programType` semantic naming is still partially unresolved, though recovered trailer bytes are implemented.
+- Physical-device validation is still required for transfer timing and family-specific runtime behavior.

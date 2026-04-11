@@ -42,6 +42,8 @@ fun AppScreen(vm: AppViewModel = viewModel()) {
     val family by vm.family.collectAsState()
     val caps by vm.capabilities.collectAsState()
     val parsed by vm.parsed.collectAsState()
+    val transfer by vm.transferState.collectAsState()
+    val events by vm.events.collectAsState()
 
     var brightness by remember { mutableStateOf(80f) }
     var password by remember { mutableStateOf("1234") }
@@ -54,7 +56,8 @@ fun AppScreen(vm: AppViewModel = viewModel()) {
             Button(onClick = { vm.power(false) }) { Text("Off") }
         }
         Text("State=$state MTU=$mtu Family=$family")
-        Text("Caps: clock=${caps.supportsClock} scoreboard=${caps.supportsScoreboard} colorModes=${caps.supportsColorModes}")
+        Text("Transfer=$transfer")
+        Text("Caps: clock=${caps.supportsClock} alarms=${caps.supportsAlarms} reminders=${caps.supportsReminders} night=${caps.supportsNightMode} scoreboard=${caps.supportsScoreboard}")
 
         Text("Brightness")
         Slider(value = brightness, onValueChange = { brightness = it }, valueRange = 1f..100f)
@@ -73,7 +76,42 @@ fun AppScreen(vm: AppViewModel = viewModel()) {
             Button(onClick = { vm.setPassword(password) }) { Text("Set Password") }
         }
 
-        Text("Debug decode: $parsed")
+        if (caps.supportsClock) {
+            Text("Clock Controls")
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(onClick = vm::syncTimeNow) { Text("Sync Time") }
+                Button(onClick = { vm.timer(10, true) }) { Text("Timer 10m") }
+                Button(onClick = { vm.volume(60) }, enabled = caps.supportsVolume) { Text("Volume 60") }
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(onClick = { vm.countdown(true) }, enabled = caps.supportsCountdown) { Text("Countdown Start") }
+                Button(onClick = { vm.stopwatch(true) }, enabled = caps.supportsStopwatch) { Text("Stopwatch Start") }
+                Button(onClick = { vm.scoreboard(true) }, enabled = caps.supportsScoreboard) { Text("Scoreboard Start") }
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(onClick = vm::queryTomato, enabled = caps.supportsTomato) { Text("Tomato") }
+                Button(onClick = vm::queryTempHumidity, enabled = caps.supportsTempHumidity) { Text("Temp/Humidity") }
+                Button(onClick = vm::queryAlarms, enabled = caps.supportsAlarms) { Text("Query Alarms") }
+                Button(onClick = vm::setSampleAlarm, enabled = caps.supportsAlarms) { Text("Set Alarm") }
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(onClick = vm::setNightMode, enabled = caps.supportsNightMode) { Text("Night Mode") }
+                Button(onClick = vm::queryReminderList, enabled = caps.supportsReminders) { Text("Reminders") }
+            }
+        }
+
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Button(onClick = vm::startFakeTransfer) { Text("Start Transfer") }
+            Button(onClick = vm::timeoutTransfer) { Text("Timeout Tick") }
+            Button(onClick = vm::cancelTransfer) { Text("Cancel Transfer") }
+        }
+
+        Text("Parsed packet: $parsed")
+        Text("Debug events (latest first)")
+        LazyColumn(modifier = Modifier.weight(1f, fill = false)) {
+            items(events) { e -> Text(e) }
+        }
+
         Text("Scan results")
         LazyColumn {
             items(scans) { d ->

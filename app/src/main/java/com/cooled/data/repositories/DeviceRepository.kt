@@ -2,9 +2,12 @@ package com.cooled.data.repositories
 
 import com.cooled.core.ble.BleTransport
 import com.cooled.core.ble.ScanDevice
+import com.cooled.core.model.DeviceFamily
 import com.cooled.core.model.FamilyDetector
+import com.cooled.core.protocol.AlarmCommand
 import com.cooled.core.protocol.CommandBuilders
 import com.cooled.core.protocol.ParsedPayload
+import com.cooled.core.protocol.ProgramStartRequest
 import com.cooled.core.protocol.ProtocolParsers
 import com.cooled.data.persistence.RememberedDeviceStore
 import kotlinx.coroutines.flow.Flow
@@ -36,6 +39,28 @@ class DeviceRepository(
     suspend fun sendQueryInfo() = transport.write(CommandBuilders.queryDeviceInfo())
     suspend fun sendCheckPassword(password: String) = transport.write(CommandBuilders.checkPassword(password))
     suspend fun sendSetPassword(password: String) = transport.write(CommandBuilders.setPassword(password))
+
+    suspend fun sendTimeSync(epochSeconds: Int) = transport.write(CommandBuilders.syncTime(epochSeconds))
+    suspend fun sendSetTimer(minutes: Int, enabled: Boolean) = transport.write(CommandBuilders.setTimer(minutes, enabled))
+    suspend fun sendCountdown(running: Boolean) = transport.write(CommandBuilders.setCountdownRunning(running))
+    suspend fun sendStopwatch(running: Boolean) = transport.write(CommandBuilders.setStopwatchRunning(running))
+    suspend fun sendScoreboard(running: Boolean) = transport.write(CommandBuilders.setScoreboardRunning(running))
+    suspend fun sendVolume(value: Int) = transport.write(CommandBuilders.setVolume(value))
+    suspend fun sendQueryTomato() = transport.write(CommandBuilders.queryTomato())
+    suspend fun sendQueryTempHumidity() = transport.write(CommandBuilders.queryTemperatureHumidity())
+    suspend fun sendAlarmList(alarms: List<AlarmCommand>) = transport.write(CommandBuilders.setAlarmList(alarms))
+    suspend fun sendQueryAlarms() = transport.write(CommandBuilders.queryAlarmList())
+    suspend fun sendQueryReminderList() = transport.write(CommandBuilders.queryReminderList())
+    suspend fun sendQueryReminderDetail(id: Int) = transport.write(CommandBuilders.queryReminderDetail(id))
+    suspend fun sendDeleteReminder(id: Int) = transport.write(CommandBuilders.deleteReminder(id))
+    suspend fun sendNightMode(enabled: Boolean, sh: Int, sm: Int, eh: Int, em: Int) =
+        transport.write(CommandBuilders.setNightMode(enabled, sh, sm, eh, em))
+
+    suspend fun sendProgramStart(family: DeviceFamily, request: ProgramStartRequest) =
+        transport.write(CommandBuilders.buildProgramStartHeader(family, request))
+
+    suspend fun sendDataChunk(messageType: Int, totalCompressedLength: Int, chunkIndex: Int, chunk: ByteArray) =
+        transport.write(CommandBuilders.buildDataChunk(messageType, totalCompressedLength, chunkIndex, chunk))
 
     fun detectFamily(name: String?) = FamilyDetector.detect(name)
     fun remembered() = store.all()
