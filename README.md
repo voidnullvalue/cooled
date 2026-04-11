@@ -1,13 +1,11 @@
 # CoolLED BLE Reimplementation (Native Android, No Play Services)
 
-This repository contains a native Kotlin Android app that reimplements BLE transport/protocol behavior evidenced in reverse-engineering artifacts for `com.jtkj.led1248`.
+Native Kotlin Android app reimplementing BLE transport/protocol behavior evidenced in reverse-engineering artifacts for `com.jtkj.led1248`.
 
 ## No Google Play Services
-This app intentionally does **not** use Google Play Services, Firebase, Nearby, Play Integrity, or GMS BLE wrappers. BLE uses only Android native APIs:
-- `android.bluetooth.*`
-- `android.bluetooth.le.*`
+This project intentionally avoids Google Play Services/Firebase/Nearby wrappers and uses native Android BLE APIs (`android.bluetooth.*`, `android.bluetooth.le.*`).
 
-## Supported families (current)
+## Supported device-name families (detection)
 - CoolLEDM
 - CoolLEDU
 - CoolLEDUX
@@ -15,46 +13,42 @@ This app intentionally does **not** use Google Play Services, Firebase, Nearby, 
 - CoolLEDS
 - iLedClock
 
-## Build
+## Current status summary
+
+### Implemented
+- BLE transport abstraction + Android implementation + fake transport implementation.
+- BLE scan/connect/discover/notify flow for `FFF0/FFF1` + CCCD enable + MTU request.
+- Frame codec with escaping/unescaping and payload-length envelope handling.
+- CRC implementation and use in transfer start headers.
+- Typed parser coverage for core controls, transfer acks, device info/OTA info, and clock-class families.
+- LZSS tokenized compress/decompress implementation (`N=512`, `F=18`, `THRESHOLD=2`) with LSB-first flag handling.
+- Command builders for core controls, password, clock-class queries/commands, color-mode, start headers, and chunks.
+- Program composition path (`ProgramContent` -> encode -> compress -> start header -> chunk frames).
+- Transfer retry/timeout/cancel state machine.
+- Debug timeline surfacing raw TX/RX events and parsed-vs-unknown parser outcomes.
+
+### Partial
+- Advanced `programType` semantic labeling is incomplete (fallback trailer branch still used for unknown/less-understood values).
+- Full runtime parity for all advanced OEM content classes is incomplete.
+- Physical transfer timing tuning and broad family-by-family runtime parity remain incomplete.
+
+### Validated
+- Unit test coverage exists for frame/CRC/chunk/parser/LZSS/builders/transfer/fake-transport paths.
+- Broad real-device parity is **not** yet validated; see `docs/REAL_DEVICE_VALIDATION.md`.
+
+## Build/test
 ```bash
 ./gradlew assembleDebug
 ./gradlew testDebugUnitTest
 ```
 
-## Implemented feature coverage (this pass)
-- Native BLE scan/connect/notify/MTU architecture
-- Typed parser dispatch for core + clock + transfer responses
-- LZSS compressor/decompressor with confirmed **LSB-first** flag-bit order
-- Family-aware program/OTA start headers + chunk packet builders
-- Centralized program content composer (text/drawing/preset) with compression+chunk packaging
-- Clock-class builders including advanced reset commands (`0F 02`, `10 02`)
-- Color mode command path (`13 03 <mode>`)
-- Transfer ack/retry state machine with finite retries, timeout, cancel
-- Scriptable fake transport scenarios for transfer robustness testing
-- Debug timeline with raw TX/RX hex + parsed/unknown event distinctions
+## Toolchain notes
+- Android Gradle Plugin: `8.7.3`
+- Gradle wrapper: `8.9`
+- Kotlin plugins: `2.0.21`
+- `compileSdk` / `targetSdk`: `35`
+- JDK: use `17` or `21` (JDK `25` currently breaks Gradle/Kotlin script evaluation in this repo)
 
-## Feature support matrix
-| Area | Status |
-|---|---|
-| BLE scanning/connection/session | Implemented |
-| Family detection/capabilities | Implemented |
-| Basic controls + password | Implemented |
-| Program/OTA start headers + chunking | Implemented |
-| Program content composer (text/drawing/preset) | Implemented (initial parity scope) |
-| Transfer ack/retry state machine | Implemented (hardware timing tuning pending) |
-| Full documented parser families | Implemented |
-| LZSS flag-bit order | Resolved (LSB-first) |
-| Full semantic labeling of all advanced program types | Partial |
-| Full CoolLEDX/CoolLEDS runtime parity on hardware | Partial |
-
-## Remaining validation needs
-- End-to-end hardware verification of advanced content classes on real CoolLEDX/CoolLEDS and iLedClock targets.
-- Physical timing tuning for noisy BLE links (inter-packet delays/timeouts).
-- Additional reverse-engineered vectors for uncommon program types beyond currently implemented typed trailer map.
-
-
-## Build environment notes
-- This repo is pinned to Android Gradle Plugin 8.7.3 and Gradle wrapper 8.9.
-- `compileSdk`/`targetSdk` are pinned to API 35 for AGP 8.7 compatibility.
-- Use JDK 17 or 21 (JDK 17 is the AGP 8.7 baseline for this project). Running with JDK 25 is known-bad in this repo.
-- Android Gradle Plugin artifacts are resolved from Google Maven; builds fail in restricted/offline environments that block `google()` repository access.
+## Environment caveats
+- Android SDK/build-tools must be installed and discoverable (`ANDROID_HOME`/`ANDROID_SDK_ROOT`).
+- Plugin/dependency resolution requires access to `google()` and `mavenCentral()` repositories.
