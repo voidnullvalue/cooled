@@ -1,5 +1,6 @@
 package com.cooled.core.ble
 
+import com.cooled.core.protocol.FrameCodec
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -9,6 +10,8 @@ class FakeBleTransport : BleTransport {
     private val _mtu = MutableStateFlow(23)
     private val _rx = MutableStateFlow(RxFrame(byteArrayOf()))
     private val _scan = MutableStateFlow(emptyList<ScanDevice>())
+
+    private val scriptedResponses = ArrayDeque<ByteArray>()
 
     override val connectionState: Flow<ConnectionState> = _state.asStateFlow()
     override val mtu: Flow<Int> = _mtu.asStateFlow()
@@ -31,6 +34,18 @@ class FakeBleTransport : BleTransport {
         _state.value = ConnectionState.READY
     }
 
-    override suspend fun disconnect() { _state.value = ConnectionState.DISCONNECTED }
-    override suspend fun write(bytes: ByteArray) { _rx.value = RxFrame(bytes) }
+    override suspend fun disconnect() {
+        _state.value = ConnectionState.DISCONNECTED
+    }
+
+    override suspend fun write(bytes: ByteArray) {
+        val scripted = scriptedResponses.removeFirstOrNull()
+        _rx.value = RxFrame(scripted ?: bytes)
+    }
+
+    fun enqueueRxPayload(payload: ByteArray) {
+        scriptedResponses.addLast(FrameCodec.encode(payload))
+    }
+
+    fun clearScripted() = scriptedResponses.clear()
 }
