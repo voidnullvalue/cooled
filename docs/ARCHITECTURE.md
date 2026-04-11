@@ -13,7 +13,11 @@ Concise architecture snapshot audited against current code.
 - `data/persistence`: remembered-device store.
 - `ui`: `AppViewModel` state/event wiring; Compose UI in `MainActivity`.
 
-## BLE session lifecycle (implemented wiring)
+## Runtime wiring in this branch
+- `AppViewModel` currently instantiates `FakeBleTransport` directly.
+- `AndroidBleTransport` is implemented but not currently selected by app runtime wiring.
+
+## BLE session lifecycle (implemented in Android transport)
 1. Scan by service UUID `FFF0`.
 2. Connect and discover services.
 3. Enable notifications on `FFF1` and write CCCD.

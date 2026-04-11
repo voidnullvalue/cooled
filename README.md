@@ -16,8 +16,8 @@ This project intentionally avoids Google Play Services/Firebase/Nearby wrappers 
 ## Current status summary
 
 ### Implemented
-- BLE transport abstraction + Android implementation + fake transport implementation.
-- BLE scan/connect/discover/notify flow for `FFF0/FFF1` + CCCD enable + MTU request.
+- BLE transport abstraction + Android implementation + scripted fake transport implementation.
+- BLE scan/connect/discover/notify flow for `FFF0/FFF1` + CCCD enable + MTU request in `AndroidBleTransport`.
 - Frame codec with escaping/unescaping and payload-length envelope handling.
 - CRC implementation and use in transfer start headers.
 - Typed parser coverage for core controls, transfer acks, device info/OTA info, and clock-class families.
@@ -27,14 +27,22 @@ This project intentionally avoids Google Play Services/Firebase/Nearby wrappers 
 - Transfer retry/timeout/cancel state machine.
 - Debug timeline surfacing raw TX/RX events and parsed-vs-unknown parser outcomes.
 
+### Important runtime note
+- Current app wiring (`AppViewModel`) uses `FakeBleTransport` directly for deterministic scripting/testing flows.
+- `AndroidBleTransport` exists but is not the default runtime transport in this branch.
+
 ### Partial
-- Advanced `programType` semantic labeling is incomplete (fallback trailer branch still used for unknown/less-understood values).
+- Advanced `programType` semantic labeling is incomplete (fallback trailer branch is still used for unknown/less-understood values).
 - Full runtime parity for all advanced OEM content classes is incomplete.
 - Physical transfer timing tuning and broad family-by-family runtime parity remain incomplete.
 
 ### Validated
 - Unit test coverage exists for frame/CRC/chunk/parser/LZSS/builders/transfer/fake-transport paths.
 - Broad real-device parity is **not** yet validated; see `docs/REAL_DEVICE_VALIDATION.md`.
+
+## Source-of-truth plan docs
+- Active plan: `docs/IMPLEMENTATION_PLAN.md`
+- Historical ledgers: `docs/NEXT_PASS_PLAN.md`, `docs/NEXT_PASS_2_PLAN.md`
 
 ## Build/test
 ```bash

@@ -19,18 +19,20 @@ Unit tests are under `app/src/test/java/com/cooled/core/protocol` and currently 
 
 ## Local commands
 ```bash
+java -version
 ./gradlew testDebugUnitTest
 ```
 
 ## Current container result (April 11, 2026)
-- Command fails before task execution under JDK `25.0.1` with Kotlin/Gradle script error:
+- Installed Java is `25.0.1`.
+- `./gradlew testDebugUnitTest` fails before task execution with Kotlin/Gradle script error:
   `java.lang.IllegalArgumentException: 25.0.1`
 - This is a toolchain/runtime mismatch in this environment, not a proven unit-test assertion failure.
 
 ## Expected toolchain
 - JDK `17` or `21`
 - AGP `8.7.3`
-- Gradle wrapper `8.9`
+- Gradle wrapper `8.9` (wrapper files are present)
 - Android SDK/API 35 installed and discoverable
 
 ## Hardware validation
