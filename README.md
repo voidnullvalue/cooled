@@ -1,9 +1,9 @@
 # CoolLED BLE Reimplementation (Native Android, No Play Services)
 
-This repository contains a native Kotlin Android app that reimplements the BLE transport/protocol behavior evidenced in reverse-engineering artifacts for `com.jtkj.led1248`.
+This repository contains a native Kotlin Android app that reimplements BLE transport/protocol behavior evidenced in reverse-engineering artifacts for `com.jtkj.led1248`.
 
 ## No Google Play Services
-This app intentionally does **not** use Google Play Services, Firebase, Nearby, Play Integrity, or any GMS BLE wrappers. BLE uses only Android native APIs:
+This app intentionally does **not** use Google Play Services, Firebase, Nearby, Play Integrity, or GMS BLE wrappers. BLE uses only Android native APIs:
 - `android.bluetooth.*`
 - `android.bluetooth.le.*`
 
@@ -17,35 +17,37 @@ This app intentionally does **not** use Google Play Services, Firebase, Nearby, 
 
 ## Build
 ```bash
-./gradlew assembleDebug
-./gradlew testDebugUnitTest
+gradle assembleDebug
+gradle testDebugUnitTest
 ```
 
 ## Implemented feature coverage (this pass)
-- BLE scan/connect/notify/MTU architecture with native Android stack
-- Typed response parser dispatch for core + clock + transfer ack families
-- LZSS compressor/decompressor with recovered `N=512/F=18/THRESHOLD=2` token format
-- Family-aware capability mapping and advanced program/OTA start-header builders
-- Clock-class command builders (alarms/reminders/night mode/timer/countdown/stopwatch/scoreboard/volume/tomato/temp-humidity/time sync)
-- Transfer ack/retry session state machine with explicit finite retries
-- Fake transport scripted-RX support for deterministic protocol-flow tests
-- Compose UI sections for clock controls, transfer state, and parsed debug event stream
+- Native BLE scan/connect/notify/MTU architecture
+- Typed parser dispatch for core + clock + transfer responses
+- LZSS compressor/decompressor with confirmed **LSB-first** flag-bit order
+- Family-aware program/OTA start headers + chunk packet builders
+- Centralized program content composer (text/drawing/preset) with compression+chunk packaging
+- Clock-class builders including advanced reset commands (`0F 02`, `10 02`)
+- Color mode command path (`13 03 <mode>`)
+- Transfer ack/retry state machine with finite retries, timeout, cancel
+- Scriptable fake transport scenarios for transfer robustness testing
+- Debug timeline with raw TX/RX hex + parsed/unknown event distinctions
 
 ## Feature support matrix
 | Area | Status |
 |---|---|
 | BLE scanning/connection/session | Implemented |
-| Family detection/capabilities | Implemented (expanded) |
-| Basic controls | Implemented |
-| Password check/set | Implemented |
-| Program/OTA start headers and chunking | Implemented |
-| Transfer ack/retry state machine | Implemented (device validation pending) |
-| Full response parser parity for documented families | Implemented |
-| Exact LZSS parity | Implemented with isolated flag-bit-order ambiguity |
-| Full semantic naming of all advanced program types | Partial |
-| CoolLEDX/CoolLEDS behavior parity on hardware | Partial |
+| Family detection/capabilities | Implemented |
+| Basic controls + password | Implemented |
+| Program/OTA start headers + chunking | Implemented |
+| Program content composer (text/drawing/preset) | Implemented (initial parity scope) |
+| Transfer ack/retry state machine | Implemented (hardware timing tuning pending) |
+| Full documented parser families | Implemented |
+| LZSS flag-bit order | Resolved (LSB-first) |
+| Full semantic labeling of all advanced program types | Partial |
+| Full CoolLEDX/CoolLEDS runtime parity on hardware | Partial |
 
-## Remaining ambiguities / validation needs
-- LZSS flag-byte bit order still has one static-analysis ambiguity; implementation isolates it to one enum-controlled path.
-- Advanced `programType` semantic naming is still partially unresolved, though recovered trailer bytes are implemented.
-- Physical-device validation is still required for transfer timing and family-specific runtime behavior.
+## Remaining validation needs
+- End-to-end hardware verification of advanced content classes on real CoolLEDX/CoolLEDS and iLedClock targets.
+- Physical timing tuning for noisy BLE links (inter-packet delays/timeouts).
+- Additional reverse-engineered vectors for uncommon program types beyond currently implemented typed trailer map.

@@ -1,15 +1,15 @@
 # Architecture
 
-## Module/component layout (single module package separation)
-- `core/ble`: BLE transport abstraction + Android/native implementation + fake transport.
-- `core/protocol`: UUID/constants, frame codec, command builders, typed payload parser, transfer state machine.
+## Module/component layout
+- `core/ble`: BLE transport abstraction + Android implementation + fake scripted transport + raw I/O events.
+- `core/protocol`: frame codec, command builders, parser, transfer state machine, content/program composer.
 - `core/crc`: custom CRC implementation from APK evidence.
-- `core/compression`: LZSS codec with recovered token format and configurable flag-bit order.
+- `core/compression`: LZSS codec with recovered token format and confirmed LSB flag order.
 - `core/model`: family/capability model.
-- `core/logging`: TX/RX structured hex logging.
-- `data/repositories`: protocol+transport orchestration API for ViewModel.
-- `data/persistence`: remembered device store scaffold.
-- `ui`: app view model and Compose UI.
+- `core/logging`: Android log helpers.
+- `data/repositories`: transport/protocol orchestration API for ViewModel.
+- `data/persistence`: remembered-device persistence.
+- `ui`: app view model + Compose UI controls/debug feed.
 
 ## BLE session lifecycle
 1. Start scan with `FFF0` filter.
@@ -17,16 +17,22 @@
 3. Discover services.
 4. Enable notification on `FFF1` + write CCCD.
 5. Request MTU (247 target).
-6. State enters `READY`.
-7. Commands are protocol-built then written.
-8. Notify frames are parsed and exposed as typed events.
+6. Enter `READY`.
+7. Write framed protocol commands.
+8. Capture raw RX/TX timeline events and parse RX into typed payloads.
 
-## Upload/transfer lifecycle
-1. Build source bytes.
-2. Compress (LZSS).
-3. Build start header (`02` / `1A` / `FE` family-specific).
-4. Split compressed bytes into chunks.
-5. Build chunk packets (`03` program / `FF` OTA) with XOR tail.
-6. Transfer state machine waits for start ack.
-7. Chunk acks drive next chunk / retry / completion / failure transitions.
-8. Timeout and cancel paths cleanly end session state.
+## Upload/program lifecycle
+1. Build typed content (`ProgramContent`).
+2. Encode content body (`ProgramComposer`).
+3. Compress via LZSS.
+4. Build start header (`02`/`1A`/typed variants).
+5. Split compressed bytes into chunks.
+6. Build chunk packets (`03` program / `FF` OTA).
+7. Transfer state machine tracks start ack, chunk acks, retries, completion/failure.
+8. Timeout/cancel/disconnect path forces cleanup (`Cancelled`/`Failed`).
+
+## Debug observability path
+- Transport emits timestamped `BleIoEvent` for TX/RX raw frames.
+- ViewModel appends raw + parsed timeline entries.
+- Parser fallthrough is explicitly shown as `Unknown` / `ParseError`.
+- Transfer-state transitions are visible in UI and event feed.

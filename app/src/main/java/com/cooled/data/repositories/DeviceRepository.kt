@@ -7,6 +7,9 @@ import com.cooled.core.model.FamilyDetector
 import com.cooled.core.protocol.AlarmCommand
 import com.cooled.core.protocol.CommandBuilders
 import com.cooled.core.protocol.ParsedPayload
+import com.cooled.core.protocol.ProgramContent
+import com.cooled.core.protocol.ProgramComposer
+import com.cooled.core.protocol.ProgramPackage
 import com.cooled.core.protocol.ProgramStartRequest
 import com.cooled.core.protocol.ProtocolParsers
 import com.cooled.data.persistence.RememberedDeviceStore
@@ -36,6 +39,7 @@ class DeviceRepository(
     suspend fun sendBrightness(value: Int) = transport.write(CommandBuilders.setBrightness(value))
     suspend fun sendRhythm(type: Int) = transport.write(CommandBuilders.setRhythm(type))
     suspend fun sendMirror(v: Int) = transport.write(CommandBuilders.setMirror(v))
+    suspend fun sendColorMode(modeIndex: Int) = transport.write(CommandBuilders.setColorMode(modeIndex))
     suspend fun sendQueryInfo() = transport.write(CommandBuilders.queryDeviceInfo())
     suspend fun sendCheckPassword(password: String) = transport.write(CommandBuilders.checkPassword(password))
     suspend fun sendSetPassword(password: String) = transport.write(CommandBuilders.setPassword(password))
@@ -44,6 +48,8 @@ class DeviceRepository(
     suspend fun sendSetTimer(minutes: Int, enabled: Boolean) = transport.write(CommandBuilders.setTimer(minutes, enabled))
     suspend fun sendCountdown(running: Boolean) = transport.write(CommandBuilders.setCountdownRunning(running))
     suspend fun sendStopwatch(running: Boolean) = transport.write(CommandBuilders.setStopwatchRunning(running))
+    suspend fun resetCountdown() = transport.write(CommandBuilders.resetCountdown())
+    suspend fun resetStopwatch() = transport.write(CommandBuilders.resetStopwatch())
     suspend fun sendScoreboard(running: Boolean) = transport.write(CommandBuilders.setScoreboardRunning(running))
     suspend fun sendVolume(value: Int) = transport.write(CommandBuilders.setVolume(value))
     suspend fun sendQueryTomato() = transport.write(CommandBuilders.queryTomato())
@@ -61,6 +67,21 @@ class DeviceRepository(
 
     suspend fun sendDataChunk(messageType: Int, totalCompressedLength: Int, chunkIndex: Int, chunk: ByteArray) =
         transport.write(CommandBuilders.buildDataChunk(messageType, totalCompressedLength, chunkIndex, chunk))
+
+    suspend fun sendComposedProgram(
+        family: DeviceFamily,
+        content: ProgramContent,
+        index: Int = 0,
+        count: Int = 1,
+        showCount: Int = 1,
+        programType: Int? = null,
+        extraTypeByte: Int? = null
+    ): ProgramPackage {
+        val pack = ProgramComposer.compose(family, content, index, count, showCount, programType, extraTypeByte)
+        transport.write(pack.startHeaderFrame)
+        pack.chunkFrames.forEach { transport.write(it) }
+        return pack
+    }
 
     fun detectFamily(name: String?) = FamilyDetector.detect(name)
     fun remembered() = store.all()

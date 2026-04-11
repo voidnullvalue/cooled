@@ -4,17 +4,16 @@ package com.cooled.core.compression
  * LZSS codec with parameters observed in reverse-engineering artifacts:
  * N=512, F=18, THRESHOLD=2.
  *
- * Ambiguity isolated to [FlagBitOrder]: static artifacts do not conclusively prove whether
- * token flags are consumed LSB-first or MSB-first. Default is LSB-first.
+ * Flag bit order is confirmed as LSB-first from the decompiled compressor loop
+ * (`mask = 1; mask <<= 1`) in base_apk_protocol_sources.zip
+ * `CoolledUUtils$LzssCompress.lazssCompress` and sibling family compressors.
  */
 object LzssCodec {
     private const val N = 512
     private const val F = 18
     private const val THRESHOLD = 2
 
-    enum class FlagBitOrder { LSB_FIRST, MSB_FIRST }
-
-    fun compress(input: ByteArray, bitOrder: FlagBitOrder = FlagBitOrder.LSB_FIRST): ByteArray {
+    fun compress(input: ByteArray): ByteArray {
         if (input.isEmpty()) return byteArrayOf()
         val ring = ByteArray(N)
         var r = N - F
@@ -42,7 +41,7 @@ object LzssCodec {
                 }
 
                 if (bestLen <= THRESHOLD) {
-                    flags = setFlag(flags, bitOrder, bitCount)
+                    flags = flags or (1 shl bitCount)
                     val b = input[src]
                     out += b
                     ring[r] = b
@@ -65,7 +64,7 @@ object LzssCodec {
         return out.toByteArray()
     }
 
-    fun decompress(input: ByteArray, bitOrder: FlagBitOrder = FlagBitOrder.LSB_FIRST): ByteArray {
+    fun decompress(input: ByteArray): ByteArray {
         if (input.isEmpty()) return byteArrayOf()
         val ring = ByteArray(N)
         var r = N - F
@@ -77,7 +76,8 @@ object LzssCodec {
             index++
             for (bit in 0 until 8) {
                 if (index >= input.size) break
-                if (isLiteral(flags, bitOrder, bit)) {
+                val isLiteral = (flags and (1 shl bit)) != 0
+                if (isLiteral) {
                     val b = input[index++]
                     out += b
                     ring[r] = b
@@ -99,15 +99,5 @@ object LzssCodec {
             }
         }
         return out.toByteArray()
-    }
-
-    private fun setFlag(flags: Int, order: FlagBitOrder, bit: Int): Int {
-        val shift = if (order == FlagBitOrder.LSB_FIRST) bit else (7 - bit)
-        return flags or (1 shl shift)
-    }
-
-    private fun isLiteral(flags: Int, order: FlagBitOrder, bit: Int): Boolean {
-        val shift = if (order == FlagBitOrder.LSB_FIRST) bit else (7 - bit)
-        return (flags and (1 shl shift)) != 0
     }
 }
