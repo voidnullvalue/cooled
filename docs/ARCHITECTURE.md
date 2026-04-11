@@ -1,45 +1,40 @@
 # Architecture
 
+## Status
+Concise architecture snapshot audited against current code.
+
 ## Module/component layout
-- `core/ble`: BLE transport abstraction + Android implementation + fake scripted transport + raw I/O events.
-- `core/protocol`: frame codec, command builders, parser, transfer state machine, content/program composer.
-- `core/crc`: custom CRC implementation from APK evidence.
-- `core/compression`: LZSS codec with recovered token format and confirmed LSB flag order.
-- `core/model`: family/capability model.
-- `core/logging`: Android log helpers.
-- `data/repositories`: transport/protocol orchestration API for ViewModel.
-- `data/persistence`: remembered-device persistence.
-- `ui`: app view model + Compose UI controls/debug feed.
+- `core/ble`: BLE transport contract (`BleTransport`), Android GATT implementation (`AndroidBleTransport`), and scripted fake transport (`FakeBleTransport`) with raw I/O events.
+- `core/protocol`: framing codec, command builders, typed parsers, transfer state machine, program content/composer.
+- `core/crc`: custom CRC routine used by transfer start headers.
+- `core/compression`: LZSS codec (tokenized compress/decompress, LSB-first flags).
+- `core/model`: family detector + capability map.
+- `data/repositories`: protocol/transport orchestration API used by UI.
+- `data/persistence`: remembered-device store.
+- `ui`: `AppViewModel` state/event wiring; Compose UI in `MainActivity`.
 
-## BLE session lifecycle
-1. Start scan with `FFF0` filter.
-2. Connect selected address.
-3. Discover services.
-4. Enable notification on `FFF1` + write CCCD.
-5. Request MTU (247 target).
-6. Enter `READY`.
-7. Write framed protocol commands.
-8. Capture raw RX/TX timeline events and parse RX into typed payloads.
+## BLE session lifecycle (implemented wiring)
+1. Scan by service UUID `FFF0`.
+2. Connect and discover services.
+3. Enable notifications on `FFF1` and write CCCD.
+4. Request MTU (`247` target).
+5. Transition to `READY` state.
+6. Send framed writes and receive notify frames.
+7. Emit raw TX/RX `BleIoEvent` timeline and parse RX frames.
 
-## Upload/program lifecycle
-1. Build typed content (`ProgramContent`).
-2. Encode content body (`ProgramComposer`).
-3. Compress via LZSS.
-4. Build start header (`02`/`1A`/typed variants).
-5. Split compressed bytes into chunks.
-6. Build chunk packets (`03` program / `FF` OTA).
-7. Transfer state machine tracks start ack, chunk acks, retries, completion/failure.
-8. Timeout/cancel/disconnect path forces cleanup (`Cancelled`/`Failed`).
+## Upload/program lifecycle (implemented wiring)
+1. Create `ProgramContent` (`Text`/`Drawing`/`PresetMode`).
+2. Encode content body in `ProgramComposer`.
+3. Compress with `LzssCodec`.
+4. Build start header (`02`/`1A`; `FE` for OTA path).
+5. Split compressed bytes and build chunk frames (`03`/`FF`).
+6. Process parsed transfer acks through `TransferStateMachine`.
+7. Surface state transitions (`AwaitingStartAck`, `SendingChunk`, `Completed`, `Failed`, `Cancelled`) in ViewModel/UI.
 
-## Debug observability path
-- Transport emits timestamped `BleIoEvent` for TX/RX raw frames.
-- ViewModel appends raw + parsed timeline entries.
-- Parser fallthrough is explicitly shown as `Unknown` / `ParseError`.
-- Transfer-state transitions are visible in UI and event feed.
+## Observability path
+- Transport emits raw timestamped TX/RX events.
+- ViewModel appends raw timeline lines plus parsed-model lines.
+- Unknown and parse-error payloads are explicit in event text.
 
-
-## Build/tooling baseline
-- Android Gradle Plugin: `8.7.3`
-- Kotlin plugins: `2.0.21` (`org.jetbrains.kotlin.android` + Compose compiler plugin)
-- Gradle wrapper: `8.7`
-- Recommended runtime JDK for builds/tests: `21`
+## Build baseline (from Gradle files)
+- AGP `8.7.3`, Kotlin `2.0.21`, Gradle wrapper `8.9`, Java 17 target.

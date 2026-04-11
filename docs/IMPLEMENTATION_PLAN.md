@@ -1,53 +1,38 @@
-# CoolLED Native Reimplementation Plan
+# Implementation Status (audited April 11, 2026)
 
-## Phase 1 – Evidence extraction (completed)
-Sources reviewed:
-- `base_apk_bluetooth_spec.md`
-- `base_apk_bluetooth_spec_reimplementation.md`
-- `base_apk_bluetooth_clone_spec.md`
-- `base_apk_protocol_sources.zip` (decompiled `DeviceManager`, `CoolledM/U/UX`, `ILedClock` helpers)
+## Status
+This file is now a **status summary**, not an execution checklist. Status labels below are based on current code wiring and tests, not historical checkboxes.
 
-Confirmed protocol facts captured for implementation:
-- BLE service `FFF0`, command/notify characteristic `FFF1`, CCCD `0x2902`.
-- Scan name families include `CoolLEDM`, `CoolLEDU`, `CoolLEDUX`, `CoolLEDX`, `CoolLEDS`, `iLedClock` and additional iLed variants.
-- Framing: `01` + escaped(`len_hi len_lo payload`) + `03`.
-- Escape rule: `01/02/03 -> 02 (byte XOR 04)`.
-- Length field: payload bytes only, big-endian.
-- Chunk packet format and XOR tail.
-- CRC variant (poly `0x04C11DB7`, init `0xFFFFFFFF`, custom MSB-first loop).
-- Password check/set obfuscation (`0D` / `0E`, random mask, nibble xor, xor tail).
-- MTU target 247 for modern families, fallback behavior and chunk sizing evidence.
+## Confirmed complete
 
-## Phase 2 – Protocol core (implemented)
-- Centralized constants and UUIDs.
-- Frame encode/decode and escape/unescape.
-- CRC implementation per decompiled routine.
-- Command builders for confirmed common opcodes.
-- Chunk splitter + chunk body builder.
-- Family detector and capability map.
-- Parser scaffold for framed inbound payload dispatch.
+### Protocol core
+- Frame envelope + escaping/unescaping (`01 ... 03`, `02` escape with `xor 0x04`) is implemented in `FrameCodec`.
+- Custom CRC routine is implemented in `CoolLedCrc` and used by start-header builders.
+- Core command builders (power/brightness/rhythm/mirror/password/info) are implemented and wired through `DeviceRepository`.
 
-## Phase 3 – BLE transport/session (implemented, with fake + real)
-- Transport abstraction independent from protocol.
-- `AndroidBleTransport` using only `android.bluetooth.*` / `android.bluetooth.le.*`.
-- Notification enable on `FFF1` with CCCD write.
-- MTU request support.
-- Scan filtering on `FFF0`.
-- `FakeBleTransport` for offline/integration testing and UI development.
+### Upload primitives
+- Program/OTA start header builders (`02`, `1A`, `FE`) and chunk packet builder (`03`/`FF`) are implemented in `CommandBuilders`.
+- Program composer path (`ProgramContent` -> encode -> LZSS -> start header -> chunk frames) is implemented in `ProgramComposer`.
+- Transfer session model with start/chunk ack handling, retry exhaustion, timeout tick, cancel, and failed/completed states is implemented in `TransferStateMachine`.
 
-## Phase 4 – UI (implemented baseline)
-- Scanner + connect list.
-- Connection state + MTU display.
-- Basic controls (power, brightness, rhythm/music/mic, mirror/rotate value path).
-- Password check/set controls.
-- Debug section with parsed RX summary.
+### Parser and family model
+- Typed parser coverage exists for core controls, transfer acks, device info/OTA info, and clock-class responses (`0B/0F/10/11/14/15/16/19/1A/1E`).
+- Family detection and capability map are implemented (`FamilyDetector`, `CapabilityMap`).
 
-## Phase 5 – tests/docs/build (implemented)
-- Unit tests: CRC, frame encode/decode, chunk format, chunk split, parser.
-- Architecture/protocol/testing docs.
-- README with feature matrix and unresolved gaps.
+### Fake transport + observability
+- Fake transport supports scripted payload/raw-frame injection (not just loopback).
+- Raw TX/RX timeline events are emitted by transport and surfaced in `AppViewModel` events.
+- Parsed vs unknown parse-path events are surfaced in the same debug feed.
 
-## Confirmed vs unresolved implementation policy
-- Confirmed behavior is implemented in code paths.
-- Complex family-specific payload tables (e.g., full UX/iLedClock color preset tables and extended grouped program headers) are documented and marked TODO/UNRESOLVED instead of guessed.
-- LZSS currently uses conservative pass-through fallback pending full parity reconstruction from large decompiled token writer methods.
+## Confirmed partial
+- Advanced `programType` semantic mapping is still partial; unknown values still use fallback trailer encoding in `typedProgramTrailer`.
+- CoolLEDX/CoolLEDS and iLedClock end-to-end hardware parity remains partial (code exists, broad device validation evidence does not).
+- Transfer timing constants/retry tuning are implemented but not physically tuned across unstable links.
+
+## Still unresolved
+- Full OEM parity for complex/less-common composition classes (beyond current `Text`, `Drawing`, `PresetMode`) is unresolved.
+- Hardware validation breadth remains unresolved; see `docs/REAL_DEVICE_VALIDATION.md`.
+
+## Historical notes
+- Earlier notes that LZSS was pass-through are stale; tokenized LZSS encode/decode is now present.
+- Earlier roadmap checklists should be treated as historical planning artifacts, not current source of truth.

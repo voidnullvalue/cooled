@@ -1,52 +1,35 @@
 # Protocol Implementation Notes
 
-## Mapping evidence -> code
-- UUIDs and scan names were mapped into `BleProtocolConstants`.
-- Frame/escape rules were mapped into `FrameCodec`.
-- CRC algorithm from `*Utils$CrcCode` was mapped into `CoolLedCrc`.
-- Common and clock-class opcodes from clone spec were mapped into `CommandBuilders`.
-- Chunk packet format and split behavior mapped into `buildDataChunk` and `splitChunks`.
-- Family names/capabilities mapped into `FamilyDetector` and `CapabilityMap`.
-- Upload retry/ack state handling mapped into `TransferStateMachine`.
-- Content composition mapped into `ProgramComposer` + `ProgramContent`.
+## Status
+Implementation notes audited against current source.
 
-## Confirmed implemented commands
-- Core controls/info/password: `1F`, `04`, `05`, `06`, `0C`, `0D`, `0E`
-- Color mode: `13 03 <mode>`
-- Clock/time/timer/state: `09`, `0A`, `0B`, `0F`, `10`, `11`, `14`, `15`, `16`, `19`, `1A`, `1E`
-- Clock reset subcommands: `0F 02`, `10 02`
-- Transfer primitives:
-  - program start headers (`02` / `1A`, including typed trailer branch)
-  - OTA start (`FE`, standard + preamble style)
-  - data chunk builders (`03` / `FF`)
+## Implemented and wired
+- UUID/constants + scan-name table: `BleProtocolConstants`.
+- Frame encode/decode + escape rules: `FrameCodec`.
+- CRC routine: `CoolLedCrc`.
+- Family detection/capabilities: `FamilyDetector` + `CapabilityMap`.
+- Command builders for core, clock-class, color mode, password, start headers, OTA start, and chunk frames: `CommandBuilders`.
+- Program packaging flow from typed content through compression/chunking: `ProgramComposer`.
+- Transfer ack/retry/timeout/cancel state model: `TransferStateMachine`.
+- Typed parser dispatch for core, transfer, and clock-class response families: `ProtocolParsers`.
 
-## Parser coverage
-Typed parser dispatch covers:
-- brightness/power/mirror/password acks
-- device info and OTA capability/version (`1F` / `FD`)
-- timer switch list and time/timer acks (`0B`, `09`, `0A`)
-- countdown/stopwatch/scoreboard (`0F`, `10`, `11`)
-- night mode (`14`), tomato (`15`), alarms (`16`), reminders (`1A`), temp/humidity (`19`), volume (`1E`)
-- transfer start/chunk acks (`02`, `03`, `FE`, `FF`)
-- unknown and malformed packet fallthrough paths
+## Parser coverage currently present
+`ProtocolParsers` has typed branches for:
+- Core: brightness/power/mirror/password (`04/05/0C/0D/0E`)
+- Device/OTA info (`1F` / `FD`)
+- Clock/timer classes (`09/0A/0B/0F/10/11/14/15/16/19/1A/1E`)
+- Transfer start/chunk responses (`02/03/FE/FF`)
+- Unknown and malformed fallthrough (`Unknown`, `ParseError`)
 
-## LZSS parity status
-Implemented tokenized LZSS codec with recovered constants and token format:
-- `N=512`, `F=18`, `THRESHOLD=2`
-- grouped flag bytes controlling 8 tokens
-- two-byte back-reference encoding
+## LZSS status
+- Implemented tokenized LZSS compressor/decompressor with `N=512`, `F=18`, `THRESHOLD=2`.
+- Flag-bit order is implemented as LSB-first.
 
-### Flag-bit order resolution
-Flag bit order is now locked to **LSB-first** based on decompiled compressor loops in
-`CoolledUUtils$LzssCompress.lazssCompress` (and sibling family compressors): mask starts at `1` and shifts left per token.
+## Confirmed partial / unresolved
+- Advanced `programType` semantics are only partially decoded; unknown values use fallback trailer encoding.
+- High-level parity for all OEM advanced program composition classes is not complete.
+- Runtime timing/performance behavior (retry/timeout tuning) still requires hardware validation.
 
-## Remaining partial areas
-- Full semantic naming of every advanced `programType` value is still incomplete; unknown values are still sent via raw fallback trailer format.
-- Full high-level program-content parity for every OEM composition class (especially animation/gif/complex grouped modes) is still partial.
-- CoolLEDX/CoolLEDS runtime behavior still needs broader on-device validation.
-- Transfer timing constants still need physical-device tuning.
-
-
-## Build integration notes
-- App module applies `com.android.application`, `org.jetbrains.kotlin.android`, and `org.jetbrains.kotlin.plugin.compose` together to keep Compose/Kotlin wiring explicit and avoid implicit plugin coupling.
-- Wrapper/plugin baseline is pinned to AGP `8.7.3` + Gradle `8.7` + Kotlin `2.0.21` for a coherent local build setup.
+## Evidence boundary
+- “Implemented” in this doc means code exists and is called by repo/viewmodel paths.
+- “Validated” requires either passing tests or hardware evidence; broad hardware parity is still open.
