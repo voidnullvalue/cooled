@@ -26,6 +26,7 @@ Current unit coverage includes:
 See `docs/REAL_DEVICE_VALIDATION.md` for step-by-step real-device flows.
 
 ## Known environment caveat in this repo container
+- This repo is pinned to Android Gradle Plugin 8.7.3, Gradle wrapper 8.9, and Android API 35 (`compileSdk`/`targetSdk`).
 - Android/Gradle tasks require Android SDK + build tools installed and reachable via `ANDROID_HOME`/`ANDROID_SDK_ROOT`.
 - In restricted CI containers, dependency resolution can fail if Google Maven access is blocked by network/proxy policy.
-- Use JDK 21 (or 17). JDK 25 fails early in Kotlin DSL parsing.
+- Use JDK 17 or 21 (JDK 17 is the AGP 8.7 baseline for this project). JDK 25 is known-bad in this repo.

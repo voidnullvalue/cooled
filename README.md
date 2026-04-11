@@ -54,5 +54,7 @@ This app intentionally does **not** use Google Play Services, Firebase, Nearby, 
 
 
 ## Build environment notes
-- Use JDK 21 (or 17). Running Gradle with JDK 25 currently fails during Kotlin DSL bootstrap (`IllegalArgumentException: 25.0.1`).
+- This repo is pinned to Android Gradle Plugin 8.7.3 and Gradle wrapper 8.9.
+- `compileSdk`/`targetSdk` are pinned to API 35 for AGP 8.7 compatibility.
+- Use JDK 17 or 21 (JDK 17 is the AGP 8.7 baseline for this project). Running with JDK 25 is known-bad in this repo.
 - Android Gradle Plugin artifacts are resolved from Google Maven; builds fail in restricted/offline environments that block `google()` repository access.
