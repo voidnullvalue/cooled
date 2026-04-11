@@ -11,7 +11,7 @@
         android:allowBackup="true"
         android:label="CoolLED Reimpl"
         android:supportsRtl="true"
-        android:theme="@style/Theme.Material3.DayNight.NoActionBar">
+        android:theme="@style/Theme.Cooled">
         <activity
             android:name=".MainActivity"
             android:exported="true">
