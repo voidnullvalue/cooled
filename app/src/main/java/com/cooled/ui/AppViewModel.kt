@@ -21,7 +21,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import java.time.Instant
 
 class AppViewModel : ViewModel() {
     private val fake = FakeBleTransport()
@@ -84,7 +83,7 @@ class AppViewModel : ViewModel() {
     fun checkPassword(p: String) = viewModelScope.launch { repo.sendCheckPassword(p) }
     fun setPassword(p: String) = viewModelScope.launch { repo.sendSetPassword(p) }
 
-    fun syncTimeNow() = viewModelScope.launch { repo.sendTimeSync(Instant.now().epochSecond.toInt()) }
+    fun syncTimeNow() = viewModelScope.launch { repo.sendTimeSync((System.currentTimeMillis() / 1000L).toInt()) }
     fun timer(minutes: Int, enabled: Boolean) = viewModelScope.launch { repo.sendSetTimer(minutes, enabled) }
     fun countdown(running: Boolean) = viewModelScope.launch { repo.sendCountdown(running) }
     fun stopwatch(running: Boolean) = viewModelScope.launch { repo.sendStopwatch(running) }
@@ -173,5 +172,5 @@ class AppViewModel : ViewModel() {
     }
 
     private fun ByteArray.toHex(): String = joinToString(" ") { "%02X".format(it) }
-    private fun ts() = Instant.now().toString()
+    private fun ts() = System.currentTimeMillis().toString()
 }
