@@ -203,7 +203,7 @@ object CoolleduxProgramBytecode {
     fun originalAsset(assetPath: String, kind: String, speed: Int, effect: Int, displayColumns: Int?, displayRows: Int?): ByteArray {
         val rows = displayRows?.coerceIn(8, 128) ?: 32
         val columns = displayColumns?.coerceIn(8, 512) ?: 128
-        val payload = OriginalLedAssetByteSources.active.read(assetPath) ?: ByteArray(0)
+        val payload = OriginalLedAssetPayloadEncoder.encode(assetPath, kind, columns, rows).bytes
         val layer = CoolleduxAssetLayer(
             layerType = assetLayerType(kind),
             assetKind = kind,
