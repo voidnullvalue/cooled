@@ -132,9 +132,22 @@ class AppViewModel(
         )
     }
     fun queryTimerSwitches() = viewModelScope.launch { repo.sendQueryTimerSwitches() }
+
+    fun queryCountdownStatus() = viewModelScope.launch { repo.sendQueryCountdownStatus() }
     fun countdown(running: Boolean) = viewModelScope.launch { repo.sendCountdown(running) }
+    fun resetCountdown() = viewModelScope.launch { repo.resetCountdown() }
+    fun resetCountdownTo(hour: Int, minute: Int, second: Int) = viewModelScope.launch {
+        repo.resetCountdown(hour.coerceIn(0, 23), minute.coerceIn(0, 59), second.coerceIn(0, 59))
+    }
+
+    fun queryStopwatchStatus() = viewModelScope.launch { repo.sendQueryStopwatchStatus() }
     fun stopwatch(running: Boolean) = viewModelScope.launch { repo.sendStopwatch(running) }
+    fun resetStopwatch() = viewModelScope.launch { repo.resetStopwatch() }
+
+    fun queryScoreboardStatus() = viewModelScope.launch { repo.sendQueryScoreboardStatus() }
     fun scoreboard(running: Boolean) = viewModelScope.launch { repo.sendScoreboard(running) }
+    fun resetScoreboard(left: Int, right: Int) = viewModelScope.launch { repo.resetScoreboard(left.coerceIn(0, 255), right.coerceIn(0, 255)) }
+
     fun volume(v: Int) = viewModelScope.launch { repo.sendVolume(v.coerceIn(0, 100)) }
     fun queryTomato() = viewModelScope.launch { repo.sendQueryTomato() }
     fun queryTempHumidity() = viewModelScope.launch { repo.sendQueryTempHumidity() }
@@ -143,8 +156,6 @@ class AppViewModel(
         repo.sendNightMode(enabled, sh.coerceIn(0, 23), sm.coerceIn(0, 59), eh.coerceIn(0, 23), em.coerceIn(0, 59))
     }
     fun queryReminderList() = viewModelScope.launch { repo.sendQueryReminderList() }
-    fun resetCountdown() = viewModelScope.launch { repo.resetCountdown() }
-    fun resetStopwatch() = viewModelScope.launch { repo.resetStopwatch() }
 
     fun sendTextProgram(text: String, speed: Int, effect: Int, programType: Int?, extraTypeByte: Int?) = viewModelScope.launch {
         val cleanText = text.ifBlank { "HELLO" }.take(128)
