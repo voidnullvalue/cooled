@@ -46,6 +46,7 @@ class DeviceRepository(
 
     suspend fun sendTimeSync(epochSeconds: Int) = transport.write(CommandBuilders.syncTime(epochSeconds))
     suspend fun sendSetTimer(minutes: Int, enabled: Boolean) = transport.write(CommandBuilders.setTimer(minutes, enabled))
+    suspend fun sendQueryTimerSwitches() = transport.write(CommandBuilders.queryTimerSwitches())
     suspend fun sendCountdown(running: Boolean) = transport.write(CommandBuilders.setCountdownRunning(running))
     suspend fun sendStopwatch(running: Boolean) = transport.write(CommandBuilders.setStopwatchRunning(running))
     suspend fun resetCountdown() = transport.write(CommandBuilders.resetCountdown())
