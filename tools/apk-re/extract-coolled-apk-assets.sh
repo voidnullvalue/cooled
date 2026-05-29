@@ -98,6 +98,34 @@ tools/apk-re/extract-coolled-apk-assets.sh /path/to/base.apk
 ```
 EOF
 
+classify_asset() {
+  local rel="$1"
+  local lower="${rel,,}"
+  case "$lower" in
+    *32_32_large|*32_32_small|*8_small) echo "font" ;;
+    *.gif|*gif*) echo "animation" ;;
+    *.png|*.webp|*.jpg|*.jpeg|*.bmp|*.xml) echo "image" ;;
+    *emoji*|*emot*|*face*) echo "emoji" ;;
+    *icon*|*ico*) echo "icon" ;;
+    *clock*|*time*|*date*) echo "clock-template" ;;
+    *weather*|*temp*|*humid*) echo "sensor-template" ;;
+    *) echo "payload-asset" ;;
+  esac
+}
+
+manifest="$out_dir/LED_ASSET_MANIFEST.tsv"
+printf 'kind\tpath\tsize_bytes\tsha256\n' > "$manifest"
+while IFS= read -r -d '' file; do
+  rel="${file#$out_dir/}"
+  case "$rel" in
+    README.md|SHA256SUMS|LED_ASSET_MANIFEST.tsv) continue ;;
+  esac
+  kind="$(classify_asset "$rel")"
+  size="$(wc -c < "$file" | tr -d ' ')"
+  sha="$(sha256sum "$file" | awk '{print $1}')"
+  printf '%s\t%s\t%s\t%s\n' "$kind" "$rel" "$size" "$sha" >> "$manifest"
+done < <(find "$out_dir" -type f -print0 | sort -z)
+
 {
   echo "# SHA256 manifest for extracted original APK assets"
   find "$out_dir" -type f ! -name SHA256SUMS -print0 | sort -z | xargs -0 sha256sum
