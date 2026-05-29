@@ -2,7 +2,22 @@ package com.cooled.core.ble
 
 import kotlinx.coroutines.flow.Flow
 
-data class ScanDevice(val name: String?, val address: String, val rssi: Int)
+data class ScanDevice(
+    val name: String?,
+    val address: String,
+    val rssi: Int,
+    val metadata: LedScanMetadata = LedScanMetadata()
+)
+
+data class LedScanMetadata(
+    val deviceId: Int? = null,
+    val rows: Int? = null,
+    val columns: Int? = null,
+    val colorType: Int? = null,
+    val rawHex: String? = null
+) {
+    val hasMatrix: Boolean get() = rows != null && columns != null
+}
 
 enum class ConnectionState { DISCONNECTED, CONNECTING, CONNECTED, READY }
 
