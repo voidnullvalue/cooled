@@ -151,11 +151,30 @@ class AppViewModel(
     fun volume(v: Int) = viewModelScope.launch { repo.sendVolume(v.coerceIn(0, 100)) }
     fun queryTomato() = viewModelScope.launch { repo.sendQueryTomato() }
     fun queryTempHumidity() = viewModelScope.launch { repo.sendQueryTempHumidity() }
+
     fun queryAlarms() = viewModelScope.launch { repo.sendQueryAlarms() }
+    fun setAlarm(enabled: Boolean, hour: Int, minute: Int, repeatMask: Int, durationSeconds: Int, reminderDurationMinutes: Int) = viewModelScope.launch {
+        repo.sendAlarmList(
+            listOf(
+                AlarmCommand(
+                    enabled = enabled,
+                    hour = hour.coerceIn(0, 23),
+                    minute = minute.coerceIn(0, 59),
+                    repeatMask = repeatMask.coerceIn(0, 127),
+                    durationSeconds = durationSeconds.coerceIn(0, 65535),
+                    reminderDurationMinutes = reminderDurationMinutes.coerceIn(0, 255)
+                )
+            )
+        )
+    }
+    fun setSampleAlarm() = setAlarm(true, 7, 30, 0b0111110, 600, 5)
+
     fun setNightMode(enabled: Boolean, sh: Int, sm: Int, eh: Int, em: Int) = viewModelScope.launch {
         repo.sendNightMode(enabled, sh.coerceIn(0, 23), sm.coerceIn(0, 59), eh.coerceIn(0, 23), em.coerceIn(0, 59))
     }
     fun queryReminderList() = viewModelScope.launch { repo.sendQueryReminderList() }
+    fun queryReminderDetail(id: Int) = viewModelScope.launch { repo.sendQueryReminderDetail(id.coerceIn(0, 255)) }
+    fun deleteReminder(id: Int) = viewModelScope.launch { repo.sendDeleteReminder(id.coerceIn(0, 255)) }
 
     fun sendTextProgram(text: String, speed: Int, effect: Int, programType: Int?, extraTypeByte: Int?) = viewModelScope.launch {
         val cleanText = text.ifBlank { "HELLO" }.take(128)
@@ -180,8 +199,8 @@ class AppViewModel(
 
     fun sendTextProgram() = sendTextProgram(
         text = "HELLO",
-        speed = 3,
-        effect = 1,
+        speed = 255,
+        effect = 2,
         programType = if (family.value == DeviceFamily.ILEDCLOCK) 14 else null,
         extraTypeByte = if (family.value == DeviceFamily.ILEDCLOCK) 1 else null
     )
@@ -291,10 +310,6 @@ class AppViewModel(
             "unexpected_packet" -> fakeTransport.enqueueRawFrame(byteArrayOf(0x7E, 0x01, 0x02, 0x03), "garbage")
         }
         appendEvent("${ts()} Loaded transfer script=$name")
-    }
-
-    fun setSampleAlarm() = viewModelScope.launch {
-        repo.sendAlarmList(listOf(AlarmCommand(true, 7, 30, 0b0111110, 600, 5)))
     }
 
     fun timeoutTransfer() {
