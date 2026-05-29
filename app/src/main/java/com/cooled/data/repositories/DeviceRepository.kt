@@ -35,6 +35,8 @@ class DeviceRepository(
 
     suspend fun disconnect() = transport.disconnect()
 
+    suspend fun sendRawFrame(frame: ByteArray) = transport.write(frame)
+
     suspend fun sendPower(on: Boolean) = transport.write(CommandBuilders.setPower(on))
     suspend fun sendBrightness(value: Int) = transport.write(CommandBuilders.setBrightness(value))
     suspend fun sendRhythm(type: Int) = transport.write(CommandBuilders.setRhythm(type))
@@ -69,6 +71,16 @@ class DeviceRepository(
     suspend fun sendDataChunk(messageType: Int, totalCompressedLength: Int, chunkIndex: Int, chunk: ByteArray) =
         transport.write(CommandBuilders.buildDataChunk(messageType, totalCompressedLength, chunkIndex, chunk))
 
+    fun composeProgram(
+        family: DeviceFamily,
+        content: ProgramContent,
+        index: Int = 0,
+        count: Int = 1,
+        showCount: Int = 1,
+        programType: Int? = null,
+        extraTypeByte: Int? = null
+    ): ProgramPackage = ProgramComposer.compose(family, content, index, count, showCount, programType, extraTypeByte)
+
     suspend fun sendComposedProgram(
         family: DeviceFamily,
         content: ProgramContent,
@@ -78,7 +90,7 @@ class DeviceRepository(
         programType: Int? = null,
         extraTypeByte: Int? = null
     ): ProgramPackage {
-        val pack = ProgramComposer.compose(family, content, index, count, showCount, programType, extraTypeByte)
+        val pack = composeProgram(family, content, index, count, showCount, programType, extraTypeByte)
         transport.write(pack.startHeaderFrame)
         pack.chunkFrames.forEach { transport.write(it) }
         return pack
