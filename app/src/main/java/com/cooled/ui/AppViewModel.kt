@@ -41,6 +41,9 @@ class AppViewModel(
     val transferState: StateFlow<TransferState> = transferMachine.state
     val transportMode = MutableStateFlow(if (fake == null) "Android BLE" else "Fake demo")
 
+    private val _lastParsedSummary = MutableStateFlow("No packet yet")
+    val lastParsedSummary: StateFlow<String> = _lastParsedSummary.asStateFlow()
+
     val scanResults = repo.scanResults.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
     val connection = repo.connectionState.stateIn(viewModelScope, SharingStarted.Eagerly, ConnectionState.DISCONNECTED)
     val mtu = repo.mtu.stateIn(viewModelScope, SharingStarted.Eagerly, 23)
@@ -53,11 +56,13 @@ class AppViewModel(
         viewModelScope.launch {
             repo.parsedRx.collect { p ->
                 transferMachine.onParsed(p)
+                val summary = p.summary()
+                _lastParsedSummary.value = summary
                 val kind = when (p) {
                     is ParsedPayload.Unknown, is ParsedPayload.ParseError -> "unknown"
                     else -> "parsed"
                 }
-                appendEvent("${ts()} RX $kind: $p")
+                appendEvent("${ts()} RX $kind: $summary")
             }
         }
         viewModelScope.launch {
@@ -89,40 +94,52 @@ class AppViewModel(
 
     fun queryInfo() = viewModelScope.launch { repo.sendQueryInfo() }
     fun power(on: Boolean) = viewModelScope.launch { repo.sendPower(on) }
-    fun brightness(v: Int) = viewModelScope.launch { repo.sendBrightness(v) }
+    fun brightness(v: Int) = viewModelScope.launch { repo.sendBrightness(v.coerceIn(1, 100)) }
     fun speed(v: Int) = viewModelScope.launch { repo.sendRhythm(v) }
     fun mirror(v: Int) = viewModelScope.launch { repo.sendMirror(v) }
-    fun colorMode(v: Int) = viewModelScope.launch { repo.sendColorMode(v) }
+    fun colorMode(v: Int) = viewModelScope.launch { repo.sendColorMode(v.coerceIn(0, 255)) }
     fun checkPassword(p: String) = viewModelScope.launch { repo.sendCheckPassword(p) }
     fun setPassword(p: String) = viewModelScope.launch { repo.sendSetPassword(p) }
 
     fun syncTimeNow() = viewModelScope.launch { repo.sendTimeSync((System.currentTimeMillis() / 1000L).toInt()) }
-    fun timer(minutes: Int, enabled: Boolean) = viewModelScope.launch { repo.sendSetTimer(minutes, enabled) }
+    fun timer(minutes: Int, enabled: Boolean) = viewModelScope.launch { repo.sendSetTimer(minutes.coerceIn(0, 24 * 60), enabled) }
+    fun queryTimerSwitches() = viewModelScope.launch { repo.sendQueryTimerSwitches() }
     fun countdown(running: Boolean) = viewModelScope.launch { repo.sendCountdown(running) }
     fun stopwatch(running: Boolean) = viewModelScope.launch { repo.sendStopwatch(running) }
     fun scoreboard(running: Boolean) = viewModelScope.launch { repo.sendScoreboard(running) }
-    fun volume(v: Int) = viewModelScope.launch { repo.sendVolume(v) }
+    fun volume(v: Int) = viewModelScope.launch { repo.sendVolume(v.coerceIn(0, 100)) }
     fun queryTomato() = viewModelScope.launch { repo.sendQueryTomato() }
     fun queryTempHumidity() = viewModelScope.launch { repo.sendQueryTempHumidity() }
     fun queryAlarms() = viewModelScope.launch { repo.sendQueryAlarms() }
-    fun setNightMode() = viewModelScope.launch { repo.sendNightMode(true, 22, 0, 6, 0) }
+    fun setNightMode(enabled: Boolean, sh: Int, sm: Int, eh: Int, em: Int) = viewModelScope.launch {
+        repo.sendNightMode(enabled, sh.coerceIn(0, 23), sm.coerceIn(0, 59), eh.coerceIn(0, 23), em.coerceIn(0, 59))
+    }
     fun queryReminderList() = viewModelScope.launch { repo.sendQueryReminderList() }
     fun resetCountdown() = viewModelScope.launch { repo.resetCountdown() }
     fun resetStopwatch() = viewModelScope.launch { repo.resetStopwatch() }
 
-    fun sendTextProgram() = viewModelScope.launch {
+    fun sendTextProgram(text: String, speed: Int, effect: Int, programType: Int?, extraTypeByte: Int?) = viewModelScope.launch {
+        val cleanText = text.ifBlank { "HELLO" }.take(128)
         val pack = repo.sendComposedProgram(
             family = family.value,
-            content = ProgramContent.Text("HELLO", speed = 3, effect = 1),
+            content = ProgramContent.Text(cleanText, speed = speed.coerceIn(0, 255), effect = effect.coerceIn(0, 255)),
             index = 0,
             count = 1,
             showCount = 1,
-            programType = if (family.value == DeviceFamily.ILEDCLOCK) 14 else null,
-            extraTypeByte = 1
+            programType = programType,
+            extraTypeByte = extraTypeByte
         )
         transferMachine.startSession(pack.metadata.chunkCount)
-        appendEvent("${ts()} Program queued compressed=${pack.metadata.compressedSize} chunks=${pack.metadata.chunkCount}")
+        appendEvent("${ts()} Program queued text='$cleanText' speed=${speed.coerceIn(0, 255)} effect=${effect.coerceIn(0, 255)} programType=${programType ?: "none"} extra=${extraTypeByte ?: "none"} compressed=${pack.metadata.compressedSize} chunks=${pack.metadata.chunkCount}")
     }
+
+    fun sendTextProgram() = sendTextProgram(
+        text = "HELLO",
+        speed = 3,
+        effect = 1,
+        programType = if (family.value == DeviceFamily.ILEDCLOCK) 14 else null,
+        extraTypeByte = 1
+    )
 
     fun startFakeTransfer() = viewModelScope.launch {
         val fakeTransport = fake
@@ -195,7 +212,43 @@ class AppViewModel(
         _events.value = (listOf(text) + _events.value).take(200)
     }
 
+    private fun ParsedPayload.summary(): String = when (this) {
+        is ParsedPayload.Unknown -> "Unknown payload (${data.size} bytes): ${data.toHex()}"
+        is ParsedPayload.ParseError -> "Parse error opcode=0x${opcode.hex2()} reason=$reason raw=${data.toHex()}"
+        is ParsedPayload.BrightnessState -> "Brightness=$value"
+        is ParsedPayload.PowerState -> "Power=${if (on) "on" else "off"}"
+        is ParsedPayload.MirrorState -> "Mirror/rotate value=$value"
+        is ParsedPayload.PasswordCheckResult -> "Password check ${if (success) "OK" else "failed"} code=$code"
+        is ParsedPayload.PasswordSetResult -> "Password set ${if (success) "OK" else "failed"} code=$code"
+        is ParsedPayload.DeviceInfo -> "Device model=$model fw=$fwMajor.$fwMinor matrix=${columns}x$rows colorType=$colorType packageSize=${packageSize ?: "unknown"}"
+        is ParsedPayload.OtaInfo -> "OTA supported=$supported version=$versionMajor.$versionMinor remoteFile=$remoteFile"
+        is ParsedPayload.TimerSwitches -> "Timer switches=${values.joinToString()}"
+        is ParsedPayload.TimeSyncAck -> "Time sync status=$status"
+        is ParsedPayload.TimerAck -> "Timer status=$status"
+        is ParsedPayload.VolumeState -> "Volume=$value"
+        is ParsedPayload.CountdownState -> "Countdown sub=$subcommand time=${minute ?: "?"}:${second ?: "?"} running=${running ?: "?"}"
+        is ParsedPayload.StopwatchState -> "Stopwatch sub=$subcommand time=${minute ?: "?"}:${second ?: "?"} running=${running ?: "?"}"
+        is ParsedPayload.ScoreboardState -> "Scoreboard left=${left ?: "?"} right=${right ?: "?"} mode=${mode ?: "?"} running=${running ?: "?"}"
+        is ParsedPayload.NightModeState -> "Night mode enabled=${enabled ?: "?"} ${startHour ?: "?"}:${startMinute ?: "?"}-${endHour ?: "?"}:${endMinute ?: "?"}"
+        is ParsedPayload.TomatoClockState -> "Tomato items=${items.map { it.value }.joinToString()}"
+        is ParsedPayload.AlarmList -> "Alarms count=${alarms.size}"
+        is ParsedPayload.ReminderList -> "Reminder IDs=${ids.joinToString()}"
+        is ParsedPayload.ReminderDetail -> "Reminder id=$id date=$year-$month-$day $hour:$minute repeat=$repeatType duration=$durationSeconds content=$content"
+        is ParsedPayload.TemperatureHumidity -> "Temperature=$temperatureCelsius C humidity=$humidity%"
+        is ParsedPayload.TransferStartResponse -> "Transfer start response opcode=0x${opcode.hex2()} status=$status (${transferStatusLabel(status)})"
+        is ParsedPayload.TransferChunkResponse -> "Transfer chunk response opcode=0x${opcode.hex2()} chunk=$chunkIndex status=$status (${transferStatusLabel(status)})"
+    }
+
+    private fun transferStatusLabel(status: Int): String = when (status) {
+        0 -> "OK"
+        1 -> "retry/nack"
+        2 -> "busy/invalid state"
+        3 -> "rejected/unsupported"
+        else -> "unknown"
+    }
+
     private fun ByteArray.toHex(): String = joinToString(" ") { "%02X".format(it) }
+    private fun Int.hex2(): String = "%02X".format(this and 0xFF)
     private fun ts() = System.currentTimeMillis().toString()
 
     companion object {
