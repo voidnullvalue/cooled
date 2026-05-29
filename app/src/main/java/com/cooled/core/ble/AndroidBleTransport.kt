@@ -1,5 +1,6 @@
 package com.cooled.core.ble
 
+import android.Manifest
 import android.annotation.SuppressLint
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
@@ -14,6 +15,9 @@ import android.bluetooth.le.ScanFilter
 import android.bluetooth.le.ScanResult
 import android.bluetooth.le.ScanSettings
 import android.content.Context
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.core.content.ContextCompat
 import com.cooled.core.protocol.BleProtocolConstants
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -41,7 +45,7 @@ class AndroidBleTransport(private val context: Context) : BleTransport {
         override fun onConnectionStateChange(g: BluetoothGatt, status: Int, newState: Int) {
             if (newState == BluetoothGatt.STATE_CONNECTED) {
                 _state.value = ConnectionState.CONNECTED
-                g.discoverServices()
+                if (hasConnectPermission()) g.discoverServices()
             } else {
                 _state.value = ConnectionState.DISCONNECTED
             }
@@ -63,36 +67,72 @@ class AndroidBleTransport(private val context: Context) : BleTransport {
             _io.value = BleIoEvent(System.currentTimeMillis(), BleIoDirection.RX, value, "notify")
         }
 
+        @Deprecated("Kept for API 24-32 callback compatibility")
+        override fun onCharacteristicChanged(gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic) {
+            val value = characteristic.value ?: return
+            _rx.value = RxFrame(value)
+            _io.value = BleIoEvent(System.currentTimeMillis(), BleIoDirection.RX, value, "notify")
+        }
+
         override fun onMtuChanged(gatt: BluetoothGatt, mtu: Int, status: Int) { _mtu.value = mtu }
     }
 
     private val scanCallback = object : ScanCallback() {
         override fun onScanResult(callbackType: Int, result: ScanResult) {
             val d = result.device ?: return
-            _scan.value = (_scan.value + ScanDevice(d.name, d.address, result.rssi)).distinctBy { it.address }
+            val name = if (hasConnectPermission()) d.name else null
+            _scan.value = (_scan.value + ScanDevice(name, d.address, result.rssi)).distinctBy { it.address }
+        }
+
+        override fun onScanFailed(errorCode: Int) {
+            _io.value = BleIoEvent(System.currentTimeMillis(), BleIoDirection.RX, byteArrayOf(), "scan failed=$errorCode")
         }
     }
 
     override fun startScan() {
-        val scanner = adapter?.bluetoothLeScanner ?: return
+        if (!hasScanPermission()) {
+            _io.value = BleIoEvent(System.currentTimeMillis(), BleIoDirection.RX, byteArrayOf(), "scan skipped: missing BLUETOOTH_SCAN/location permission")
+            return
+        }
+        val scanner = adapter?.bluetoothLeScanner ?: run {
+            _io.value = BleIoEvent(System.currentTimeMillis(), BleIoDirection.RX, byteArrayOf(), "scan skipped: no BLE scanner")
+            return
+        }
         val filter = ScanFilter.Builder().setServiceUuid(android.os.ParcelUuid(BleProtocolConstants.serviceUuid)).build()
         scanner.startScan(listOf(filter), ScanSettings.Builder().build(), scanCallback)
     }
 
-    override fun stopScan() { adapter?.bluetoothLeScanner?.stopScan(scanCallback) }
+    override fun stopScan() {
+        if (hasScanPermission()) adapter?.bluetoothLeScanner?.stopScan(scanCallback)
+    }
 
     override suspend fun connect(address: String) {
-        val d: BluetoothDevice = adapter?.getRemoteDevice(address) ?: return
+        if (!hasConnectPermission()) {
+            _io.value = BleIoEvent(System.currentTimeMillis(), BleIoDirection.RX, byteArrayOf(), "connect skipped: missing BLUETOOTH_CONNECT permission")
+            return
+        }
+        val d: BluetoothDevice = adapter?.getRemoteDevice(address) ?: run {
+            _io.value = BleIoEvent(System.currentTimeMillis(), BleIoDirection.RX, byteArrayOf(), "connect skipped: no adapter/device")
+            return
+        }
         _state.value = ConnectionState.CONNECTING
         gatt = d.connectGatt(context, false, callback)
     }
 
     override suspend fun disconnect() {
-        gatt?.disconnect(); gatt?.close(); gatt = null
+        if (hasConnectPermission()) {
+            gatt?.disconnect()
+            gatt?.close()
+        }
+        gatt = null
         _state.value = ConnectionState.DISCONNECTED
     }
 
     override suspend fun write(bytes: ByteArray) {
+        if (!hasConnectPermission()) {
+            _io.value = BleIoEvent(System.currentTimeMillis(), BleIoDirection.RX, byteArrayOf(), "write skipped: missing BLUETOOTH_CONNECT permission")
+            return
+        }
         val g = gatt ?: return
         val service = g.getService(BleProtocolConstants.serviceUuid) ?: return
         val ch = service.getCharacteristic(BleProtocolConstants.commandCharacteristicUuid) ?: return
@@ -100,4 +140,13 @@ class AndroidBleTransport(private val context: Context) : BleTransport {
         _io.value = BleIoEvent(System.currentTimeMillis(), BleIoDirection.TX, bytes, "write")
         g.writeCharacteristic(ch)
     }
+
+    private fun hasScanPermission(): Boolean = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        ContextCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_SCAN) == PackageManager.PERMISSION_GRANTED
+    } else {
+        ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+    }
+
+    private fun hasConnectPermission(): Boolean = Build.VERSION.SDK_INT < Build.VERSION_CODES.S ||
+        ContextCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED
 }
