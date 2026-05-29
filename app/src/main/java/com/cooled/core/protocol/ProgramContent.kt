@@ -76,7 +76,7 @@ object ProgramComposer {
 
     private fun encodeContent(family: DeviceFamily, content: ProgramContent): ByteArray = when (content) {
         is ProgramContent.Text -> if (family == DeviceFamily.COOLLEDUX) {
-            CoolleduxTextPayload.encode(
+            CoolleduxProgramBytecode.text(
                 text = content.text,
                 speed = content.speed,
                 effect = content.effect,
@@ -114,8 +114,33 @@ data class CoolleduxTextProgramContent(
     val textSpacing: Int = 1
 )
 
-private object CoolleduxTextPayload {
-    fun encode(text: String, speed: Int, effect: Int, displayColumns: Int?, displayRows: Int?): ByteArray {
+data class CoolleduxTextLayer(
+    val layerType: Int,
+    val startRow: Int,
+    val startColumn: Int,
+    val showHeight: Int,
+    val showWidth: Int,
+    val mode: Int,
+    val speed: Int,
+    val stayTime: Int,
+    val textRotate: Int,
+    val isAutoTextSize: Boolean,
+    val textSize: Int,
+    val textSpacing: Int,
+    val isTextBold: Boolean,
+    val glyphBytes: ByteArray
+)
+
+data class CoolleduxCombineProgram(
+    val layers: List<CoolleduxTextLayer>
+)
+
+data class CoolleduxProgram(
+    val combinePrograms: List<CoolleduxCombineProgram>
+)
+
+object CoolleduxProgramBytecode {
+    fun text(text: String, speed: Int, effect: Int, displayColumns: Int?, displayRows: Int?): ByteArray {
         val rows = displayRows?.coerceIn(8, 128) ?: 32
         val columns = displayColumns?.coerceIn(8, 512) ?: 128
         val textSize = when {
@@ -132,43 +157,72 @@ private object CoolleduxTextPayload {
             speed = speed.coerceIn(0, 255),
             textSize = textSize
         )
-        return encodeTextContentProgram(content)
+        return getDataResult(getDataForProgram(textContentProgram(content)))
     }
 
-    private fun encodeTextContentProgram(content: CoolleduxTextProgramContent): ByteArray {
+    private fun textContentProgram(content: CoolleduxTextProgramContent): CoolleduxProgram {
         val glyphBytes = CoolleduxFontByteBuilder.renderText(content)
-        val textContent = mutableListOf<Byte>()
-        textContent += content.layerType.coerceIn(0, 255).toByte()
-        textContent += content.textRotate.coerceIn(0, 255).toByte()
-        textContent += (if (content.isAutoTextSize) 1 else 0).toByte()
-        textContent += content.textSize.coerceIn(0, 255).toByte()
-        textContent += content.textSpacing.coerceIn(0, 255).toByte()
-        textContent += (if (content.isTextBold) 1 else 0).toByte()
-        textContent += 0x00.toByte()
-        textContent += 0x00.toByte()
-        textContent += 0x01.toByte()
-        textContent += u16(content.startColumn)
-        textContent += u16(content.startRow)
-        textContent += u16(content.showWidth)
-        textContent += u16(content.showHeight)
-        textContent += content.mode.coerceIn(0, 255).toByte()
-        textContent += content.speed.coerceIn(0, 255).toByte()
-        textContent += content.stayTime.coerceIn(0, 255).toByte()
-        textContent += u16(content.textSpacing)
-        textContent += u32(glyphBytes.size)
-        textContent += glyphBytes.toList()
-
-        val combineBlock = mutableListOf<Byte>()
-        combineBlock += u32(textContent.size + 4)
-        combineBlock += textContent
-
-        val program = mutableListOf<Byte>()
-        repeat(8) { program += 0x00.toByte() }
-        program += 0x01.toByte()
-        program += 0x00.toByte()
-        program += combineBlock
-        return program.toByteArray()
+        val layer = CoolleduxTextLayer(
+            layerType = content.layerType,
+            startRow = content.startRow,
+            startColumn = content.startColumn,
+            showHeight = content.showHeight,
+            showWidth = content.showWidth,
+            mode = content.mode,
+            speed = content.speed,
+            stayTime = content.stayTime,
+            textRotate = content.textRotate,
+            isAutoTextSize = content.isAutoTextSize,
+            textSize = content.textSize,
+            textSpacing = content.textSpacing,
+            isTextBold = content.isTextBold,
+            glyphBytes = glyphBytes
+        )
+        return CoolleduxProgram(listOf(CoolleduxCombineProgram(listOf(layer))))
     }
+
+    private fun getDataForProgram(program: CoolleduxProgram): ByteArray {
+        val out = mutableListOf<Byte>()
+        repeat(8) { out += 0x00.toByte() }
+        out += program.combinePrograms.size.coerceIn(0, 255).toByte()
+        out += 0x00.toByte()
+        program.combinePrograms.forEach { combine -> out += getDataForCombineProgram(combine).toList() }
+        return out.toByteArray()
+    }
+
+    private fun getDataForCombineProgram(combine: CoolleduxCombineProgram): ByteArray {
+        val body = mutableListOf<Byte>()
+        combine.layers.forEach { layer -> body += getDataWithTextCombineProgram(layer).toList() }
+        return (u32(body.size + 4) + body).toByteArray()
+    }
+
+    private fun getDataWithTextCombineProgram(layer: CoolleduxTextLayer): ByteArray = getDataWithTextContentProgramContent(layer)
+
+    private fun getDataWithTextContentProgramContent(layer: CoolleduxTextLayer): ByteArray {
+        val out = mutableListOf<Byte>()
+        out += layer.layerType.coerceIn(0, 255).toByte()
+        out += layer.textRotate.coerceIn(0, 255).toByte()
+        out += (if (layer.isAutoTextSize) 1 else 0).toByte()
+        out += layer.textSize.coerceIn(0, 255).toByte()
+        out += layer.textSpacing.coerceIn(0, 255).toByte()
+        out += (if (layer.isTextBold) 1 else 0).toByte()
+        out += 0x00.toByte()
+        out += 0x00.toByte()
+        out += 0x01.toByte()
+        out += u16(layer.startColumn)
+        out += u16(layer.startRow)
+        out += u16(layer.showWidth)
+        out += u16(layer.showHeight)
+        out += layer.mode.coerceIn(0, 255).toByte()
+        out += layer.speed.coerceIn(0, 255).toByte()
+        out += layer.stayTime.coerceIn(0, 255).toByte()
+        out += u16(layer.textSpacing)
+        out += u32(layer.glyphBytes.size)
+        out += layer.glyphBytes.toList()
+        return out.toByteArray()
+    }
+
+    private fun getDataResult(programBytes: ByteArray): ByteArray = programBytes
 
     private fun u16(value: Int): List<Byte> = listOf(((value ushr 8) and 0xFF).toByte(), (value and 0xFF).toByte())
     private fun u32(value: Int): List<Byte> = listOf(
