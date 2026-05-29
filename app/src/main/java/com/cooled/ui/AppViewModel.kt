@@ -22,6 +22,7 @@ import com.cooled.core.protocol.TransferState
 import com.cooled.core.protocol.TransferStateMachine
 import com.cooled.data.persistence.RememberedDeviceStore
 import com.cooled.data.repositories.DeviceRepository
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -39,6 +40,8 @@ class AppViewModel(
 
     private var pendingProgram: ProgramPackage? = null
     private var pendingChunkIndex: Int = 0
+    private var pendingStartRetries: Int = 0
+    private var nextProgramIndex: Int = 0
 
     private val _events = MutableStateFlow<List<String>>(emptyList())
     val events: StateFlow<List<String>> = _events.asStateFlow()
@@ -75,6 +78,7 @@ class AppViewModel(
                 if (it == ConnectionState.DISCONNECTED) {
                     pendingProgram = null
                     pendingChunkIndex = 0
+                    pendingStartRetries = 0
                     transferMachine.cancel()
                     appendEvent("${ts()} Transfer cleanup on disconnect")
                 }
@@ -127,10 +131,12 @@ class AppViewModel(
 
     fun sendTextProgram(text: String, speed: Int, effect: Int, programType: Int?, extraTypeByte: Int?) = viewModelScope.launch {
         val cleanText = text.ifBlank { "HELLO" }.take(128)
+        val programIndex = nextProgramIndex
+        nextProgramIndex = (nextProgramIndex + 1) % 4
         val pack = repo.composeProgram(
             family = family.value,
             content = ProgramContent.Text(cleanText, speed = speed.coerceIn(0, 255), effect = effect.coerceIn(0, 255)),
-            index = 0,
+            index = programIndex,
             count = 1,
             showCount = 1,
             programType = programType,
@@ -138,8 +144,9 @@ class AppViewModel(
         )
         pendingProgram = pack
         pendingChunkIndex = 0
+        pendingStartRetries = 3
         transferMachine.startSession(pack.metadata.chunkCount)
-        appendEvent("${ts()} Program start queued text='$cleanText' speed=${speed.coerceIn(0, 255)} effect=${effect.coerceIn(0, 255)} programType=${programType ?: "none"} extra=${extraTypeByte ?: "none"} compressed=${pack.metadata.compressedSize} chunks=${pack.metadata.chunkCount}")
+        appendEvent("${ts()} Program start queued slot=$programIndex text='$cleanText' speed=${speed.coerceIn(0, 255)} effect=${effect.coerceIn(0, 255)} programType=${programType ?: "none"} extra=${extraTypeByte ?: "none"} compressed=${pack.metadata.compressedSize} chunks=${pack.metadata.chunkCount}")
         repo.sendRawFrame(pack.startHeaderFrame)
     }
 
@@ -156,11 +163,20 @@ class AppViewModel(
         when (payload) {
             is ParsedPayload.TransferStartResponse -> {
                 if (payload.status == 0) {
+                    pendingStartRetries = 0
                     pendingChunkIndex = 0
                     sendPendingChunk(pack)
+                } else if (payload.status == 1 && pendingStartRetries > 0) {
+                    pendingStartRetries--
+                    appendEvent("${ts()} Program start NACK; retrying start (${pendingStartRetries} left)")
+                    viewModelScope.launch {
+                        delay(300L)
+                        if (pendingProgram === pack) repo.sendRawFrame(pack.startHeaderFrame)
+                    }
                 } else {
                     pendingProgram = null
                     pendingChunkIndex = 0
+                    pendingStartRetries = 0
                     appendEvent("${ts()} Program upload aborted: start rejected status=${payload.status}")
                 }
             }
@@ -171,6 +187,7 @@ class AppViewModel(
                         appendEvent("${ts()} Program upload completed chunks=${pack.chunkFrames.size}")
                         pendingProgram = null
                         pendingChunkIndex = 0
+                        pendingStartRetries = 0
                     } else {
                         sendPendingChunk(pack)
                     }
@@ -181,6 +198,7 @@ class AppViewModel(
                 } else {
                     pendingProgram = null
                     pendingChunkIndex = 0
+                    pendingStartRetries = 0
                     appendEvent("${ts()} Program upload aborted: chunk ${payload.chunkIndex} rejected status=${payload.status}")
                 }
             }
@@ -259,6 +277,7 @@ class AppViewModel(
     fun cancelTransfer() {
         pendingProgram = null
         pendingChunkIndex = 0
+        pendingStartRetries = 0
         transferMachine.cancel()
         appendEvent("${ts()} Transfer cancelled")
     }
