@@ -1,5 +1,6 @@
 package com.cooled.core.protocol
 
+import com.cooled.core.assets.OriginalLedAssetByteSources
 import com.cooled.core.compression.LzssCodec
 import com.cooled.core.model.DeviceFamily
 
@@ -11,6 +12,16 @@ sealed class ProgramContent {
         val displayColumns: Int? = null,
         val displayRows: Int? = null
     ) : ProgramContent()
+
+    data class OriginalAsset(
+        val assetPath: String,
+        val kind: String,
+        val speed: Int = 255,
+        val effect: Int = 2,
+        val displayColumns: Int? = null,
+        val displayRows: Int? = null
+    ) : ProgramContent()
+
     data class Drawing(val width: Int, val height: Int, val rgbBytes: ByteArray) : ProgramContent()
     data class PresetMode(val mode: Int, val intensity: Int) : ProgramContent()
 }
@@ -88,6 +99,20 @@ object ProgramComposer {
             byteArrayOf(0x54, content.speed.toByte(), content.effect.toByte(), textBytes.size.toByte()) + textBytes
         }
 
+        is ProgramContent.OriginalAsset -> if (family == DeviceFamily.COOLLEDUX) {
+            CoolleduxProgramBytecode.originalAsset(
+                assetPath = content.assetPath,
+                kind = content.kind,
+                speed = content.speed,
+                effect = content.effect,
+                displayColumns = content.displayColumns,
+                displayRows = content.displayRows
+            )
+        } else {
+            val bytes = OriginalLedAssetByteSources.active.read(content.assetPath) ?: ByteArray(0)
+            byteArrayOf(0x41, content.kind.take(1).encodeToByteArray().firstOrNull() ?: 0x00, bytes.size.coerceIn(0, 255).toByte()) + bytes
+        }
+
         is ProgramContent.Drawing -> {
             require(content.rgbBytes.size == content.width * content.height * 3) { "Drawing rgbBytes must be width*height*3" }
             byteArrayOf(0x49, content.width.toByte(), content.height.toByte()) + content.rgbBytes
@@ -114,6 +139,8 @@ data class CoolleduxTextProgramContent(
     val textSpacing: Int = 1
 )
 
+sealed interface CoolleduxLayer
+
 data class CoolleduxTextLayer(
     val layerType: Int,
     val startRow: Int,
@@ -129,10 +156,23 @@ data class CoolleduxTextLayer(
     val textSpacing: Int,
     val isTextBold: Boolean,
     val glyphBytes: ByteArray
-)
+) : CoolleduxLayer
+
+data class CoolleduxAssetLayer(
+    val layerType: Int,
+    val assetKind: String,
+    val startRow: Int,
+    val startColumn: Int,
+    val showHeight: Int,
+    val showWidth: Int,
+    val mode: Int,
+    val speed: Int,
+    val stayTime: Int,
+    val payloadBytes: ByteArray
+) : CoolleduxLayer
 
 data class CoolleduxCombineProgram(
-    val layers: List<CoolleduxTextLayer>
+    val layers: List<CoolleduxLayer>
 )
 
 data class CoolleduxProgram(
@@ -158,6 +198,25 @@ object CoolleduxProgramBytecode {
             textSize = textSize
         )
         return getDataResult(getDataForProgram(textContentProgram(content)))
+    }
+
+    fun originalAsset(assetPath: String, kind: String, speed: Int, effect: Int, displayColumns: Int?, displayRows: Int?): ByteArray {
+        val rows = displayRows?.coerceIn(8, 128) ?: 32
+        val columns = displayColumns?.coerceIn(8, 512) ?: 128
+        val payload = OriginalLedAssetByteSources.active.read(assetPath) ?: ByteArray(0)
+        val layer = CoolleduxAssetLayer(
+            layerType = assetLayerType(kind),
+            assetKind = kind,
+            startRow = 0,
+            startColumn = 0,
+            showHeight = rows,
+            showWidth = columns,
+            mode = effect.coerceIn(0, 255),
+            speed = speed.coerceIn(0, 255),
+            stayTime = 3,
+            payloadBytes = payload
+        )
+        return getDataResult(getDataForProgram(CoolleduxProgram(listOf(CoolleduxCombineProgram(listOf(layer))))))
     }
 
     private fun textContentProgram(content: CoolleduxTextProgramContent): CoolleduxProgram {
@@ -192,11 +251,18 @@ object CoolleduxProgramBytecode {
 
     private fun getDataForCombineProgram(combine: CoolleduxCombineProgram): ByteArray {
         val body = mutableListOf<Byte>()
-        combine.layers.forEach { layer -> body += getDataWithTextCombineProgram(layer).toList() }
+        combine.layers.forEach { layer -> body += getDataWithCombineProgram(layer).toList() }
         return (u32(body.size + 4) + body).toByteArray()
     }
 
+    private fun getDataWithCombineProgram(layer: CoolleduxLayer): ByteArray = when (layer) {
+        is CoolleduxTextLayer -> getDataWithTextCombineProgram(layer)
+        is CoolleduxAssetLayer -> getDataWithAssetCombineProgram(layer)
+    }
+
     private fun getDataWithTextCombineProgram(layer: CoolleduxTextLayer): ByteArray = getDataWithTextContentProgramContent(layer)
+
+    private fun getDataWithAssetCombineProgram(layer: CoolleduxAssetLayer): ByteArray = getDataWithAssetContentProgramContent(layer)
 
     private fun getDataWithTextContentProgramContent(layer: CoolleduxTextLayer): ByteArray {
         val out = mutableListOf<Byte>()
@@ -215,14 +281,43 @@ object CoolleduxProgramBytecode {
         out += u16(layer.showHeight)
         out += layer.mode.coerceIn(0, 255).toByte()
         out += layer.speed.coerceIn(0, 255).toByte()
-        out += layer.stayTime.coerceIn(0, 255).toByte()
+        out += 0x03.toByte()
         out += u16(layer.textSpacing)
         out += u32(layer.glyphBytes.size)
         out += layer.glyphBytes.toList()
         return out.toByteArray()
     }
 
+    private fun getDataWithAssetContentProgramContent(layer: CoolleduxAssetLayer): ByteArray {
+        val kindBytes = layer.assetKind.encodeToByteArray().take(16)
+        val out = mutableListOf<Byte>()
+        out += layer.layerType.coerceIn(0, 255).toByte()
+        out += 0x00.toByte()
+        out += u16(layer.startColumn)
+        out += u16(layer.startRow)
+        out += u16(layer.showWidth)
+        out += u16(layer.showHeight)
+        out += layer.mode.coerceIn(0, 255).toByte()
+        out += layer.speed.coerceIn(0, 255).toByte()
+        out += layer.stayTime.coerceIn(0, 255).toByte()
+        out += kindBytes.size.coerceIn(0, 255).toByte()
+        out += kindBytes
+        out += u32(layer.payloadBytes.size)
+        out += layer.payloadBytes.toList()
+        return out.toByteArray()
+    }
+
     private fun getDataResult(programBytes: ByteArray): ByteArray = programBytes
+
+    private fun assetLayerType(kind: String): Int = when (kind.lowercase()) {
+        "animation" -> 3
+        "emoji" -> 4
+        "icon" -> 5
+        "image" -> 6
+        "clock-template" -> 7
+        "sensor-template" -> 8
+        else -> 9
+    }
 
     private fun u16(value: Int): List<Byte> = listOf(((value ushr 8) and 0xFF).toByte(), (value and 0xFF).toByte())
     private fun u32(value: Int): List<Byte> = listOf(
