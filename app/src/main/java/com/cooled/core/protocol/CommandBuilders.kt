@@ -19,7 +19,6 @@ object CommandBuilders {
     fun setScoreboardRunning(running: Boolean): ByteArray = FrameCodec.encode(byteArrayOf(0x11.toByte(), 0x04, (if (running) 1 else 0).toByte()))
     fun setVolume(value: Int): ByteArray = FrameCodec.encode(byteArrayOf(0x1E.toByte(), 0x03, value.coerceIn(0, 100).toByte()))
 
-
     fun setColorMode(modeIndex: Int): ByteArray =
         FrameCodec.encode(byteArrayOf(0x13.toByte(), 0x03, modeIndex.toByte()))
 
@@ -78,6 +77,7 @@ object CommandBuilders {
         val trailer = if (request.programType == null) byteArrayOf() else typedProgramTrailer(request.programType, request.extraTypeByte)
         val opcode = when {
             request.useAlternateOpcode -> 0x1A
+            family == DeviceFamily.COOLLEDUX -> 0x1A
             else -> 0x02
         }
         val crc = CoolLedCrc.crc32Like(request.compressed)
