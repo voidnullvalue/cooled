@@ -88,9 +88,9 @@ object ProgramComposer {
 private object CoolleduxTextPayload {
     fun encode(text: String, speed: Int, effect: Int): ByteArray {
         val clean = text.ifBlank { "HELLO" }.take(128)
-        val glyphBytes = SimpleGlyphs.renderColumns(clean)
-        val showWidth = maxOf(8, glyphBytes.size)
-        val showHeight = 8
+        val glyph = SimpleGlyphs.renderPixelMatrix(clean)
+        val showWidth = maxOf(8, glyph.width)
+        val showHeight = glyph.height
         val mode = effect.coerceIn(0, 255)
         val speedByte = speed.coerceIn(0, 255)
 
@@ -106,7 +106,7 @@ private object CoolleduxTextPayload {
         textContent += speedByte.toByte()
         textContent += 0x00
         textContent += u16(0)
-        textContent += glyphBytes.toList()
+        textContent += glyph.data.toList()
 
         val combineBlock = mutableListOf<Byte>()
         combineBlock += u32(textContent.size + 4)
@@ -129,7 +129,12 @@ private object CoolleduxTextPayload {
     )
 }
 
+private data class GlyphMatrix(val width: Int, val height: Int, val data: ByteArray)
+
 private object SimpleGlyphs {
+    private const val ON: Byte = 0x7F
+    private const val OFF: Byte = 0x00
+
     private val font = mapOf(
         'A' to listOf("01110", "10001", "10001", "11111", "10001", "10001", "10001"),
         'B' to listOf("11110", "10001", "10001", "11110", "10001", "10001", "11110"),
@@ -173,19 +178,22 @@ private object SimpleGlyphs {
         '.' to listOf("00000", "00000", "00000", "00000", "00000", "01100", "01100")
     )
 
-    fun renderColumns(text: String): ByteArray {
-        val columns = mutableListOf<Byte>()
+    fun renderPixelMatrix(text: String): GlyphMatrix {
+        val rows = MutableList(8) { StringBuilder() }
         text.uppercase().forEach { ch ->
-            val rows = font[ch] ?: font[' ']!!
-            for (x in 0 until 5) {
-                var value = 0
-                for (y in rows.indices) {
-                    if (rows[y][x] == '1') value = value or (1 shl y)
-                }
-                columns += value.toByte()
-            }
-            columns += 0x00
+            val glyph = font[ch] ?: font[' ']!!
+            rows[0].append("00000")
+            for (y in glyph.indices) rows[y + 1].append(glyph[y])
+            repeat(8) { rows[it].append('0') }
         }
-        return columns.toByteArray()
+        val width = rows.maxOf { it.length }.coerceAtLeast(8)
+        val out = ByteArray(width * 8) { OFF }
+        for (y in 0 until 8) {
+            val row = rows[y].toString().padEnd(width, '0')
+            for (x in 0 until width) {
+                out[y * width + x] = if (row[x] == '1') ON else OFF
+            }
+        }
+        return GlyphMatrix(width, 8, out)
     }
 }
