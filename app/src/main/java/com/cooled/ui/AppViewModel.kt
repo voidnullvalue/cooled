@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.APPLICATION_KEY
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.CreationExtras
+import com.cooled.core.assets.OriginalLedAssetCatalogs
 import com.cooled.core.ble.AndroidBleTransport
 import com.cooled.core.ble.BleIoDirection
 import com.cooled.core.ble.BleTransport
@@ -179,10 +180,26 @@ class AppViewModel(
             return@launch
         }
         val cleanKind = kind.ifBlank { "payload-asset" }.take(32)
+        queueOriginalAssetProgram(cleanPath, cleanKind, speed, effect, programType, extraTypeByte)
+    }
+
+    fun sendPreferredOriginalAssetProgram(kind: String, speed: Int, effect: Int, programType: Int?, extraTypeByte: Int?) = viewModelScope.launch {
+        val cleanKind = kind.ifBlank { "payload-asset" }.take(32)
+        val asset = OriginalLedAssetCatalogs.active.firstPreferred(cleanKind)
+        if (asset == null) {
+            appendEvent("${ts()} Preferred original asset upload skipped: no asset found for kind=$cleanKind")
+            return@launch
+        }
+        queueOriginalAssetProgram(asset.path, asset.kind, speed, effect, programType, extraTypeByte)
+    }
+
+    fun sendTextProgram() = sendTextProgram("HELLO", 255, 2, if (family.value == DeviceFamily.ILEDCLOCK) 14 else null, if (family.value == DeviceFamily.ILEDCLOCK) 1 else null)
+
+    private fun queueOriginalAssetProgram(assetPath: String, kind: String, speed: Int, effect: Int, programType: Int?, extraTypeByte: Int?) {
         val pack = buildProgramPackage(
             content = ProgramContent.OriginalAsset(
-                assetPath = cleanPath,
-                kind = cleanKind,
+                assetPath = assetPath,
+                kind = kind,
                 speed = speed.coerceIn(0, 255),
                 effect = effect.coerceIn(0, 255),
                 displayColumns = connectedMetadata.columns,
@@ -191,10 +208,8 @@ class AppViewModel(
             programType = programType,
             extraTypeByte = extraTypeByte
         )
-        queueProgramUpload(pack, "asset='$cleanPath' kind=$cleanKind matrix=${connectedMetadata.columns ?: "?"}x${connectedMetadata.rows ?: "?"} speed=${speed.coerceIn(0, 255)} effect=${effect.coerceIn(0, 255)} programType=${programType ?: "none"} extra=${extraTypeByte ?: "none"}")
+        queueProgramUpload(pack, "asset='$assetPath' kind=$kind matrix=${connectedMetadata.columns ?: "?"}x${connectedMetadata.rows ?: "?"} speed=${speed.coerceIn(0, 255)} effect=${effect.coerceIn(0, 255)} programType=${programType ?: "none"} extra=${extraTypeByte ?: "none"}")
     }
-
-    fun sendTextProgram() = sendTextProgram("HELLO", 255, 2, if (family.value == DeviceFamily.ILEDCLOCK) 14 else null, if (family.value == DeviceFamily.ILEDCLOCK) 1 else null)
 
     private fun buildProgramPackage(content: ProgramContent, programType: Int?, extraTypeByte: Int?): ProgramPackage {
         val programIndex = nextProgramIndex
