@@ -41,6 +41,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.cooled.core.assets.OriginalLedAssetCatalogs
 import com.cooled.ui.AppViewModel
 
 private val CooledColors = darkColorScheme(
@@ -159,6 +160,8 @@ private fun AppScreenContent(vm: AppViewModel, missingPermissions: List<String>)
     var alarmDurationSeconds by remember { mutableStateOf("600") }
     var alarmReminderMinutes by remember { mutableStateOf("5") }
     var reminderId by remember { mutableStateOf("0") }
+    var assetRefresh by remember { mutableIntStateOf(0) }
+    val ledAssetSummary = remember(assetRefresh, transportMode) { OriginalLedAssetCatalogs.active.summary() }
     val hasBlePermissions = missingPermissions.isEmpty()
     val isFakeMode = transportMode == "Fake demo"
     val context = LocalContext.current
@@ -189,6 +192,15 @@ private fun AppScreenContent(vm: AppViewModel, missingPermissions: List<String>)
         WhiteText("Caps: clock=${caps.supportsClock} colorModes=${caps.supportsColorModes} countdown=${caps.supportsCountdown} stopwatch=${caps.supportsStopwatch} scoreboard=${caps.supportsScoreboard} volume=${caps.supportsVolume}")
         WhiteText("Last packet: $parsedSummary")
         WhiteText("Transfer=$transfer")
+
+        SectionTitle("Original APK LED Assets")
+        WhiteText(ledAssetSummary.asSingleLine())
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Button(onClick = { assetRefresh++ }) { Text("Refresh Asset Catalog") }
+        }
+        ledAssetSummary.examples.take(6).forEach { asset ->
+            WhiteText("${asset.kind}: ${asset.path} (${asset.sizeBytes} bytes)")
+        }
 
         SectionTitle("Core LED Controls")
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -352,7 +364,12 @@ private fun AppScreenContent(vm: AppViewModel, missingPermissions: List<String>)
         }
 
         SectionTitle("Scan Results")
-        scans.forEach { d -> Button(onClick = { vm.connect(d.address, d.name) }, enabled = hasBlePermissions, modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp)) { Text("${d.name ?: "Unnamed"} (${d.address}) RSSI=${d.rssi}") } }
+        scans.forEach { d ->
+            val meta = d.metadata
+            Button(onClick = { vm.connect(d.address, d.name) }, enabled = hasBlePermissions, modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp)) {
+                Text("${d.name ?: "Unnamed"} (${d.address}) RSSI=${d.rssi} matrix=${meta.columns ?: "?"}x${meta.rows ?: "?"} color=${meta.colorType ?: "?"}")
+            }
+        }
 
         SectionTitle("Debug Events")
         events.take(40).forEach { e -> WhiteText(e) }
