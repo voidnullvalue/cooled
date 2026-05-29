@@ -143,8 +143,8 @@ private fun AppScreenContent(vm: AppViewModel, missingPermissions: List<String>)
     var uploadText by remember { mutableStateOf("HELLO") }
     var uploadSpeed by remember { mutableStateOf("3") }
     var uploadEffect by remember { mutableStateOf("1") }
-    var uploadProgramType by remember { mutableStateOf("14") }
-    var uploadExtraType by remember { mutableStateOf("1") }
+    var uploadProgramType by remember { mutableStateOf("") }
+    var uploadExtraType by remember { mutableStateOf("") }
     var nightStartHour by remember { mutableStateOf("22") }
     var nightStartMinute by remember { mutableStateOf("0") }
     var nightEndHour by remember { mutableStateOf("6") }
@@ -198,14 +198,7 @@ private fun AppScreenContent(vm: AppViewModel, missingPermissions: List<String>)
         }
 
         SectionTitle("Password")
-        TextField(
-            value = password,
-            onValueChange = { password = it },
-            modifier = Modifier.fillMaxWidth(),
-            label = { Text("Password (hex-ish digits)") },
-            enabled = hasBlePermissions,
-            colors = textFieldColors()
-        )
+        TextField(value = password, onValueChange = { password = it }, modifier = Modifier.fillMaxWidth(), label = { Text("Password (hex-ish digits)") }, enabled = hasBlePermissions, colors = textFieldColors())
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Button(onClick = { vm.checkPassword(password) }, enabled = hasBlePermissions) { Text("Check Password") }
             Button(onClick = { vm.setPassword(password) }, enabled = hasBlePermissions) { Text("Set Password") }
@@ -249,29 +242,11 @@ private fun AppScreenContent(vm: AppViewModel, missingPermissions: List<String>)
             SmallTextField(nightStartMinute, { nightStartMinute = it }, "Start m")
             SmallTextField(nightEndHour, { nightEndHour = it }, "End h")
             SmallTextField(nightEndMinute, { nightEndMinute = it }, "End m")
-            Button(
-                onClick = {
-                    vm.setNightMode(
-                        true,
-                        nightStartHour.toIntOrNull() ?: 22,
-                        nightStartMinute.toIntOrNull() ?: 0,
-                        nightEndHour.toIntOrNull() ?: 6,
-                        nightEndMinute.toIntOrNull() ?: 0
-                    )
-                },
-                enabled = hasBlePermissions && caps.supportsNightMode
-            ) { Text("Set Night Mode") }
+            Button(onClick = { vm.setNightMode(true, nightStartHour.toIntOrNull() ?: 22, nightStartMinute.toIntOrNull() ?: 0, nightEndHour.toIntOrNull() ?: 6, nightEndMinute.toIntOrNull() ?: 0) }, enabled = hasBlePermissions && caps.supportsNightMode) { Text("Set Night Mode") }
         }
 
         SectionTitle("Text Program Upload")
-        TextField(
-            value = uploadText,
-            onValueChange = { uploadText = it },
-            modifier = Modifier.fillMaxWidth(),
-            label = { Text("Text to upload") },
-            enabled = hasBlePermissions,
-            colors = textFieldColors()
-        )
+        TextField(value = uploadText, onValueChange = { uploadText = it }, modifier = Modifier.fillMaxWidth(), label = { Text("Text to upload") }, enabled = hasBlePermissions, colors = textFieldColors())
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             SmallTextField(uploadSpeed, { uploadSpeed = it }, "Speed")
             SmallTextField(uploadEffect, { uploadEffect = it }, "Effect")
@@ -279,18 +254,12 @@ private fun AppScreenContent(vm: AppViewModel, missingPermissions: List<String>)
             SmallTextField(uploadExtraType, { uploadExtraType = it }, "Extra type")
         }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Button(
-                onClick = {
-                    vm.sendTextProgram(
-                        text = uploadText,
-                        speed = uploadSpeed.toIntOrNull() ?: 3,
-                        effect = uploadEffect.toIntOrNull() ?: 1,
-                        programType = uploadProgramType.toIntOrNull(),
-                        extraTypeByte = uploadExtraType.toIntOrNull()
-                    )
-                },
-                enabled = hasBlePermissions
-            ) { Text("Upload Text Program") }
+            Button(onClick = { uploadProgramType = ""; uploadExtraType = "" }) { Text("Basic Header") }
+            Button(onClick = { uploadProgramType = "14"; uploadExtraType = "1" }) { Text("Type 14/1") }
+            Button(onClick = { uploadProgramType = "8"; uploadExtraType = "" }) { Text("Type 8") }
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Button(onClick = { vm.sendTextProgram(text = uploadText, speed = uploadSpeed.toIntOrNull() ?: 3, effect = uploadEffect.toIntOrNull() ?: 1, programType = uploadProgramType.toIntOrNull(), extraTypeByte = uploadExtraType.toIntOrNull()) }, enabled = hasBlePermissions) { Text("Upload Text Program") }
             Button(onClick = vm::timeoutTransfer) { Text("Timeout Tick") }
             Button(onClick = vm::cancelTransfer) { Text("Cancel Transfer") }
         }
@@ -304,11 +273,7 @@ private fun AppScreenContent(vm: AppViewModel, missingPermissions: List<String>)
         }
 
         SectionTitle("Scan Results")
-        scans.forEach { d ->
-            Button(onClick = { vm.connect(d.address, d.name) }, enabled = hasBlePermissions, modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp)) {
-                Text("${d.name ?: "Unnamed"} (${d.address}) RSSI=${d.rssi}")
-            }
-        }
+        scans.forEach { d -> Button(onClick = { vm.connect(d.address, d.name) }, enabled = hasBlePermissions, modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp)) { Text("${d.name ?: "Unnamed"} (${d.address}) RSSI=${d.rssi}") } }
 
         SectionTitle("Debug Events")
         events.take(40).forEach { e -> WhiteText(e) }
@@ -317,13 +282,7 @@ private fun AppScreenContent(vm: AppViewModel, missingPermissions: List<String>)
 
 @Composable
 private fun SmallTextField(value: String, onChange: (String) -> Unit, label: String) {
-    TextField(
-        value = value,
-        onValueChange = onChange,
-        label = { Text(label) },
-        singleLine = true,
-        colors = textFieldColors()
-    )
+    TextField(value = value, onValueChange = onChange, label = { Text(label) }, singleLine = true, colors = textFieldColors())
 }
 
 @Composable
@@ -339,9 +298,7 @@ private fun textFieldColors() = TextFieldDefaults.colors(
 )
 
 @Composable
-private fun SectionTitle(value: String) {
-    Text(value, color = Color.White, style = MaterialTheme.typography.titleMedium)
-}
+private fun SectionTitle(value: String) { Text(value, color = Color.White, style = MaterialTheme.typography.titleMedium) }
 
 private fun permissionLabel(permission: String): String = when (permission) {
     Manifest.permission.ACCESS_FINE_LOCATION -> "Location"
@@ -350,11 +307,7 @@ private fun permissionLabel(permission: String): String = when (permission) {
     else -> permission.substringAfterLast('.')
 }
 
-private fun appPermissionSettingsIntent(packageName: String): Intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-    data = Uri.fromParts("package", packageName, null)
-}
+private fun appPermissionSettingsIntent(packageName: String): Intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply { data = Uri.fromParts("package", packageName, null) }
 
 @Composable
-private fun WhiteText(value: String) {
-    Text(value, color = Color.White)
-}
+private fun WhiteText(value: String) { Text(value, color = Color.White) }
