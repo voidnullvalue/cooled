@@ -112,7 +112,7 @@ class AppViewModel(
     fun checkPassword(p: String) = viewModelScope.launch { repo.sendCheckPassword(p) }
     fun setPassword(p: String) = viewModelScope.launch { repo.sendSetPassword(p) }
 
-    fun syncTimeNow() = viewModelScope.launch { repo.sendTimeSync((System.currentTimeMillis() / 1000L).toInt()) }
+    fun syncTimeNow() = viewModelScope.launch { repo.sendTimeSyncNow() }
     fun timer(minutes: Int, enabled: Boolean) = viewModelScope.launch { repo.sendSetTimer(minutes.coerceIn(0, 24 * 60), enabled) }
     fun queryTimerSwitches() = viewModelScope.launch { repo.sendQueryTimerSwitches() }
     fun countdown(running: Boolean) = viewModelScope.launch { repo.sendCountdown(running) }
@@ -296,6 +296,7 @@ class AppViewModel(
         is ParsedPayload.MirrorState -> "Mirror/rotate value=$value"
         is ParsedPayload.PasswordCheckResult -> "Password check ${if (success) "OK" else "failed"} code=$code"
         is ParsedPayload.PasswordSetResult -> "Password set ${if (success) "OK" else "failed"} code=$code"
+        is ParsedPayload.DriveState -> "Drive state opcode=0x${opcode.hex2()} state=$state"
         is ParsedPayload.DeviceInfo -> "Device model=$model fw=$fwMajor.$fwMinor matrix=${columns}x$rows colorType=$colorType packageSize=${packageSize ?: "unknown"}"
         is ParsedPayload.OtaInfo -> "OTA supported=$supported version=$versionMajor.$versionMinor remoteFile=$remoteFile"
         is ParsedPayload.TimerSwitches -> "Timer switches=${values.joinToString()}"
