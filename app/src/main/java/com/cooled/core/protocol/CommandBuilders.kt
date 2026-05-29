@@ -70,15 +70,23 @@ object CommandBuilders {
         listOf(TimerSwitchCommand(enabled = enabled, hour = (minutes / 60) % 24, minute = minutes % 60, weekdayMask = 0, turnDeviceOn = enabled))
     )
 
+    fun queryCountdownStatus(): ByteArray = FrameCodec.encode(byteArrayOf(0x0F.toByte(), 0x01))
+    fun resetCountdown(hour: Int = 0, minute: Int = 0, second: Int = 0): ByteArray = FrameCodec.encode(
+        byteArrayOf(0x0F.toByte(), 0x02, hour.coerceIn(0, 23).toByte(), minute.coerceIn(0, 59).toByte(), second.coerceIn(0, 59).toByte())
+    )
     fun setCountdownRunning(running: Boolean): ByteArray = FrameCodec.encode(byteArrayOf(0x0F.toByte(), 0x03, (if (running) 1 else 0).toByte()))
-    fun setStopwatchRunning(running: Boolean): ByteArray = FrameCodec.encode(byteArrayOf(0x10.toByte(), 0x03, (if (running) 1 else 0).toByte()))
-    fun setScoreboardRunning(running: Boolean): ByteArray = FrameCodec.encode(byteArrayOf(0x11.toByte(), 0x04, (if (running) 1 else 0).toByte()))
-    fun setVolume(value: Int): ByteArray = FrameCodec.encode(byteArrayOf(0x1E.toByte(), 0x03, value.coerceIn(0, 100).toByte()))
 
+    fun queryStopwatchStatus(): ByteArray = FrameCodec.encode(byteArrayOf(0x10.toByte(), 0x01))
+    fun resetStopwatch(): ByteArray = FrameCodec.encode(byteArrayOf(0x10.toByte(), 0x02))
+    fun setStopwatchRunning(running: Boolean): ByteArray = FrameCodec.encode(byteArrayOf(0x10.toByte(), 0x03, (if (running) 1 else 0).toByte()))
+
+    fun queryScoreboardStatus(): ByteArray = FrameCodec.encode(byteArrayOf(0x11.toByte(), 0x01))
+    fun resetScoreboard(left: Int = 0, right: Int = 0): ByteArray = FrameCodec.encode(byteArrayOf(0x11.toByte(), 0x02, left.coerceIn(0, 255).toByte(), right.coerceIn(0, 255).toByte()))
+    fun setScoreboardRunning(running: Boolean): ByteArray = FrameCodec.encode(byteArrayOf(0x11.toByte(), 0x04, (if (running) 1 else 0).toByte()))
+
+    fun setVolume(value: Int): ByteArray = FrameCodec.encode(byteArrayOf(0x1E.toByte(), 0x03, value.coerceIn(0, 100).toByte()))
     fun setColorMode(modeIndex: Int): ByteArray = FrameCodec.encode(byteArrayOf(0x13.toByte(), 0x03, modeIndex.coerceIn(0, 255).toByte()))
 
-    fun resetCountdown(): ByteArray = FrameCodec.encode(byteArrayOf(0x0F.toByte(), 0x02))
-    fun resetStopwatch(): ByteArray = FrameCodec.encode(byteArrayOf(0x10.toByte(), 0x02))
     fun queryTomato(): ByteArray = FrameCodec.encode(byteArrayOf(0x15.toByte(), 0x02))
     fun queryTemperatureHumidity(type: Int = 1): ByteArray = FrameCodec.encode(byteArrayOf(0x19.toByte(), type.coerceIn(0, 255).toByte()))
 
