@@ -18,6 +18,7 @@ import com.cooled.core.protocol.ParsedPayload
 import com.cooled.core.protocol.ProgramContent
 import com.cooled.core.protocol.ProgramPackage
 import com.cooled.core.protocol.ProgramStartRequest
+import com.cooled.core.protocol.TimerSwitchCommand
 import com.cooled.core.protocol.TransferState
 import com.cooled.core.protocol.TransferStateMachine
 import com.cooled.data.persistence.RememberedDeviceStore
@@ -117,6 +118,19 @@ class AppViewModel(
 
     fun syncTimeNow() = viewModelScope.launch { repo.sendTimeSyncNow() }
     fun timer(minutes: Int, enabled: Boolean) = viewModelScope.launch { repo.sendSetTimer(minutes.coerceIn(0, 24 * 60), enabled) }
+    fun setTimerSwitch(enabled: Boolean, hour: Int, minute: Int, weekdayMask: Int, turnDeviceOn: Boolean) = viewModelScope.launch {
+        repo.sendTimerSwitches(
+            listOf(
+                TimerSwitchCommand(
+                    enabled = enabled,
+                    hour = hour.coerceIn(0, 23),
+                    minute = minute.coerceIn(0, 59),
+                    weekdayMask = weekdayMask.coerceIn(0, 127),
+                    turnDeviceOn = turnDeviceOn
+                )
+            )
+        )
+    }
     fun queryTimerSwitches() = viewModelScope.launch { repo.sendQueryTimerSwitches() }
     fun countdown(running: Boolean) = viewModelScope.launch { repo.sendCountdown(running) }
     fun stopwatch(running: Boolean) = viewModelScope.launch { repo.sendStopwatch(running) }
