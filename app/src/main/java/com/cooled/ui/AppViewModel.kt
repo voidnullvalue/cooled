@@ -104,6 +104,9 @@ class AppViewModel(
     fun disconnect() = viewModelScope.launch { repo.disconnect() }
 
     fun queryInfo() = viewModelScope.launch { repo.sendQueryInfo() }
+    fun queryOtaVersion() = viewModelScope.launch { repo.sendQueryOtaVersion() }
+    fun queryDriveState() = viewModelScope.launch { repo.sendQueryDriveState() }
+    fun setDriveState(state: Int) = viewModelScope.launch { repo.sendDriveState(state.coerceIn(0, 255)) }
     fun power(on: Boolean) = viewModelScope.launch { repo.sendPower(on) }
     fun brightness(v: Int) = viewModelScope.launch { repo.sendBrightness(v.coerceIn(1, 100)) }
     fun speed(v: Int) = viewModelScope.launch { repo.sendRhythm(v) }
