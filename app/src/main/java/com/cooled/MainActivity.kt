@@ -138,11 +138,19 @@ private fun AppScreenContent(vm: AppViewModel, missingPermissions: List<String>)
     var brightness by remember { mutableStateOf(80f) }
     var volume by remember { mutableStateOf(60f) }
     var colorMode by remember { mutableStateOf("5") }
-    var timerMinutes by remember { mutableStateOf("10") }
+    var driveState by remember { mutableStateOf("0") }
+    var timerHour by remember { mutableStateOf("8") }
+    var timerMinute by remember { mutableStateOf("0") }
+    var timerWeekdayMask by remember { mutableStateOf("127") }
+    var countdownHour by remember { mutableStateOf("0") }
+    var countdownMinute by remember { mutableStateOf("10") }
+    var countdownSecond by remember { mutableStateOf("0") }
+    var scoreboardLeft by remember { mutableStateOf("0") }
+    var scoreboardRight by remember { mutableStateOf("0") }
     var password by remember { mutableStateOf("1234") }
     var uploadText by remember { mutableStateOf("HELLO") }
-    var uploadSpeed by remember { mutableStateOf("3") }
-    var uploadEffect by remember { mutableStateOf("1") }
+    var uploadSpeed by remember { mutableStateOf("255") }
+    var uploadEffect by remember { mutableStateOf("2") }
     var uploadProgramType by remember { mutableStateOf("") }
     var uploadExtraType by remember { mutableStateOf("") }
     var nightStartHour by remember { mutableStateOf("22") }
@@ -168,6 +176,7 @@ private fun AppScreenContent(vm: AppViewModel, missingPermissions: List<String>)
             Button(onClick = vm::stopScan, enabled = hasBlePermissions) { Text("Stop Scan") }
             Button(onClick = vm::disconnect, enabled = hasBlePermissions) { Text("Disconnect") }
             Button(onClick = vm::queryInfo, enabled = hasBlePermissions) { Text("Info") }
+            Button(onClick = vm::queryOtaVersion, enabled = hasBlePermissions) { Text("OTA Version") }
         }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Button(onClick = { context.startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)) }) { Text("Location Settings") }
@@ -179,7 +188,7 @@ private fun AppScreenContent(vm: AppViewModel, missingPermissions: List<String>)
         WhiteText("Last packet: $parsedSummary")
         WhiteText("Transfer=$transfer")
 
-        SectionTitle("Core Controls")
+        SectionTitle("Core LED Controls")
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Button(onClick = { vm.power(true) }, enabled = hasBlePermissions) { Text("On") }
             Button(onClick = { vm.power(false) }, enabled = hasBlePermissions) { Text("Off") }
@@ -196,6 +205,11 @@ private fun AppScreenContent(vm: AppViewModel, missingPermissions: List<String>)
             SmallTextField(colorMode, { colorMode = it }, "Color mode")
             Button(onClick = { vm.colorMode(colorMode.toIntOrNull() ?: 0) }, enabled = hasBlePermissions && caps.supportsColorModes) { Text("Send Color Mode") }
         }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Button(onClick = vm::queryDriveState, enabled = hasBlePermissions) { Text("Query Drive") }
+            SmallTextField(driveState, { driveState = it }, "Drive state")
+            Button(onClick = { vm.setDriveState(driveState.toIntOrNull() ?: 0) }, enabled = hasBlePermissions) { Text("Set Drive") }
+        }
 
         SectionTitle("Password")
         TextField(value = password, onValueChange = { password = it }, modifier = Modifier.fillMaxWidth(), label = { Text("Password (hex-ish digits)") }, enabled = hasBlePermissions, colors = textFieldColors())
@@ -204,30 +218,104 @@ private fun AppScreenContent(vm: AppViewModel, missingPermissions: List<String>)
             Button(onClick = { vm.setPassword(password) }, enabled = hasBlePermissions) { Text("Set Password") }
         }
 
-        if (caps.supportsClock) {
-            SectionTitle("Clock / Timer Controls")
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Button(onClick = vm::syncTimeNow, enabled = hasBlePermissions) { Text("Sync Time") }
-                Button(onClick = vm::queryTimerSwitches, enabled = hasBlePermissions) { Text("Query Timers") }
-                SmallTextField(timerMinutes, { timerMinutes = it }, "Timer min")
-                Button(onClick = { vm.timer(timerMinutes.toIntOrNull() ?: 10, true) }, enabled = hasBlePermissions) { Text("Set Timer") }
-            }
-            WhiteText("Volume=${volume.toInt()}")
-            Slider(value = volume, onValueChange = { volume = it }, valueRange = 0f..100f, enabled = hasBlePermissions && caps.supportsVolume)
-            Button(onClick = { vm.volume(volume.toInt()) }, enabled = hasBlePermissions && caps.supportsVolume) { Text("Send Volume") }
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Button(onClick = { vm.countdown(true) }, enabled = hasBlePermissions && caps.supportsCountdown) { Text("Countdown Start") }
-                Button(onClick = { vm.countdown(false) }, enabled = hasBlePermissions && caps.supportsCountdown) { Text("Countdown Stop") }
-                Button(onClick = { vm.resetCountdown() }, enabled = hasBlePermissions && caps.supportsCountdown) { Text("Countdown Reset") }
-            }
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Button(onClick = { vm.stopwatch(true) }, enabled = hasBlePermissions && caps.supportsStopwatch) { Text("Stopwatch Start") }
-                Button(onClick = { vm.stopwatch(false) }, enabled = hasBlePermissions && caps.supportsStopwatch) { Text("Stopwatch Stop") }
-                Button(onClick = { vm.resetStopwatch() }, enabled = hasBlePermissions && caps.supportsStopwatch) { Text("Stopwatch Reset") }
-                Button(onClick = { vm.scoreboard(true) }, enabled = hasBlePermissions && caps.supportsScoreboard) { Text("Scoreboard Start") }
-                Button(onClick = { vm.scoreboard(false) }, enabled = hasBlePermissions && caps.supportsScoreboard) { Text("Scoreboard Stop") }
-            }
+        SectionTitle("Clock / Timer Switches")
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Button(onClick = vm::syncTimeNow, enabled = hasBlePermissions) { Text("Sync Time") }
+            Button(onClick = vm::queryTimerSwitches, enabled = hasBlePermissions) { Text("Query Timer Switches") }
         }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            SmallTextField(timerHour, { timerHour = it }, "Hour")
+            SmallTextField(timerMinute, { timerMinute = it }, "Minute")
+            SmallTextField(timerWeekdayMask, { timerWeekdayMask = it }, "Week mask")
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Button(
+                onClick = {
+                    vm.setTimerSwitch(
+                        enabled = true,
+                        hour = timerHour.toIntOrNull() ?: 8,
+                        minute = timerMinute.toIntOrNull() ?: 0,
+                        weekdayMask = timerWeekdayMask.toIntOrNull() ?: 127,
+                        turnDeviceOn = true
+                    )
+                },
+                enabled = hasBlePermissions
+            ) { Text("Set On Timer") }
+            Button(
+                onClick = {
+                    vm.setTimerSwitch(
+                        enabled = true,
+                        hour = timerHour.toIntOrNull() ?: 8,
+                        minute = timerMinute.toIntOrNull() ?: 0,
+                        weekdayMask = timerWeekdayMask.toIntOrNull() ?: 127,
+                        turnDeviceOn = false
+                    )
+                },
+                enabled = hasBlePermissions
+            ) { Text("Set Off Timer") }
+            Button(
+                onClick = {
+                    vm.setTimerSwitch(
+                        enabled = false,
+                        hour = timerHour.toIntOrNull() ?: 8,
+                        minute = timerMinute.toIntOrNull() ?: 0,
+                        weekdayMask = timerWeekdayMask.toIntOrNull() ?: 127,
+                        turnDeviceOn = false
+                    )
+                },
+                enabled = hasBlePermissions
+            ) { Text("Disable Timer") }
+        }
+
+        SectionTitle("Countdown")
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Button(onClick = vm::queryCountdownStatus, enabled = hasBlePermissions && caps.supportsCountdown) { Text("Query") }
+            Button(onClick = { vm.countdown(true) }, enabled = hasBlePermissions && caps.supportsCountdown) { Text("Start") }
+            Button(onClick = { vm.countdown(false) }, enabled = hasBlePermissions && caps.supportsCountdown) { Text("Stop") }
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            SmallTextField(countdownHour, { countdownHour = it }, "Hour")
+            SmallTextField(countdownMinute, { countdownMinute = it }, "Minute")
+            SmallTextField(countdownSecond, { countdownSecond = it }, "Second")
+            Button(
+                onClick = {
+                    vm.resetCountdownTo(
+                        countdownHour.toIntOrNull() ?: 0,
+                        countdownMinute.toIntOrNull() ?: 10,
+                        countdownSecond.toIntOrNull() ?: 0
+                    )
+                },
+                enabled = hasBlePermissions && caps.supportsCountdown
+            ) { Text("Reset To") }
+        }
+
+        SectionTitle("Stopwatch")
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Button(onClick = vm::queryStopwatchStatus, enabled = hasBlePermissions && caps.supportsStopwatch) { Text("Query") }
+            Button(onClick = { vm.stopwatch(true) }, enabled = hasBlePermissions && caps.supportsStopwatch) { Text("Start") }
+            Button(onClick = { vm.stopwatch(false) }, enabled = hasBlePermissions && caps.supportsStopwatch) { Text("Stop") }
+            Button(onClick = vm::resetStopwatch, enabled = hasBlePermissions && caps.supportsStopwatch) { Text("Reset") }
+        }
+
+        SectionTitle("Scoreboard")
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Button(onClick = vm::queryScoreboardStatus, enabled = hasBlePermissions && caps.supportsScoreboard) { Text("Query") }
+            Button(onClick = { vm.scoreboard(true) }, enabled = hasBlePermissions && caps.supportsScoreboard) { Text("Start") }
+            Button(onClick = { vm.scoreboard(false) }, enabled = hasBlePermissions && caps.supportsScoreboard) { Text("Stop") }
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            SmallTextField(scoreboardLeft, { scoreboardLeft = it }, "Left")
+            SmallTextField(scoreboardRight, { scoreboardRight = it }, "Right")
+            Button(
+                onClick = { vm.resetScoreboard(scoreboardLeft.toIntOrNull() ?: 0, scoreboardRight.toIntOrNull() ?: 0) },
+                enabled = hasBlePermissions && caps.supportsScoreboard
+            ) { Text("Set Score") }
+        }
+
+        SectionTitle("Volume")
+        WhiteText("Volume=${volume.toInt()}")
+        Slider(value = volume, onValueChange = { volume = it }, valueRange = 0f..100f, enabled = hasBlePermissions && caps.supportsVolume)
+        Button(onClick = { vm.volume(volume.toInt()) }, enabled = hasBlePermissions && caps.supportsVolume) { Text("Send Volume") }
 
         SectionTitle("Optional Clock-Class Features")
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -259,7 +347,7 @@ private fun AppScreenContent(vm: AppViewModel, missingPermissions: List<String>)
             Button(onClick = { uploadProgramType = "8"; uploadExtraType = "" }) { Text("Type 8") }
         }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Button(onClick = { vm.sendTextProgram(text = uploadText, speed = uploadSpeed.toIntOrNull() ?: 3, effect = uploadEffect.toIntOrNull() ?: 1, programType = uploadProgramType.toIntOrNull(), extraTypeByte = uploadExtraType.toIntOrNull()) }, enabled = hasBlePermissions) { Text("Upload Text Program") }
+            Button(onClick = { vm.sendTextProgram(text = uploadText, speed = uploadSpeed.toIntOrNull() ?: 255, effect = uploadEffect.toIntOrNull() ?: 2, programType = uploadProgramType.toIntOrNull(), extraTypeByte = uploadExtraType.toIntOrNull()) }, enabled = hasBlePermissions) { Text("Upload Text Program") }
             Button(onClick = vm::timeoutTransfer) { Text("Timeout Tick") }
             Button(onClick = vm::cancelTransfer) { Text("Cancel Transfer") }
         }
