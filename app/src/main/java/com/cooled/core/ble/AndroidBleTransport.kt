@@ -19,7 +19,9 @@ import android.content.pm.PackageManager
 import android.location.LocationManager
 import android.os.Build
 import androidx.core.content.ContextCompat
+import com.cooled.core.protocol.AssetCoolleduxFontSource
 import com.cooled.core.protocol.BleProtocolConstants
+import com.cooled.core.protocol.CoolleduxFontSources
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -50,6 +52,10 @@ class AndroidBleTransport(private val context: Context) : BleTransport {
     override val rxFrames: Flow<RxFrame> = _rx.asStateFlow()
     override val scanResults: Flow<List<ScanDevice>> = _scan.asStateFlow()
     override val ioEvents: Flow<BleIoEvent> = _io.asStateFlow()
+
+    init {
+        CoolleduxFontSources.active = AssetCoolleduxFontSource(context.assets)
+    }
 
     private val callback = object : BluetoothGattCallback() {
         override fun onConnectionStateChange(g: BluetoothGatt, status: Int, newState: Int) {
@@ -188,9 +194,15 @@ class AndroidBleTransport(private val context: Context) : BleTransport {
         val g = gatt ?: return
         val service = g.getService(BleProtocolConstants.serviceUuid) ?: return
         val ch = service.getCharacteristic(BleProtocolConstants.commandCharacteristicUuid) ?: return
-        ch.value = bytes
-        _io.value = BleIoEvent(System.currentTimeMillis(), BleIoDirection.TX, bytes, "write")
-        g.writeCharacteristic(ch)
+        val splitSize = if (_mtu.value >= 247) 180 else 20
+        val chunks = bytes.toList().chunked(splitSize).map { it.toByteArray() }
+        chunks.forEachIndexed { index, chunk ->
+            ch.value = chunk
+            val note = if (chunks.size == 1) "write" else "write split ${index + 1}/${chunks.size}"
+            _io.value = BleIoEvent(System.currentTimeMillis(), BleIoDirection.TX, chunk, note)
+            g.writeCharacteristic(ch)
+            if (index != chunks.lastIndex) delay(15L)
+        }
     }
 
     private fun addScanResult(result: ScanResult) {
@@ -220,12 +232,12 @@ class AndroidBleTransport(private val context: Context) : BleTransport {
     private fun needsLocationEnabledForScan(): Boolean = Build.VERSION.SDK_INT < Build.VERSION_CODES.S
 
     private fun isLocationEnabled(): Boolean {
-        val locationManager = context.getSystemService(LocationManager::class.java) ?: return false
+        val lm = context.getSystemService(LocationManager::class.java) ?: return true
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-            locationManager.isLocationEnabled
+            lm.isLocationEnabled
         } else {
-            locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER) ||
-                locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)
+            @Suppress("DEPRECATION")
+            lm.isProviderEnabled(LocationManager.GPS_PROVIDER) || lm.isProviderEnabled(LocationManager.NETWORK_PROVIDER)
         }
     }
 }
