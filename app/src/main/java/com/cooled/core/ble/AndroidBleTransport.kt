@@ -19,6 +19,8 @@ import android.content.pm.PackageManager
 import android.location.LocationManager
 import android.os.Build
 import androidx.core.content.ContextCompat
+import com.cooled.core.assets.AssetManifestOriginalLedAssetCatalog
+import com.cooled.core.assets.OriginalLedAssetCatalogs
 import com.cooled.core.protocol.AssetCoolleduxFontSource
 import com.cooled.core.protocol.BleProtocolConstants
 import com.cooled.core.protocol.CoolleduxFontSources
@@ -55,6 +57,7 @@ class AndroidBleTransport(private val context: Context) : BleTransport {
 
     init {
         CoolleduxFontSources.active = AssetCoolleduxFontSource(context.assets)
+        OriginalLedAssetCatalogs.active = AssetManifestOriginalLedAssetCatalog(context.assets)
     }
 
     private val callback = object : BluetoothGattCallback() {
