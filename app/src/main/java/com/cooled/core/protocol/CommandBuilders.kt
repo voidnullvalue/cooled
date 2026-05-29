@@ -19,8 +19,7 @@ object CommandBuilders {
     fun setScoreboardRunning(running: Boolean): ByteArray = FrameCodec.encode(byteArrayOf(0x11.toByte(), 0x04, (if (running) 1 else 0).toByte()))
     fun setVolume(value: Int): ByteArray = FrameCodec.encode(byteArrayOf(0x1E.toByte(), 0x03, value.coerceIn(0, 100).toByte()))
 
-    fun setColorMode(modeIndex: Int): ByteArray =
-        FrameCodec.encode(byteArrayOf(0x13.toByte(), 0x03, modeIndex.toByte()))
+    fun setColorMode(modeIndex: Int): ByteArray = FrameCodec.encode(byteArrayOf(0x13.toByte(), 0x03, modeIndex.toByte()))
 
     fun resetCountdown(): ByteArray = FrameCodec.encode(byteArrayOf(0x0F.toByte(), 0x02))
     fun resetStopwatch(): ByteArray = FrameCodec.encode(byteArrayOf(0x10.toByte(), 0x02))
@@ -48,18 +47,9 @@ object CommandBuilders {
     fun setNightMode(enabled: Boolean, startHour: Int, startMinute: Int, endHour: Int, endMinute: Int): ByteArray =
         FrameCodec.encode(
             byteArrayOf(
-                0x14.toByte(),
-                0x01,
-                (if (enabled) 1 else 0).toByte(),
-                startHour.toByte(),
-                startMinute.toByte(),
-                endHour.toByte(),
-                endMinute.toByte(),
-                0x00,
-                0x00,
-                0x00,
-                0x00,
-                0x00
+                0x14.toByte(), 0x01, (if (enabled) 1 else 0).toByte(),
+                startHour.toByte(), startMinute.toByte(), endHour.toByte(), endMinute.toByte(),
+                0x00, 0x00, 0x00, 0x00, 0x00
             )
         )
 
@@ -77,13 +67,13 @@ object CommandBuilders {
         val trailer = if (request.programType == null) byteArrayOf() else typedProgramTrailer(request.programType, request.extraTypeByte)
         val opcode = when {
             request.useAlternateOpcode -> 0x1A
-            family == DeviceFamily.COOLLEDUX -> 0x1A
             else -> 0x02
         }
-        val crc = CoolLedCrc.crc32Like(request.compressed)
+        val startSource = request.startSource ?: request.compressed
+        val crc = CoolLedCrc.crc32Like(startSource)
         val base = mutableListOf(opcode.toByte())
         base += intToBytes(crc)
-        base += intToBytes(request.compressed.size)
+        base += intToBytes(startSource.size)
         base += (request.index and 0xFF).toByte()
         request.count?.let { base += (it and 0xFF).toByte() }
         request.showCount?.let { base += (it and 0xFF).toByte() }
@@ -110,12 +100,15 @@ object CommandBuilders {
     }
 
     fun buildDataChunk(messageType: Int, totalCompressedLength: Int, chunkIndex: Int, chunk: ByteArray): ByteArray {
-        val body = mutableListOf(messageType.toByte(), 0x00)
-        body += intToBytes(totalCompressedLength)
-        body += shortToBytes(chunkIndex)
-        body += shortToBytes(chunk.size)
-        body += chunk.toList()
-        val xor = body.fold(0) { acc, b -> acc xor (b.toInt() and 0xFF) }
+        val payloadAfterMessageType = mutableListOf<Byte>()
+        payloadAfterMessageType += 0x00
+        payloadAfterMessageType += intToBytes(totalCompressedLength)
+        payloadAfterMessageType += shortToBytes(chunkIndex)
+        payloadAfterMessageType += shortToBytes(chunk.size)
+        payloadAfterMessageType += chunk.toList()
+        val xor = payloadAfterMessageType.fold(0) { acc, b -> acc xor (b.toInt() and 0xFF) }
+        val body = mutableListOf(messageType.toByte())
+        body += payloadAfterMessageType
         body += xor.toByte()
         return FrameCodec.encode(body.toByteArray())
     }
@@ -158,5 +151,6 @@ data class ProgramStartRequest(
     val showCount: Int? = null,
     val useAlternateOpcode: Boolean = false,
     val programType: Int? = null,
-    val extraTypeByte: Int? = null
+    val extraTypeByte: Int? = null,
+    val startSource: ByteArray? = null
 )
