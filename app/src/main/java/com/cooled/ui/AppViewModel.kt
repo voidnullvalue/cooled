@@ -16,6 +16,7 @@ import com.cooled.core.model.DeviceFamily
 import com.cooled.core.protocol.AlarmCommand
 import com.cooled.core.protocol.ParsedPayload
 import com.cooled.core.protocol.ProgramContent
+import com.cooled.core.protocol.ProgramPackage
 import com.cooled.core.protocol.ProgramStartRequest
 import com.cooled.core.protocol.TransferState
 import com.cooled.core.protocol.TransferStateMachine
@@ -35,6 +36,9 @@ class AppViewModel(
     private val fake = transport as? FakeBleTransport
     private val repo = DeviceRepository(transport, rememberedDeviceStore)
     private val transferMachine = TransferStateMachine()
+
+    private var pendingProgram: ProgramPackage? = null
+    private var pendingChunkIndex: Int = 0
 
     private val _events = MutableStateFlow<List<String>>(emptyList())
     val events: StateFlow<List<String>> = _events.asStateFlow()
@@ -56,6 +60,7 @@ class AppViewModel(
         viewModelScope.launch {
             repo.parsedRx.collect { p ->
                 transferMachine.onParsed(p)
+                handleProgramTransferAck(p)
                 val summary = p.summary()
                 _lastParsedSummary.value = summary
                 val kind = when (p) {
@@ -68,6 +73,8 @@ class AppViewModel(
         viewModelScope.launch {
             repo.connectionState.collect {
                 if (it == ConnectionState.DISCONNECTED) {
+                    pendingProgram = null
+                    pendingChunkIndex = 0
                     transferMachine.cancel()
                     appendEvent("${ts()} Transfer cleanup on disconnect")
                 }
@@ -120,7 +127,7 @@ class AppViewModel(
 
     fun sendTextProgram(text: String, speed: Int, effect: Int, programType: Int?, extraTypeByte: Int?) = viewModelScope.launch {
         val cleanText = text.ifBlank { "HELLO" }.take(128)
-        val pack = repo.sendComposedProgram(
+        val pack = repo.composeProgram(
             family = family.value,
             content = ProgramContent.Text(cleanText, speed = speed.coerceIn(0, 255), effect = effect.coerceIn(0, 255)),
             index = 0,
@@ -129,8 +136,11 @@ class AppViewModel(
             programType = programType,
             extraTypeByte = extraTypeByte
         )
+        pendingProgram = pack
+        pendingChunkIndex = 0
         transferMachine.startSession(pack.metadata.chunkCount)
-        appendEvent("${ts()} Program queued text='$cleanText' speed=${speed.coerceIn(0, 255)} effect=${effect.coerceIn(0, 255)} programType=${programType ?: "none"} extra=${extraTypeByte ?: "none"} compressed=${pack.metadata.compressedSize} chunks=${pack.metadata.chunkCount}")
+        appendEvent("${ts()} Program start queued text='$cleanText' speed=${speed.coerceIn(0, 255)} effect=${effect.coerceIn(0, 255)} programType=${programType ?: "none"} extra=${extraTypeByte ?: "none"} compressed=${pack.metadata.compressedSize} chunks=${pack.metadata.chunkCount}")
+        repo.sendRawFrame(pack.startHeaderFrame)
     }
 
     fun sendTextProgram() = sendTextProgram(
@@ -138,8 +148,53 @@ class AppViewModel(
         speed = 3,
         effect = 1,
         programType = if (family.value == DeviceFamily.ILEDCLOCK) 14 else null,
-        extraTypeByte = 1
+        extraTypeByte = if (family.value == DeviceFamily.ILEDCLOCK) 1 else null
     )
+
+    private fun handleProgramTransferAck(payload: ParsedPayload) {
+        val pack = pendingProgram ?: return
+        when (payload) {
+            is ParsedPayload.TransferStartResponse -> {
+                if (payload.status == 0) {
+                    pendingChunkIndex = 0
+                    sendPendingChunk(pack)
+                } else {
+                    pendingProgram = null
+                    pendingChunkIndex = 0
+                    appendEvent("${ts()} Program upload aborted: start rejected status=${payload.status}")
+                }
+            }
+            is ParsedPayload.TransferChunkResponse -> {
+                if (payload.status == 0) {
+                    pendingChunkIndex = payload.chunkIndex + 1
+                    if (pendingChunkIndex >= pack.chunkFrames.size) {
+                        appendEvent("${ts()} Program upload completed chunks=${pack.chunkFrames.size}")
+                        pendingProgram = null
+                        pendingChunkIndex = 0
+                    } else {
+                        sendPendingChunk(pack)
+                    }
+                } else if (payload.status == 1) {
+                    appendEvent("${ts()} Program chunk ${payload.chunkIndex} NACK; resending")
+                    pendingChunkIndex = payload.chunkIndex.coerceIn(0, pack.chunkFrames.lastIndex)
+                    sendPendingChunk(pack)
+                } else {
+                    pendingProgram = null
+                    pendingChunkIndex = 0
+                    appendEvent("${ts()} Program upload aborted: chunk ${payload.chunkIndex} rejected status=${payload.status}")
+                }
+            }
+            else -> Unit
+        }
+    }
+
+    private fun sendPendingChunk(pack: ProgramPackage) {
+        val chunk = pack.chunkFrames.getOrNull(pendingChunkIndex) ?: return
+        viewModelScope.launch {
+            appendEvent("${ts()} Program sending chunk ${pendingChunkIndex + 1}/${pack.chunkFrames.size}")
+            repo.sendRawFrame(chunk)
+        }
+    }
 
     fun startFakeTransfer() = viewModelScope.launch {
         val fakeTransport = fake
@@ -202,6 +257,8 @@ class AppViewModel(
     }
 
     fun cancelTransfer() {
+        pendingProgram = null
+        pendingChunkIndex = 0
         transferMachine.cancel()
         appendEvent("${ts()} Transfer cancelled")
     }
