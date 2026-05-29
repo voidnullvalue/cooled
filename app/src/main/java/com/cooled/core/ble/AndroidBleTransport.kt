@@ -12,7 +12,6 @@ import android.bluetooth.BluetoothGattService
 import android.bluetooth.BluetoothManager
 import android.bluetooth.BluetoothProfile
 import android.bluetooth.le.ScanCallback
-import android.bluetooth.le.ScanFilter
 import android.bluetooth.le.ScanResult
 import android.bluetooth.le.ScanSettings
 import android.content.Context
@@ -29,6 +28,7 @@ class AndroidBleTransport(private val context: Context) : BleTransport {
     private val manager = context.getSystemService(BluetoothManager::class.java)
     private val adapter: BluetoothAdapter? get() = manager?.adapter
     private var gatt: BluetoothGatt? = null
+    private var isScanning = false
 
     private val _state = MutableStateFlow(ConnectionState.DISCONNECTED)
     private val _mtu = MutableStateFlow(23)
@@ -53,8 +53,14 @@ class AndroidBleTransport(private val context: Context) : BleTransport {
         }
 
         override fun onServicesDiscovered(g: BluetoothGatt, status: Int) {
-            val service: BluetoothGattService = g.getService(BleProtocolConstants.serviceUuid) ?: return
-            val ch: BluetoothGattCharacteristic = service.getCharacteristic(BleProtocolConstants.commandCharacteristicUuid) ?: return
+            val service: BluetoothGattService = g.getService(BleProtocolConstants.serviceUuid) ?: run {
+                _io.value = BleIoEvent(System.currentTimeMillis(), BleIoDirection.RX, byteArrayOf(), "service ${BleProtocolConstants.serviceUuid} not found")
+                return
+            }
+            val ch: BluetoothGattCharacteristic = service.getCharacteristic(BleProtocolConstants.commandCharacteristicUuid) ?: run {
+                _io.value = BleIoEvent(System.currentTimeMillis(), BleIoDirection.RX, byteArrayOf(), "characteristic ${BleProtocolConstants.commandCharacteristicUuid} not found")
+                return
+            }
             g.setCharacteristicNotification(ch, true)
             val cccd: BluetoothGattDescriptor? = ch.getDescriptor(BleProtocolConstants.cccdUuid)
             cccd?.value = BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE
@@ -86,6 +92,7 @@ class AndroidBleTransport(private val context: Context) : BleTransport {
         }
 
         override fun onScanFailed(errorCode: Int) {
+            isScanning = false
             _io.value = BleIoEvent(System.currentTimeMillis(), BleIoDirection.RX, byteArrayOf(), "scan failed=$errorCode")
         }
     }
@@ -99,12 +106,23 @@ class AndroidBleTransport(private val context: Context) : BleTransport {
             _io.value = BleIoEvent(System.currentTimeMillis(), BleIoDirection.RX, byteArrayOf(), "scan skipped: no BLE scanner")
             return
         }
-        val filter = ScanFilter.Builder().setServiceUuid(android.os.ParcelUuid(BleProtocolConstants.serviceUuid)).build()
-        scanner.startScan(listOf(filter), ScanSettings.Builder().build(), scanCallback)
+
+        if (isScanning) scanner.stopScan(scanCallback)
+        isScanning = false
+        _scan.value = emptyList()
+
+        val settings = ScanSettings.Builder()
+            .setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY)
+            .build()
+        scanner.startScan(null, settings, scanCallback)
+        isScanning = true
+        _io.value = BleIoEvent(System.currentTimeMillis(), BleIoDirection.RX, byteArrayOf(), "scan started: unfiltered BLE scan")
     }
 
     override fun stopScan() {
         if (hasScanPermission()) adapter?.bluetoothLeScanner?.stopScan(scanCallback)
+        isScanning = false
+        _io.value = BleIoEvent(System.currentTimeMillis(), BleIoDirection.RX, byteArrayOf(), "scan stopped")
     }
 
     override suspend fun connect(address: String) {
@@ -116,6 +134,7 @@ class AndroidBleTransport(private val context: Context) : BleTransport {
             _io.value = BleIoEvent(System.currentTimeMillis(), BleIoDirection.RX, byteArrayOf(), "connect skipped: no adapter/device")
             return
         }
+        stopScan()
         _state.value = ConnectionState.CONNECTING
         gatt = d.connectGatt(context, false, callback)
     }
