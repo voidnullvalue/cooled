@@ -4,7 +4,13 @@ import com.cooled.core.compression.LzssCodec
 import com.cooled.core.model.DeviceFamily
 
 sealed class ProgramContent {
-    data class Text(val text: String, val speed: Int, val effect: Int) : ProgramContent()
+    data class Text(
+        val text: String,
+        val speed: Int,
+        val effect: Int,
+        val displayColumns: Int? = null,
+        val displayRows: Int? = null
+    ) : ProgramContent()
     data class Drawing(val width: Int, val height: Int, val rgbBytes: ByteArray) : ProgramContent()
     data class PresetMode(val mode: Int, val intensity: Int) : ProgramContent()
 }
@@ -70,7 +76,13 @@ object ProgramComposer {
 
     private fun encodeContent(family: DeviceFamily, content: ProgramContent): ByteArray = when (content) {
         is ProgramContent.Text -> if (family == DeviceFamily.COOLLEDUX) {
-            CoolleduxTextPayload.encode(content.text, content.speed, content.effect)
+            CoolleduxTextPayload.encode(
+                text = content.text,
+                speed = content.speed,
+                effect = content.effect,
+                displayColumns = content.displayColumns,
+                displayRows = content.displayRows
+            )
         } else {
             val textBytes = content.text.encodeToByteArray()
             byteArrayOf(0x54, content.speed.toByte(), content.effect.toByte(), textBytes.size.toByte()) + textBytes
@@ -103,11 +115,22 @@ data class CoolleduxTextProgramContent(
 )
 
 private object CoolleduxTextPayload {
-    fun encode(text: String, speed: Int, effect: Int): ByteArray {
+    fun encode(text: String, speed: Int, effect: Int, displayColumns: Int?, displayRows: Int?): ByteArray {
+        val rows = displayRows?.coerceIn(8, 128) ?: 32
+        val columns = displayColumns?.coerceIn(8, 512) ?: 128
+        val textSize = when {
+            rows >= 32 -> 32
+            rows >= 24 -> 24
+            rows >= 16 -> 16
+            else -> 8
+        }
         val content = CoolleduxTextProgramContent(
             text = text.ifBlank { "HELLO" }.take(128),
+            showHeight = rows,
+            showWidth = columns,
             mode = effect.coerceIn(0, 255),
-            speed = speed.coerceIn(0, 255)
+            speed = speed.coerceIn(0, 255),
+            textSize = textSize
         )
         return encodeTextContentProgram(content)
     }
