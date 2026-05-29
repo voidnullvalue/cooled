@@ -1,9 +1,11 @@
 package com.cooled
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
+import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
@@ -72,10 +74,12 @@ private fun rememberMissingBlePermissions(): List<String> {
     val context = LocalContext.current
     var refresh by remember { mutableIntStateOf(0) }
     val permissions = remember {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            listOf(Manifest.permission.BLUETOOTH_SCAN, Manifest.permission.BLUETOOTH_CONNECT)
-        } else {
-            listOf(Manifest.permission.ACCESS_FINE_LOCATION)
+        buildList {
+            add(Manifest.permission.ACCESS_FINE_LOCATION)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                add(Manifest.permission.BLUETOOTH_SCAN)
+                add(Manifest.permission.BLUETOOTH_CONNECT)
+            }
         }
     }
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
@@ -92,8 +96,9 @@ private fun rememberMissingBlePermissions(): List<String> {
                 .padding(12.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Text("BLE permissions are required for real device scanning and connection.", color = Color.White)
+            Text("BLE scanning needs Bluetooth and Location permissions on many Android builds.", color = Color.White)
             Button(onClick = { launcher.launch(missing.toTypedArray()) }) { Text("Grant BLE permissions") }
+            Button(onClick = { context.startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)) }) { Text("Open Location Settings") }
         }
     }
     refresh
@@ -116,6 +121,7 @@ private fun AppScreenContent(vm: AppViewModel, missingPermissions: List<String>)
     var password by remember { mutableStateOf("1234") }
     val hasBlePermissions = missingPermissions.isEmpty()
     val isFakeMode = transportMode == "Fake demo"
+    val context = LocalContext.current
 
     Column(
         modifier = Modifier
@@ -132,6 +138,10 @@ private fun AppScreenContent(vm: AppViewModel, missingPermissions: List<String>)
             Button(onClick = vm::queryInfo, enabled = hasBlePermissions) { Text("Info") }
             Button(onClick = { vm.power(true) }, enabled = hasBlePermissions) { Text("On") }
             Button(onClick = { vm.power(false) }, enabled = hasBlePermissions) { Text("Off") }
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Button(onClick = { context.startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)) }) { Text("Location Settings") }
+            Button(onClick = { context.startActivity(Intent(Settings.ACTION_BLUETOOTH_SETTINGS)) }) { Text("Bluetooth Settings") }
         }
         WhiteText("State=$state MTU=$mtu Family=$family")
         WhiteText("Transfer=$transfer")
