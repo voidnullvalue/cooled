@@ -158,10 +158,7 @@ class AppViewModel(
 
     fun sendTextProgram(text: String, speed: Int, effect: Int, programType: Int?, extraTypeByte: Int?) = viewModelScope.launch {
         val cleanText = text.ifBlank { "HELLO" }.take(128)
-        val programIndex = nextProgramIndex
-        nextProgramIndex = (nextProgramIndex + 1) % 4
-        val pack = repo.composeProgram(
-            family = family.value,
+        val pack = buildProgramPackage(
             content = ProgramContent.Text(
                 text = cleanText,
                 speed = speed.coerceIn(0, 255),
@@ -169,21 +166,58 @@ class AppViewModel(
                 displayColumns = connectedMetadata.columns,
                 displayRows = connectedMetadata.rows
             ),
+            programType = programType,
+            extraTypeByte = extraTypeByte
+        )
+        queueProgramUpload(pack, "text='$cleanText' matrix=${connectedMetadata.columns ?: "?"}x${connectedMetadata.rows ?: "?"} speed=${speed.coerceIn(0, 255)} effect=${effect.coerceIn(0, 255)} programType=${programType ?: "none"} extra=${extraTypeByte ?: "none"}")
+    }
+
+    fun sendOriginalAssetProgram(assetPath: String, kind: String, speed: Int, effect: Int, programType: Int?, extraTypeByte: Int?) = viewModelScope.launch {
+        val cleanPath = assetPath.trim().trimStart('/').take(512)
+        if (cleanPath.isBlank()) {
+            appendEvent("${ts()} Original asset upload skipped: blank asset path")
+            return@launch
+        }
+        val cleanKind = kind.ifBlank { "payload-asset" }.take(32)
+        val pack = buildProgramPackage(
+            content = ProgramContent.OriginalAsset(
+                assetPath = cleanPath,
+                kind = cleanKind,
+                speed = speed.coerceIn(0, 255),
+                effect = effect.coerceIn(0, 255),
+                displayColumns = connectedMetadata.columns,
+                displayRows = connectedMetadata.rows
+            ),
+            programType = programType,
+            extraTypeByte = extraTypeByte
+        )
+        queueProgramUpload(pack, "asset='$cleanPath' kind=$cleanKind matrix=${connectedMetadata.columns ?: "?"}x${connectedMetadata.rows ?: "?"} speed=${speed.coerceIn(0, 255)} effect=${effect.coerceIn(0, 255)} programType=${programType ?: "none"} extra=${extraTypeByte ?: "none"}")
+    }
+
+    fun sendTextProgram() = sendTextProgram("HELLO", 255, 2, if (family.value == DeviceFamily.ILEDCLOCK) 14 else null, if (family.value == DeviceFamily.ILEDCLOCK) 1 else null)
+
+    private fun buildProgramPackage(content: ProgramContent, programType: Int?, extraTypeByte: Int?): ProgramPackage {
+        val programIndex = nextProgramIndex
+        nextProgramIndex = (nextProgramIndex + 1) % 4
+        return repo.composeProgram(
+            family = family.value,
+            content = content,
             index = programIndex,
             count = 1,
             showCount = 1,
             programType = programType,
             extraTypeByte = extraTypeByte
         )
+    }
+
+    private fun queueProgramUpload(pack: ProgramPackage, description: String) {
         pendingProgram = pack
         pendingChunkIndex = 0
         pendingStartRetries = 3
         transferMachine.startSession(pack.metadata.chunkCount)
-        appendEvent("${ts()} Program start queued slot=$programIndex text='$cleanText' matrix=${connectedMetadata.columns ?: "?"}x${connectedMetadata.rows ?: "?"} speed=${speed.coerceIn(0, 255)} effect=${effect.coerceIn(0, 255)} programType=${programType ?: "none"} extra=${extraTypeByte ?: "none"} compressed=${pack.metadata.compressedSize} chunks=${pack.metadata.chunkCount}")
-        repo.sendRawFrame(pack.startHeaderFrame)
+        appendEvent("${ts()} Program start queued $description compressed=${pack.metadata.compressedSize} chunks=${pack.metadata.chunkCount}")
+        viewModelScope.launch { repo.sendRawFrame(pack.startHeaderFrame) }
     }
-
-    fun sendTextProgram() = sendTextProgram("HELLO", 255, 2, if (family.value == DeviceFamily.ILEDCLOCK) 14 else null, if (family.value == DeviceFamily.ILEDCLOCK) 1 else null)
 
     private fun handleProgramTransferAck(payload: ParsedPayload) {
         val pack = pendingProgram ?: return
