@@ -11,6 +11,7 @@ import com.cooled.core.ble.BleIoDirection
 import com.cooled.core.ble.BleTransport
 import com.cooled.core.ble.ConnectionState
 import com.cooled.core.ble.FakeBleTransport
+import com.cooled.core.ble.LedScanMetadata
 import com.cooled.core.model.CapabilityMap
 import com.cooled.core.model.DeviceFamily
 import com.cooled.core.protocol.AlarmCommand
@@ -43,6 +44,7 @@ class AppViewModel(
     private var pendingChunkIndex: Int = 0
     private var pendingStartRetries: Int = 0
     private var nextProgramIndex: Int = 0
+    private var connectedMetadata: LedScanMetadata = LedScanMetadata()
 
     private val _events = MutableStateFlow<List<String>>(emptyList())
     val events: StateFlow<List<String>> = _events.asStateFlow()
@@ -80,6 +82,7 @@ class AppViewModel(
                     pendingProgram = null
                     pendingChunkIndex = 0
                     pendingStartRetries = 0
+                    connectedMetadata = LedScanMetadata()
                     transferMachine.cancel()
                     appendEvent("${ts()} Transfer cleanup on disconnect")
                 }
@@ -96,11 +99,13 @@ class AppViewModel(
     fun scan() = repo.startScan()
     fun stopScan() = repo.stopScan()
     fun connect(address: String, name: String?) = viewModelScope.launch {
+        val found = scanResults.value.firstOrNull { it.address == address }
+        connectedMetadata = found?.metadata ?: LedScanMetadata()
         repo.connect(address)
         val f = repo.detectFamily(name)
         family.value = f
         capabilities.value = CapabilityMap.forFamily(f)
-        appendEvent("${ts()} Device family=$f caps=${capabilities.value}")
+        appendEvent("${ts()} Device family=$f matrix=${connectedMetadata.columns ?: "?"}x${connectedMetadata.rows ?: "?"} colorType=${connectedMetadata.colorType ?: "?"} caps=${capabilities.value}")
     }
     fun disconnect() = viewModelScope.launch { repo.disconnect() }
 
@@ -119,26 +124,14 @@ class AppViewModel(
     fun syncTimeNow() = viewModelScope.launch { repo.sendTimeSyncNow() }
     fun timer(minutes: Int, enabled: Boolean) = viewModelScope.launch { repo.sendSetTimer(minutes.coerceIn(0, 24 * 60), enabled) }
     fun setTimerSwitch(enabled: Boolean, hour: Int, minute: Int, weekdayMask: Int, turnDeviceOn: Boolean) = viewModelScope.launch {
-        repo.sendTimerSwitches(
-            listOf(
-                TimerSwitchCommand(
-                    enabled = enabled,
-                    hour = hour.coerceIn(0, 23),
-                    minute = minute.coerceIn(0, 59),
-                    weekdayMask = weekdayMask.coerceIn(0, 127),
-                    turnDeviceOn = turnDeviceOn
-                )
-            )
-        )
+        repo.sendTimerSwitches(listOf(TimerSwitchCommand(enabled, hour.coerceIn(0, 23), minute.coerceIn(0, 59), weekdayMask.coerceIn(0, 127), turnDeviceOn)))
     }
     fun queryTimerSwitches() = viewModelScope.launch { repo.sendQueryTimerSwitches() }
 
     fun queryCountdownStatus() = viewModelScope.launch { repo.sendQueryCountdownStatus() }
     fun countdown(running: Boolean) = viewModelScope.launch { repo.sendCountdown(running) }
     fun resetCountdown() = viewModelScope.launch { repo.resetCountdown() }
-    fun resetCountdownTo(hour: Int, minute: Int, second: Int) = viewModelScope.launch {
-        repo.resetCountdown(hour.coerceIn(0, 23), minute.coerceIn(0, 59), second.coerceIn(0, 59))
-    }
+    fun resetCountdownTo(hour: Int, minute: Int, second: Int) = viewModelScope.launch { repo.resetCountdown(hour.coerceIn(0, 23), minute.coerceIn(0, 59), second.coerceIn(0, 59)) }
 
     fun queryStopwatchStatus() = viewModelScope.launch { repo.sendQueryStopwatchStatus() }
     fun stopwatch(running: Boolean) = viewModelScope.launch { repo.sendStopwatch(running) }
@@ -154,24 +147,11 @@ class AppViewModel(
 
     fun queryAlarms() = viewModelScope.launch { repo.sendQueryAlarms() }
     fun setAlarm(enabled: Boolean, hour: Int, minute: Int, repeatMask: Int, durationSeconds: Int, reminderDurationMinutes: Int) = viewModelScope.launch {
-        repo.sendAlarmList(
-            listOf(
-                AlarmCommand(
-                    enabled = enabled,
-                    hour = hour.coerceIn(0, 23),
-                    minute = minute.coerceIn(0, 59),
-                    repeatMask = repeatMask.coerceIn(0, 127),
-                    durationSeconds = durationSeconds.coerceIn(0, 65535),
-                    reminderDurationMinutes = reminderDurationMinutes.coerceIn(0, 255)
-                )
-            )
-        )
+        repo.sendAlarmList(listOf(AlarmCommand(enabled, hour.coerceIn(0, 23), minute.coerceIn(0, 59), repeatMask.coerceIn(0, 127), durationSeconds.coerceIn(0, 65535), reminderDurationMinutes.coerceIn(0, 255))))
     }
     fun setSampleAlarm() = setAlarm(true, 7, 30, 0b0111110, 600, 5)
 
-    fun setNightMode(enabled: Boolean, sh: Int, sm: Int, eh: Int, em: Int) = viewModelScope.launch {
-        repo.sendNightMode(enabled, sh.coerceIn(0, 23), sm.coerceIn(0, 59), eh.coerceIn(0, 23), em.coerceIn(0, 59))
-    }
+    fun setNightMode(enabled: Boolean, sh: Int, sm: Int, eh: Int, em: Int) = viewModelScope.launch { repo.sendNightMode(enabled, sh.coerceIn(0, 23), sm.coerceIn(0, 59), eh.coerceIn(0, 23), em.coerceIn(0, 59)) }
     fun queryReminderList() = viewModelScope.launch { repo.sendQueryReminderList() }
     fun queryReminderDetail(id: Int) = viewModelScope.launch { repo.sendQueryReminderDetail(id.coerceIn(0, 255)) }
     fun deleteReminder(id: Int) = viewModelScope.launch { repo.sendDeleteReminder(id.coerceIn(0, 255)) }
@@ -182,7 +162,13 @@ class AppViewModel(
         nextProgramIndex = (nextProgramIndex + 1) % 4
         val pack = repo.composeProgram(
             family = family.value,
-            content = ProgramContent.Text(cleanText, speed = speed.coerceIn(0, 255), effect = effect.coerceIn(0, 255)),
+            content = ProgramContent.Text(
+                text = cleanText,
+                speed = speed.coerceIn(0, 255),
+                effect = effect.coerceIn(0, 255),
+                displayColumns = connectedMetadata.columns,
+                displayRows = connectedMetadata.rows
+            ),
             index = programIndex,
             count = 1,
             showCount = 1,
@@ -193,17 +179,11 @@ class AppViewModel(
         pendingChunkIndex = 0
         pendingStartRetries = 3
         transferMachine.startSession(pack.metadata.chunkCount)
-        appendEvent("${ts()} Program start queued slot=$programIndex text='$cleanText' speed=${speed.coerceIn(0, 255)} effect=${effect.coerceIn(0, 255)} programType=${programType ?: "none"} extra=${extraTypeByte ?: "none"} compressed=${pack.metadata.compressedSize} chunks=${pack.metadata.chunkCount}")
+        appendEvent("${ts()} Program start queued slot=$programIndex text='$cleanText' matrix=${connectedMetadata.columns ?: "?"}x${connectedMetadata.rows ?: "?"} speed=${speed.coerceIn(0, 255)} effect=${effect.coerceIn(0, 255)} programType=${programType ?: "none"} extra=${extraTypeByte ?: "none"} compressed=${pack.metadata.compressedSize} chunks=${pack.metadata.chunkCount}")
         repo.sendRawFrame(pack.startHeaderFrame)
     }
 
-    fun sendTextProgram() = sendTextProgram(
-        text = "HELLO",
-        speed = 255,
-        effect = 2,
-        programType = if (family.value == DeviceFamily.ILEDCLOCK) 14 else null,
-        extraTypeByte = if (family.value == DeviceFamily.ILEDCLOCK) 1 else null
-    )
+    fun sendTextProgram() = sendTextProgram("HELLO", 255, 2, if (family.value == DeviceFamily.ILEDCLOCK) 14 else null, if (family.value == DeviceFamily.ILEDCLOCK) 1 else null)
 
     private fun handleProgramTransferAck(payload: ParsedPayload) {
         val pack = pendingProgram ?: return
@@ -216,10 +196,7 @@ class AppViewModel(
                 } else if (payload.status == 1 && pendingStartRetries > 0) {
                     pendingStartRetries--
                     appendEvent("${ts()} Program start NACK; retrying start (${pendingStartRetries} left)")
-                    viewModelScope.launch {
-                        delay(300L)
-                        if (pendingProgram === pack) repo.sendRawFrame(pack.startHeaderFrame)
-                    }
+                    viewModelScope.launch { delay(300L); if (pendingProgram === pack) repo.sendRawFrame(pack.startHeaderFrame) }
                 } else {
                     pendingProgram = null
                     pendingChunkIndex = 0
@@ -235,9 +212,7 @@ class AppViewModel(
                         pendingProgram = null
                         pendingChunkIndex = 0
                         pendingStartRetries = 0
-                    } else {
-                        sendPendingChunk(pack)
-                    }
+                    } else sendPendingChunk(pack)
                 } else if (payload.status == 1) {
                     appendEvent("${ts()} Program chunk ${payload.chunkIndex} NACK; resending")
                     pendingChunkIndex = payload.chunkIndex.coerceIn(0, pack.chunkFrames.lastIndex)
@@ -253,83 +228,40 @@ class AppViewModel(
         }
     }
 
-    private fun sendPendingChunk(pack: ProgramPackage) {
-        val chunk = pack.chunkFrames.getOrNull(pendingChunkIndex) ?: return
-        viewModelScope.launch {
-            appendEvent("${ts()} Program sending chunk ${pendingChunkIndex + 1}/${pack.chunkFrames.size}")
-            repo.sendRawFrame(chunk)
-        }
+    private fun sendPendingChunk(pack: ProgramPackage) = viewModelScope.launch {
+        val chunk = pack.chunkFrames.getOrNull(pendingChunkIndex) ?: return@launch
+        appendEvent("${ts()} Program sending chunk ${pendingChunkIndex + 1}/${pack.chunkFrames.size}")
+        repo.sendRawFrame(chunk)
     }
 
     fun startFakeTransfer() = viewModelScope.launch {
-        val fakeTransport = fake
-        if (fakeTransport == null) {
-            appendEvent("${ts()} Fake scripted transfer is unavailable in Android BLE mode")
-            return@launch
-        }
+        val fakeTransport = fake ?: run { appendEvent("${ts()} Fake scripted transfer is unavailable in Android BLE mode"); return@launch }
         val compressed = ByteArray(2500) { (it % 17).toByte() }
         val chunks = compressed.toList().chunked(1024).map { it.toByteArray() }
         transferMachine.startSession(chunks.size)
-        repo.sendProgramStart(
-            family.value,
-            ProgramStartRequest(compressed = compressed, index = 0, count = 1, showCount = 1, programType = 14, extraTypeByte = 1)
-        )
+        repo.sendProgramStart(family.value, ProgramStartRequest(compressed = compressed, index = 0, count = 1, showCount = 1, programType = 14, extraTypeByte = 1))
         fakeTransport.enqueueRxPayload(byteArrayOf(0x02, 0x00), "start-ack")
-        chunks.forEachIndexed { idx, c ->
-            repo.sendDataChunk(0x03, compressed.size, idx, c)
-            fakeTransport.enqueueRxPayload(byteArrayOf(0x03, 0x00, ((idx shr 8) and 0xFF).toByte(), (idx and 0xFF).toByte(), 0x00), "chunk-ack")
-        }
+        chunks.forEachIndexed { idx, c -> repo.sendDataChunk(0x03, compressed.size, idx, c); fakeTransport.enqueueRxPayload(byteArrayOf(0x03, 0x00, ((idx shr 8) and 0xFF).toByte(), (idx and 0xFF).toByte(), 0x00), "chunk-ack") }
     }
 
     fun scriptTransferScenario(name: String) {
-        val fakeTransport = fake
-        if (fakeTransport == null) {
-            appendEvent("${ts()} Script '$name' ignored; Android BLE mode has no fake response queue")
-            return
-        }
+        val fakeTransport = fake ?: run { appendEvent("${ts()} Script '$name' ignored; Android BLE mode has no fake response queue"); return }
         fakeTransport.clearScripted()
         when (name) {
-            "happy" -> {
-                fakeTransport.enqueueRxPayload(byteArrayOf(0x02, 0x00), "start-ok")
-                repeat(6) { i -> fakeTransport.enqueueRxPayload(byteArrayOf(0x03, 0x00, 0x00, i.toByte(), 0x00), "chunk-ok-$i") }
-            }
-            "delayed_ack" -> {
-                fakeTransport.enqueueRawFrame(byteArrayOf(0x7E, 0x00, 0x7E), "unexpected-frame")
-                fakeTransport.enqueueRxPayload(byteArrayOf(0x02, 0x00), "late-start-ok")
-            }
-            "nack_then_success" -> {
-                fakeTransport.enqueueRxPayload(byteArrayOf(0x02, 0x00), "start-ok")
-                fakeTransport.enqueueRxPayload(byteArrayOf(0x03, 0x00, 0x00, 0x00, 0x01), "nack-1")
-                fakeTransport.enqueueRxPayload(byteArrayOf(0x03, 0x00, 0x00, 0x00, 0x01), "nack-2")
-                fakeTransport.enqueueRxPayload(byteArrayOf(0x03, 0x00, 0x00, 0x00, 0x00), "finally-ok")
-            }
-            "retry_exhaust" -> {
-                fakeTransport.enqueueRxPayload(byteArrayOf(0x02, 0x00), "start-ok")
-                repeat(5) { fakeTransport.enqueueRxPayload(byteArrayOf(0x03, 0x00, 0x00, 0x00, 0x01), "nack") }
-            }
+            "happy" -> { fakeTransport.enqueueRxPayload(byteArrayOf(0x02, 0x00), "start-ok"); repeat(6) { i -> fakeTransport.enqueueRxPayload(byteArrayOf(0x03, 0x00, 0x00, i.toByte(), 0x00), "chunk-ok-$i") } }
+            "delayed_ack" -> { fakeTransport.enqueueRawFrame(byteArrayOf(0x7E, 0x00, 0x7E), "unexpected-frame"); fakeTransport.enqueueRxPayload(byteArrayOf(0x02, 0x00), "late-start-ok") }
+            "nack_then_success" -> { fakeTransport.enqueueRxPayload(byteArrayOf(0x02, 0x00), "start-ok"); fakeTransport.enqueueRxPayload(byteArrayOf(0x03, 0x00, 0x00, 0x00, 0x01), "nack-1"); fakeTransport.enqueueRxPayload(byteArrayOf(0x03, 0x00, 0x00, 0x00, 0x01), "nack-2"); fakeTransport.enqueueRxPayload(byteArrayOf(0x03, 0x00, 0x00, 0x00, 0x00), "finally-ok") }
+            "retry_exhaust" -> { fakeTransport.enqueueRxPayload(byteArrayOf(0x02, 0x00), "start-ok"); repeat(5) { fakeTransport.enqueueRxPayload(byteArrayOf(0x03, 0x00, 0x00, 0x00, 0x01), "nack") } }
             "unexpected_packet" -> fakeTransport.enqueueRawFrame(byteArrayOf(0x7E, 0x01, 0x02, 0x03), "garbage")
         }
         appendEvent("${ts()} Loaded transfer script=$name")
     }
 
-    fun timeoutTransfer() {
-        transferMachine.onTimeout()
-        appendEvent("${ts()} Transfer timeout tick -> ${transferMachine.state.value}")
-    }
-
-    fun cancelTransfer() {
-        pendingProgram = null
-        pendingChunkIndex = 0
-        pendingStartRetries = 0
-        transferMachine.cancel()
-        appendEvent("${ts()} Transfer cancelled")
-    }
-
+    fun timeoutTransfer() { transferMachine.onTimeout(); appendEvent("${ts()} Transfer timeout tick -> ${transferMachine.state.value}") }
+    fun cancelTransfer() { pendingProgram = null; pendingChunkIndex = 0; pendingStartRetries = 0; transferMachine.cancel(); appendEvent("${ts()} Transfer cancelled") }
     fun copyDebugLog(): String = events.value.joinToString("\n")
 
-    private fun appendEvent(text: String) {
-        _events.value = (listOf(text) + _events.value).take(200)
-    }
+    private fun appendEvent(text: String) { _events.value = (listOf(text) + _events.value).take(200) }
 
     private fun ParsedPayload.summary(): String = when (this) {
         is ParsedPayload.Unknown -> "Unknown payload (${data.size} bytes): ${data.toHex()}"
@@ -359,14 +291,7 @@ class AppViewModel(
         is ParsedPayload.TransferChunkResponse -> "Transfer chunk response opcode=0x${opcode.hex2()} chunk=$chunkIndex status=$status (${transferStatusLabel(status)})"
     }
 
-    private fun transferStatusLabel(status: Int): String = when (status) {
-        0 -> "OK"
-        1 -> "retry/nack"
-        2 -> "busy/invalid state"
-        3 -> "rejected/unsupported"
-        else -> "unknown"
-    }
-
+    private fun transferStatusLabel(status: Int): String = when (status) { 0 -> "OK"; 1 -> "retry/nack"; 2 -> "busy/invalid state"; 3 -> "rejected/unsupported"; else -> "unknown" }
     private fun ByteArray.toHex(): String = joinToString(" ") { "%02X".format(it) }
     private fun Int.hex2(): String = "%02X".format(this and 0xFF)
     private fun ts() = System.currentTimeMillis().toString()
