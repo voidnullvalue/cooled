@@ -12,6 +12,7 @@ import com.cooled.core.protocol.ProgramComposer
 import com.cooled.core.protocol.ProgramPackage
 import com.cooled.core.protocol.ProgramStartRequest
 import com.cooled.core.protocol.ProtocolParsers
+import com.cooled.core.protocol.TimerSwitchCommand
 import com.cooled.data.persistence.RememberedDeviceStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -43,11 +44,16 @@ class DeviceRepository(
     suspend fun sendMirror(v: Int) = transport.write(CommandBuilders.setMirror(v))
     suspend fun sendColorMode(modeIndex: Int) = transport.write(CommandBuilders.setColorMode(modeIndex))
     suspend fun sendQueryInfo() = transport.write(CommandBuilders.queryDeviceInfo())
+    suspend fun sendQueryOtaVersion() = transport.write(CommandBuilders.queryOtaVersion())
+    suspend fun sendQueryDriveState() = transport.write(CommandBuilders.queryDriveState())
+    suspend fun sendDriveState(state: Int) = transport.write(CommandBuilders.setDriveState(state))
     suspend fun sendCheckPassword(password: String) = transport.write(CommandBuilders.checkPassword(password))
     suspend fun sendSetPassword(password: String) = transport.write(CommandBuilders.setPassword(password))
 
-    suspend fun sendTimeSync(epochSeconds: Int) = transport.write(CommandBuilders.syncTime(epochSeconds))
+    suspend fun sendTimeSyncNow() = transport.write(CommandBuilders.syncTimeNow())
+    suspend fun sendTimeSync(epochSeconds: Int) = transport.write(CommandBuilders.syncTimeNow())
     suspend fun sendSetTimer(minutes: Int, enabled: Boolean) = transport.write(CommandBuilders.setTimer(minutes, enabled))
+    suspend fun sendTimerSwitches(items: List<TimerSwitchCommand>) = transport.write(CommandBuilders.setTimerSwitches(items))
     suspend fun sendQueryTimerSwitches() = transport.write(CommandBuilders.queryTimerSwitches())
     suspend fun sendCountdown(running: Boolean) = transport.write(CommandBuilders.setCountdownRunning(running))
     suspend fun sendStopwatch(running: Boolean) = transport.write(CommandBuilders.setStopwatchRunning(running))
