@@ -85,12 +85,8 @@ private fun rememberMissingBlePermissions(): List<String> {
             }
         }
     }
-    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
-        refresh++
-    }
-    val missing = permissions.filter {
-        ContextCompat.checkSelfPermission(context, it) != PackageManager.PERMISSION_GRANTED
-    }
+    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { refresh++ }
+    val missing = permissions.filter { ContextCompat.checkSelfPermission(context, it) != PackageManager.PERMISSION_GRANTED }
 
     LaunchedEffect(missing.joinToString(separator = "|")) {
         if (missing.isNotEmpty() && !hasAutoRequested) {
@@ -157,6 +153,12 @@ private fun AppScreenContent(vm: AppViewModel, missingPermissions: List<String>)
     var nightStartMinute by remember { mutableStateOf("0") }
     var nightEndHour by remember { mutableStateOf("6") }
     var nightEndMinute by remember { mutableStateOf("0") }
+    var alarmHour by remember { mutableStateOf("7") }
+    var alarmMinute by remember { mutableStateOf("30") }
+    var alarmRepeatMask by remember { mutableStateOf("62") }
+    var alarmDurationSeconds by remember { mutableStateOf("600") }
+    var alarmReminderMinutes by remember { mutableStateOf("5") }
+    var reminderId by remember { mutableStateOf("0") }
     val hasBlePermissions = missingPermissions.isEmpty()
     val isFakeMode = transportMode == "Fake demo"
     val context = LocalContext.current
@@ -229,42 +231,9 @@ private fun AppScreenContent(vm: AppViewModel, missingPermissions: List<String>)
             SmallTextField(timerWeekdayMask, { timerWeekdayMask = it }, "Week mask")
         }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Button(
-                onClick = {
-                    vm.setTimerSwitch(
-                        enabled = true,
-                        hour = timerHour.toIntOrNull() ?: 8,
-                        minute = timerMinute.toIntOrNull() ?: 0,
-                        weekdayMask = timerWeekdayMask.toIntOrNull() ?: 127,
-                        turnDeviceOn = true
-                    )
-                },
-                enabled = hasBlePermissions
-            ) { Text("Set On Timer") }
-            Button(
-                onClick = {
-                    vm.setTimerSwitch(
-                        enabled = true,
-                        hour = timerHour.toIntOrNull() ?: 8,
-                        minute = timerMinute.toIntOrNull() ?: 0,
-                        weekdayMask = timerWeekdayMask.toIntOrNull() ?: 127,
-                        turnDeviceOn = false
-                    )
-                },
-                enabled = hasBlePermissions
-            ) { Text("Set Off Timer") }
-            Button(
-                onClick = {
-                    vm.setTimerSwitch(
-                        enabled = false,
-                        hour = timerHour.toIntOrNull() ?: 8,
-                        minute = timerMinute.toIntOrNull() ?: 0,
-                        weekdayMask = timerWeekdayMask.toIntOrNull() ?: 127,
-                        turnDeviceOn = false
-                    )
-                },
-                enabled = hasBlePermissions
-            ) { Text("Disable Timer") }
+            Button(onClick = { vm.setTimerSwitch(true, timerHour.toIntOrNull() ?: 8, timerMinute.toIntOrNull() ?: 0, timerWeekdayMask.toIntOrNull() ?: 127, true) }, enabled = hasBlePermissions) { Text("Set On Timer") }
+            Button(onClick = { vm.setTimerSwitch(true, timerHour.toIntOrNull() ?: 8, timerMinute.toIntOrNull() ?: 0, timerWeekdayMask.toIntOrNull() ?: 127, false) }, enabled = hasBlePermissions) { Text("Set Off Timer") }
+            Button(onClick = { vm.setTimerSwitch(false, timerHour.toIntOrNull() ?: 8, timerMinute.toIntOrNull() ?: 0, timerWeekdayMask.toIntOrNull() ?: 127, false) }, enabled = hasBlePermissions) { Text("Disable Timer") }
         }
 
         SectionTitle("Countdown")
@@ -277,16 +246,7 @@ private fun AppScreenContent(vm: AppViewModel, missingPermissions: List<String>)
             SmallTextField(countdownHour, { countdownHour = it }, "Hour")
             SmallTextField(countdownMinute, { countdownMinute = it }, "Minute")
             SmallTextField(countdownSecond, { countdownSecond = it }, "Second")
-            Button(
-                onClick = {
-                    vm.resetCountdownTo(
-                        countdownHour.toIntOrNull() ?: 0,
-                        countdownMinute.toIntOrNull() ?: 10,
-                        countdownSecond.toIntOrNull() ?: 0
-                    )
-                },
-                enabled = hasBlePermissions && caps.supportsCountdown
-            ) { Text("Reset To") }
+            Button(onClick = { vm.resetCountdownTo(countdownHour.toIntOrNull() ?: 0, countdownMinute.toIntOrNull() ?: 10, countdownSecond.toIntOrNull() ?: 0) }, enabled = hasBlePermissions && caps.supportsCountdown) { Text("Reset To") }
         }
 
         SectionTitle("Stopwatch")
@@ -306,10 +266,7 @@ private fun AppScreenContent(vm: AppViewModel, missingPermissions: List<String>)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             SmallTextField(scoreboardLeft, { scoreboardLeft = it }, "Left")
             SmallTextField(scoreboardRight, { scoreboardRight = it }, "Right")
-            Button(
-                onClick = { vm.resetScoreboard(scoreboardLeft.toIntOrNull() ?: 0, scoreboardRight.toIntOrNull() ?: 0) },
-                enabled = hasBlePermissions && caps.supportsScoreboard
-            ) { Text("Set Score") }
+            Button(onClick = { vm.resetScoreboard(scoreboardLeft.toIntOrNull() ?: 0, scoreboardRight.toIntOrNull() ?: 0) }, enabled = hasBlePermissions && caps.supportsScoreboard) { Text("Set Score") }
         }
 
         SectionTitle("Volume")
@@ -317,20 +274,54 @@ private fun AppScreenContent(vm: AppViewModel, missingPermissions: List<String>)
         Slider(value = volume, onValueChange = { volume = it }, valueRange = 0f..100f, enabled = hasBlePermissions && caps.supportsVolume)
         Button(onClick = { vm.volume(volume.toInt()) }, enabled = hasBlePermissions && caps.supportsVolume) { Text("Send Volume") }
 
-        SectionTitle("Optional Clock-Class Features")
+        SectionTitle("Sensors / Tomato")
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Button(onClick = vm::queryTomato, enabled = hasBlePermissions && caps.supportsTomato) { Text("Tomato") }
             Button(onClick = vm::queryTempHumidity, enabled = hasBlePermissions && caps.supportsTempHumidity) { Text("Temp/Humidity") }
-            Button(onClick = vm::queryAlarms, enabled = hasBlePermissions && caps.supportsAlarms) { Text("Query Alarms") }
-            Button(onClick = vm::setSampleAlarm, enabled = hasBlePermissions && caps.supportsAlarms) { Text("Set Alarm") }
-            Button(onClick = vm::queryReminderList, enabled = hasBlePermissions && caps.supportsReminders) { Text("Reminders") }
         }
+
+        SectionTitle("Alarms")
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Button(onClick = vm::queryAlarms, enabled = hasBlePermissions && caps.supportsAlarms) { Text("Query Alarms") }
+            SmallTextField(alarmHour, { alarmHour = it }, "Hour")
+            SmallTextField(alarmMinute, { alarmMinute = it }, "Minute")
+            SmallTextField(alarmRepeatMask, { alarmRepeatMask = it }, "Repeat")
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            SmallTextField(alarmDurationSeconds, { alarmDurationSeconds = it }, "Duration s")
+            SmallTextField(alarmReminderMinutes, { alarmReminderMinutes = it }, "Remind m")
+            Button(
+                onClick = {
+                    vm.setAlarm(
+                        true,
+                        alarmHour.toIntOrNull() ?: 7,
+                        alarmMinute.toIntOrNull() ?: 30,
+                        alarmRepeatMask.toIntOrNull() ?: 62,
+                        alarmDurationSeconds.toIntOrNull() ?: 600,
+                        alarmReminderMinutes.toIntOrNull() ?: 5
+                    )
+                },
+                enabled = hasBlePermissions && caps.supportsAlarms
+            ) { Text("Set Alarm") }
+            Button(onClick = { vm.setAlarm(false, alarmHour.toIntOrNull() ?: 7, alarmMinute.toIntOrNull() ?: 30, alarmRepeatMask.toIntOrNull() ?: 62, alarmDurationSeconds.toIntOrNull() ?: 600, alarmReminderMinutes.toIntOrNull() ?: 5) }, enabled = hasBlePermissions && caps.supportsAlarms) { Text("Disable Alarm") }
+        }
+
+        SectionTitle("Reminders")
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Button(onClick = vm::queryReminderList, enabled = hasBlePermissions && caps.supportsReminders) { Text("Query List") }
+            SmallTextField(reminderId, { reminderId = it }, "ID")
+            Button(onClick = { vm.queryReminderDetail(reminderId.toIntOrNull() ?: 0) }, enabled = hasBlePermissions && caps.supportsReminders) { Text("Detail") }
+            Button(onClick = { vm.deleteReminder(reminderId.toIntOrNull() ?: 0) }, enabled = hasBlePermissions && caps.supportsReminders) { Text("Delete") }
+        }
+
+        SectionTitle("Night Mode")
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             SmallTextField(nightStartHour, { nightStartHour = it }, "Start h")
             SmallTextField(nightStartMinute, { nightStartMinute = it }, "Start m")
             SmallTextField(nightEndHour, { nightEndHour = it }, "End h")
             SmallTextField(nightEndMinute, { nightEndMinute = it }, "End m")
-            Button(onClick = { vm.setNightMode(true, nightStartHour.toIntOrNull() ?: 22, nightStartMinute.toIntOrNull() ?: 0, nightEndHour.toIntOrNull() ?: 6, nightEndMinute.toIntOrNull() ?: 0) }, enabled = hasBlePermissions && caps.supportsNightMode) { Text("Set Night Mode") }
+            Button(onClick = { vm.setNightMode(true, nightStartHour.toIntOrNull() ?: 22, nightStartMinute.toIntOrNull() ?: 0, nightEndHour.toIntOrNull() ?: 6, nightEndMinute.toIntOrNull() ?: 0) }, enabled = hasBlePermissions && caps.supportsNightMode) { Text("Set") }
+            Button(onClick = { vm.setNightMode(false, nightStartHour.toIntOrNull() ?: 22, nightStartMinute.toIntOrNull() ?: 0, nightEndHour.toIntOrNull() ?: 6, nightEndMinute.toIntOrNull() ?: 0) }, enabled = hasBlePermissions && caps.supportsNightMode) { Text("Off") }
         }
 
         SectionTitle("Text Program Upload")
@@ -347,7 +338,7 @@ private fun AppScreenContent(vm: AppViewModel, missingPermissions: List<String>)
             Button(onClick = { uploadProgramType = "8"; uploadExtraType = "" }) { Text("Type 8") }
         }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Button(onClick = { vm.sendTextProgram(text = uploadText, speed = uploadSpeed.toIntOrNull() ?: 255, effect = uploadEffect.toIntOrNull() ?: 2, programType = uploadProgramType.toIntOrNull(), extraTypeByte = uploadExtraType.toIntOrNull()) }, enabled = hasBlePermissions) { Text("Upload Text Program") }
+            Button(onClick = { vm.sendTextProgram(uploadText, uploadSpeed.toIntOrNull() ?: 255, uploadEffect.toIntOrNull() ?: 2, uploadProgramType.toIntOrNull(), uploadExtraType.toIntOrNull()) }, enabled = hasBlePermissions) { Text("Upload Text Program") }
             Button(onClick = vm::timeoutTransfer) { Text("Timeout Tick") }
             Button(onClick = vm::cancelTransfer) { Text("Cancel Transfer") }
         }
