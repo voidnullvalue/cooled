@@ -88,20 +88,10 @@ object ProgramComposer {
 private object CoolleduxTextPayload {
     fun encode(text: String, speed: Int, effect: Int): ByteArray {
         val clean = text.ifBlank { "HELLO" }.take(128)
-        val rendered = Apk8SmallFont.renderColumns(clean)
-
-        // The real APK's CoolLEDUX text path has extra text-font/color/layout metadata before
-        // visible glyph data. Without a guard, the first 8 columns render as missing/clipped.
-        // A blank lead-in and tail make the firmware consume/scroll safely while we finish the
-        // full FontUtils/color metadata port.
-        val glyphBytes = ByteArray(8) { 0x00 } + rendered + ByteArray(16) { 0x00 }
-        val showWidth = glyphBytes.size
+        val glyphBytes = Apk8SmallFont.renderColumns(clean)
+        val showWidth = maxOf(8, glyphBytes.size)
         val showHeight = 8
-        val yOffset = 4
-
-        // Static mode is currently safest. Nonzero modes partially work but smear because the
-        // advanced color/effect metadata is not fully ported yet.
-        val staticMode = 0
+        val mode = effect.coerceIn(0, 255)
         val speedByte = speed.coerceIn(0, 255)
 
         val textContent = mutableListOf<Byte>()
@@ -109,10 +99,10 @@ private object CoolleduxTextPayload {
         repeat(7) { textContent += 0x00.toByte() }
         textContent += 0x01.toByte()
         textContent += u16(0)
-        textContent += u16(yOffset)
+        textContent += u16(0)
         textContent += u16(showWidth)
         textContent += u16(showHeight)
-        textContent += staticMode.toByte()
+        textContent += mode.toByte()
         textContent += speedByte.toByte()
         textContent += 0x00.toByte()
         textContent += u16(0)
@@ -150,9 +140,7 @@ private object Apk8SmallFont {
 
     fun renderColumns(text: String): ByteArray {
         val out = mutableListOf<Byte>()
-        text.uppercase().forEach { ch ->
-            out += (apkGlyphs[ch] ?: fallback5x7(ch)).toList()
-        }
+        text.uppercase().forEach { ch -> out += (apkGlyphs[ch] ?: fallback5x7(ch)).toList() }
         return out.toByteArray()
     }
 
