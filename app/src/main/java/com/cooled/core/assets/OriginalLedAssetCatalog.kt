@@ -38,6 +38,41 @@ object EmptyOriginalLedAssetCatalog : OriginalLedAssetCatalog {
     override fun summary(): OriginalLedAssetSummary = OriginalLedAssetSummary()
 }
 
+interface OriginalLedAssetBytes {
+    fun read(path: String): ByteArray?
+}
+
+object OriginalLedAssetByteSources {
+    @Volatile
+    var active: OriginalLedAssetBytes = EmptyOriginalLedAssetBytes
+}
+
+object EmptyOriginalLedAssetBytes : OriginalLedAssetBytes {
+    override fun read(path: String): ByteArray? = null
+}
+
+class AssetOriginalLedAssetBytes(
+    private val assets: AssetManager,
+    private val root: String = "coolled-original"
+) : OriginalLedAssetBytes {
+    override fun read(path: String): ByteArray? {
+        val normalized = path.trim().trimStart('/')
+        val candidates = listOf(
+            "$root/$normalized",
+            "$root/raw-assets/$normalized",
+            normalized
+        ).distinct()
+        for (candidate in candidates) {
+            try {
+                return assets.open(candidate).use { it.readBytes() }
+            } catch (_: Exception) {
+                continue
+            }
+        }
+        return null
+    }
+}
+
 class AssetManifestOriginalLedAssetCatalog(
     private val assets: AssetManager,
     private val manifestPath: String = "coolled-original/LED_ASSET_MANIFEST.tsv"
