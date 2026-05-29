@@ -1,8 +1,14 @@
 package com.cooled.ui
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.APPLICATION_KEY
 import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.CreationExtras
+import com.cooled.core.ble.AndroidBleTransport
 import com.cooled.core.ble.BleIoDirection
+import com.cooled.core.ble.BleTransport
 import com.cooled.core.ble.ConnectionState
 import com.cooled.core.ble.FakeBleTransport
 import com.cooled.core.model.CapabilityMap
@@ -22,14 +28,18 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
-class AppViewModel : ViewModel() {
-    private val fake = FakeBleTransport()
-    private val repo = DeviceRepository(fake, RememberedDeviceStore())
+class AppViewModel(
+    private val transport: BleTransport = FakeBleTransport(),
+    rememberedDeviceStore: RememberedDeviceStore = RememberedDeviceStore()
+) : ViewModel() {
+    private val fake = transport as? FakeBleTransport
+    private val repo = DeviceRepository(transport, rememberedDeviceStore)
     private val transferMachine = TransferStateMachine()
 
     private val _events = MutableStateFlow<List<String>>(emptyList())
     val events: StateFlow<List<String>> = _events.asStateFlow()
     val transferState: StateFlow<TransferState> = transferMachine.state
+    val transportMode = MutableStateFlow(if (fake == null) "Android BLE" else "Fake demo")
 
     val scanResults = repo.scanResults.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
     val connection = repo.connectionState.stateIn(viewModelScope, SharingStarted.Eagerly, ConnectionState.DISCONNECTED)
@@ -39,6 +49,7 @@ class AppViewModel : ViewModel() {
     val capabilities = MutableStateFlow(CapabilityMap.forFamily(DeviceFamily.UNKNOWN))
 
     init {
+        appendEvent("${ts()} Transport mode=${transportMode.value}")
         viewModelScope.launch {
             repo.parsedRx.collect { p ->
                 transferMachine.onParsed(p)
@@ -58,7 +69,7 @@ class AppViewModel : ViewModel() {
             }
         }
         viewModelScope.launch {
-            fake.ioEvents.collect { evt ->
+            transport.ioEvents.collect { evt ->
                 val dir = if (evt.direction == BleIoDirection.TX) "TX" else "RX"
                 appendEvent("${evt.timestampMs} $dir raw(${evt.bytes.size}): ${evt.bytes.toHex()} ${evt.note.orEmpty()}")
             }
@@ -66,6 +77,7 @@ class AppViewModel : ViewModel() {
     }
 
     fun scan() = repo.startScan()
+    fun stopScan() = repo.stopScan()
     fun connect(address: String, name: String?) = viewModelScope.launch {
         repo.connect(address)
         val f = repo.detectFamily(name)
@@ -73,6 +85,7 @@ class AppViewModel : ViewModel() {
         capabilities.value = CapabilityMap.forFamily(f)
         appendEvent("${ts()} Device family=$f caps=${capabilities.value}")
     }
+    fun disconnect() = viewModelScope.launch { repo.disconnect() }
 
     fun queryInfo() = viewModelScope.launch { repo.sendQueryInfo() }
     fun power(on: Boolean) = viewModelScope.launch { repo.sendPower(on) }
@@ -107,10 +120,16 @@ class AppViewModel : ViewModel() {
             programType = if (family.value == DeviceFamily.ILEDCLOCK) 14 else null,
             extraTypeByte = 1
         )
+        transferMachine.startSession(pack.metadata.chunkCount)
         appendEvent("${ts()} Program queued compressed=${pack.metadata.compressedSize} chunks=${pack.metadata.chunkCount}")
     }
 
     fun startFakeTransfer() = viewModelScope.launch {
+        val fakeTransport = fake
+        if (fakeTransport == null) {
+            appendEvent("${ts()} Fake scripted transfer is unavailable in Android BLE mode")
+            return@launch
+        }
         val compressed = ByteArray(2500) { (it % 17).toByte() }
         val chunks = compressed.toList().chunked(1024).map { it.toByteArray() }
         transferMachine.startSession(chunks.size)
@@ -118,35 +137,40 @@ class AppViewModel : ViewModel() {
             family.value,
             ProgramStartRequest(compressed = compressed, index = 0, count = 1, showCount = 1, programType = 14, extraTypeByte = 1)
         )
-        fake.enqueueRxPayload(byteArrayOf(0x02, 0x00), "start-ack")
+        fakeTransport.enqueueRxPayload(byteArrayOf(0x02, 0x00), "start-ack")
         chunks.forEachIndexed { idx, c ->
             repo.sendDataChunk(0x03, compressed.size, idx, c)
-            fake.enqueueRxPayload(byteArrayOf(0x03, 0x00, ((idx shr 8) and 0xFF).toByte(), (idx and 0xFF).toByte(), 0x00), "chunk-ack")
+            fakeTransport.enqueueRxPayload(byteArrayOf(0x03, 0x00, ((idx shr 8) and 0xFF).toByte(), (idx and 0xFF).toByte(), 0x00), "chunk-ack")
         }
     }
 
     fun scriptTransferScenario(name: String) {
-        fake.clearScripted()
+        val fakeTransport = fake
+        if (fakeTransport == null) {
+            appendEvent("${ts()} Script '$name' ignored; Android BLE mode has no fake response queue")
+            return
+        }
+        fakeTransport.clearScripted()
         when (name) {
             "happy" -> {
-                fake.enqueueRxPayload(byteArrayOf(0x02, 0x00), "start-ok")
-                repeat(6) { i -> fake.enqueueRxPayload(byteArrayOf(0x03, 0x00, 0x00, i.toByte(), 0x00), "chunk-ok-$i") }
+                fakeTransport.enqueueRxPayload(byteArrayOf(0x02, 0x00), "start-ok")
+                repeat(6) { i -> fakeTransport.enqueueRxPayload(byteArrayOf(0x03, 0x00, 0x00, i.toByte(), 0x00), "chunk-ok-$i") }
             }
             "delayed_ack" -> {
-                fake.enqueueRawFrame(byteArrayOf(0x7E, 0x00, 0x7E), "unexpected-frame")
-                fake.enqueueRxPayload(byteArrayOf(0x02, 0x00), "late-start-ok")
+                fakeTransport.enqueueRawFrame(byteArrayOf(0x7E, 0x00, 0x7E), "unexpected-frame")
+                fakeTransport.enqueueRxPayload(byteArrayOf(0x02, 0x00), "late-start-ok")
             }
             "nack_then_success" -> {
-                fake.enqueueRxPayload(byteArrayOf(0x02, 0x00), "start-ok")
-                fake.enqueueRxPayload(byteArrayOf(0x03, 0x00, 0x00, 0x00, 0x01), "nack-1")
-                fake.enqueueRxPayload(byteArrayOf(0x03, 0x00, 0x00, 0x00, 0x01), "nack-2")
-                fake.enqueueRxPayload(byteArrayOf(0x03, 0x00, 0x00, 0x00, 0x00), "finally-ok")
+                fakeTransport.enqueueRxPayload(byteArrayOf(0x02, 0x00), "start-ok")
+                fakeTransport.enqueueRxPayload(byteArrayOf(0x03, 0x00, 0x00, 0x00, 0x01), "nack-1")
+                fakeTransport.enqueueRxPayload(byteArrayOf(0x03, 0x00, 0x00, 0x00, 0x01), "nack-2")
+                fakeTransport.enqueueRxPayload(byteArrayOf(0x03, 0x00, 0x00, 0x00, 0x00), "finally-ok")
             }
             "retry_exhaust" -> {
-                fake.enqueueRxPayload(byteArrayOf(0x02, 0x00), "start-ok")
-                repeat(5) { fake.enqueueRxPayload(byteArrayOf(0x03, 0x00, 0x00, 0x00, 0x01), "nack") }
+                fakeTransport.enqueueRxPayload(byteArrayOf(0x02, 0x00), "start-ok")
+                repeat(5) { fakeTransport.enqueueRxPayload(byteArrayOf(0x03, 0x00, 0x00, 0x00, 0x01), "nack") }
             }
-            "unexpected_packet" -> fake.enqueueRawFrame(byteArrayOf(0x7E, 0x01, 0x02, 0x03), "garbage")
+            "unexpected_packet" -> fakeTransport.enqueueRawFrame(byteArrayOf(0x7E, 0x01, 0x02, 0x03), "garbage")
         }
         appendEvent("${ts()} Loaded transfer script=$name")
     }
@@ -173,4 +197,14 @@ class AppViewModel : ViewModel() {
 
     private fun ByteArray.toHex(): String = joinToString(" ") { "%02X".format(it) }
     private fun ts() = System.currentTimeMillis().toString()
+
+    companion object {
+        fun androidBleFactory(context: Context): ViewModelProvider.Factory = object : ViewModelProvider.Factory {
+            @Suppress("UNCHECKED_CAST")
+            override fun <T : ViewModel> create(modelClass: Class<T>, extras: CreationExtras): T {
+                val appContext = extras[APPLICATION_KEY] ?: context.applicationContext
+                return AppViewModel(AndroidBleTransport(appContext), RememberedDeviceStore()) as T
+            }
+        }
+    }
 }

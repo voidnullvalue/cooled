@@ -15,12 +15,15 @@ object FrameCodec {
     }
 
     fun decode(frame: ByteArray): ByteArray {
-        require(frame.first() == BleProtocolConstants.frameStart && frame.last() == BleProtocolConstants.frameEnd)
+        if (frame.size < 2) return byteArrayOf()
+        if (frame.first() != BleProtocolConstants.frameStart || frame.last() != BleProtocolConstants.frameEnd) return byteArrayOf()
+
         val inBytes = frame.sliceArray(1 until frame.lastIndex)
         val unescaped = ArrayList<Byte>()
         var i = 0
         while (i < inBytes.size) {
             if (inBytes[i] == BleProtocolConstants.frameEscape) {
+                if (i + 1 >= inBytes.size) return byteArrayOf()
                 unescaped.add((inBytes[i + 1].toInt() xor 0x04).toByte())
                 i += 2
             } else {
@@ -28,7 +31,10 @@ object FrameCodec {
                 i++
             }
         }
+
+        if (unescaped.size < 2) return byteArrayOf()
         val payloadLen = ((unescaped[0].toInt() and 0xFF) shl 8) or (unescaped[1].toInt() and 0xFF)
+        if (payloadLen > unescaped.size - 2) return byteArrayOf()
         return unescaped.drop(2).take(payloadLen).toByteArray()
     }
 }
