@@ -88,23 +88,33 @@ object ProgramComposer {
 private object CoolleduxTextPayload {
     fun encode(text: String, speed: Int, effect: Int): ByteArray {
         val clean = text.ifBlank { "HELLO" }.take(128)
-        val glyphBytes = Apk8SmallFont.renderColumns(clean)
-        val showWidth = maxOf(8, glyphBytes.size)
+        val rendered = Apk8SmallFont.renderColumns(clean)
+
+        // The real APK's CoolLEDUX text path has extra text-font/color/layout metadata before
+        // visible glyph data. Without a guard, the first 8 columns render as missing/clipped.
+        // A blank lead-in and tail make the firmware consume/scroll safely while we finish the
+        // full FontUtils/color metadata port.
+        val glyphBytes = ByteArray(8) { 0x00 } + rendered + ByteArray(16) { 0x00 }
+        val showWidth = glyphBytes.size
         val showHeight = 8
-        val mode = effect.coerceIn(0, 255)
+        val yOffset = 4
+
+        // Static mode is currently safest. Nonzero modes partially work but smear because the
+        // advanced color/effect metadata is not fully ported yet.
+        val staticMode = 0
         val speedByte = speed.coerceIn(0, 255)
 
         val textContent = mutableListOf<Byte>()
-        textContent += 0x01
-        repeat(7) { textContent += 0x00 }
-        textContent += 0x01
+        textContent += 0x01.toByte()
+        repeat(7) { textContent += 0x00.toByte() }
+        textContent += 0x01.toByte()
         textContent += u16(0)
-        textContent += u16(0)
+        textContent += u16(yOffset)
         textContent += u16(showWidth)
         textContent += u16(showHeight)
-        textContent += mode.toByte()
+        textContent += staticMode.toByte()
         textContent += speedByte.toByte()
-        textContent += 0x00
+        textContent += 0x00.toByte()
         textContent += u16(0)
         textContent += glyphBytes.toList()
 
@@ -113,9 +123,9 @@ private object CoolleduxTextPayload {
         combineBlock += textContent
 
         val program = mutableListOf<Byte>()
-        repeat(8) { program += 0x00 }
-        program += 0x01
-        program += 0x00
+        repeat(8) { program += 0x00.toByte() }
+        program += 0x01.toByte()
+        program += 0x00.toByte()
         program += combineBlock
         return program.toByteArray()
     }
@@ -130,53 +140,58 @@ private object CoolleduxTextPayload {
 }
 
 private object Apk8SmallFont {
-    private val glyphs = mapOf(
-        'A' to byteArrayOf(0x1F.toByte(), 0x24.toByte(), 0x44.toByte(), 0x84.toByte(), 0x44.toByte(), 0x24.toByte(), 0x1F.toByte(), 0x00.toByte()),
-        'B' to byteArrayOf(0x81.toByte(), 0xFF.toByte(), 0x91.toByte(), 0x91.toByte(), 0x91.toByte(), 0x91.toByte(), 0x6E.toByte(), 0x00.toByte()),
-        'C' to byteArrayOf(0x3C.toByte(), 0x42.toByte(), 0x81.toByte(), 0x81.toByte(), 0x81.toByte(), 0x81.toByte(), 0x42.toByte(), 0x00.toByte()),
-        'D' to byteArrayOf(0x81.toByte(), 0xFF.toByte(), 0x81.toByte(), 0x81.toByte(), 0x81.toByte(), 0x81.toByte(), 0x7E.toByte(), 0x00.toByte()),
-        'E' to byteArrayOf(0x81.toByte(), 0xFF.toByte(), 0x91.toByte(), 0x91.toByte(), 0xB9.toByte(), 0x81.toByte(), 0xC3.toByte(), 0x00.toByte()),
-        'F' to byteArrayOf(0x81.toByte(), 0xFF.toByte(), 0x91.toByte(), 0x90.toByte(), 0xB8.toByte(), 0x80.toByte(), 0xC0.toByte(), 0x00.toByte()),
-        'G' to byteArrayOf(0x3C.toByte(), 0x42.toByte(), 0x81.toByte(), 0x81.toByte(), 0x81.toByte(), 0x89.toByte(), 0x4E.toByte(), 0x00.toByte()),
+    private val apkGlyphs = mapOf(
         'H' to byteArrayOf(0xFF.toByte(), 0x10.toByte(), 0x10.toByte(), 0x10.toByte(), 0x10.toByte(), 0x10.toByte(), 0xFF.toByte(), 0x00.toByte()),
-        'I' to byteArrayOf(0x00.toByte(), 0x00.toByte(), 0x81.toByte(), 0xFF.toByte(), 0x81.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte()),
-        'J' to byteArrayOf(0x02.toByte(), 0x01.toByte(), 0x01.toByte(), 0x01.toByte(), 0x81.toByte(), 0xFE.toByte(), 0x80.toByte(), 0x00.toByte()),
-        'K' to byteArrayOf(0xFF.toByte(), 0x08.toByte(), 0x14.toByte(), 0x22.toByte(), 0x42.toByte(), 0x81.toByte(), 0x81.toByte(), 0x00.toByte()),
+        'E' to byteArrayOf(0x81.toByte(), 0xFF.toByte(), 0x91.toByte(), 0x91.toByte(), 0xB9.toByte(), 0x81.toByte(), 0xC3.toByte(), 0x00.toByte()),
         'L' to byteArrayOf(0x81.toByte(), 0xFF.toByte(), 0x81.toByte(), 0x01.toByte(), 0x01.toByte(), 0x01.toByte(), 0x03.toByte(), 0x00.toByte()),
-        'M' to byteArrayOf(0xFF.toByte(), 0x40.toByte(), 0x20.toByte(), 0x10.toByte(), 0x20.toByte(), 0x40.toByte(), 0xFF.toByte(), 0x00.toByte()),
-        'N' to byteArrayOf(0xFF.toByte(), 0x40.toByte(), 0x20.toByte(), 0x10.toByte(), 0x08.toByte(), 0x04.toByte(), 0xFF.toByte(), 0x00.toByte()),
         'O' to byteArrayOf(0x7E.toByte(), 0x81.toByte(), 0x81.toByte(), 0x81.toByte(), 0x81.toByte(), 0x81.toByte(), 0x7E.toByte(), 0x00.toByte()),
-        'P' to byteArrayOf(0x81.toByte(), 0xFF.toByte(), 0x89.toByte(), 0x88.toByte(), 0x88.toByte(), 0x88.toByte(), 0x70.toByte(), 0x00.toByte()),
-        'Q' to byteArrayOf(0x7E.toByte(), 0x81.toByte(), 0x81.toByte(), 0x81.toByte(), 0x83.toByte(), 0x7E.toByte(), 0x01.toByte(), 0x00.toByte()),
-        'R' to byteArrayOf(0x81.toByte(), 0xFF.toByte(), 0x91.toByte(), 0x98.toByte(), 0x94.toByte(), 0x92.toByte(), 0x61.toByte(), 0x00.toByte()),
-        'S' to byteArrayOf(0x62.toByte(), 0x91.toByte(), 0x91.toByte(), 0x89.toByte(), 0x89.toByte(), 0x89.toByte(), 0x46.toByte(), 0x00.toByte()),
-        'T' to byteArrayOf(0x00.toByte(), 0xC0.toByte(), 0x81.toByte(), 0xFF.toByte(), 0x81.toByte(), 0xC0.toByte(), 0x00.toByte(), 0x00.toByte()),
-        'U' to byteArrayOf(0xFE.toByte(), 0x01.toByte(), 0x01.toByte(), 0x01.toByte(), 0x01.toByte(), 0x01.toByte(), 0xFE.toByte(), 0x00.toByte()),
-        'V' to byteArrayOf(0xF8.toByte(), 0x04.toByte(), 0x02.toByte(), 0x01.toByte(), 0x02.toByte(), 0x04.toByte(), 0xF8.toByte(), 0x00.toByte()),
-        'W' to byteArrayOf(0xFC.toByte(), 0x02.toByte(), 0x03.toByte(), 0x0E.toByte(), 0x03.toByte(), 0x02.toByte(), 0xFC.toByte(), 0x00.toByte()),
-        'X' to byteArrayOf(0xC1.toByte(), 0x22.toByte(), 0x14.toByte(), 0x08.toByte(), 0x14.toByte(), 0x22.toByte(), 0xC1.toByte(), 0x00.toByte()),
-        'Y' to byteArrayOf(0x00.toByte(), 0xE0.toByte(), 0x11.toByte(), 0x0F.toByte(), 0x11.toByte(), 0xE0.toByte(), 0x00.toByte(), 0x00.toByte()),
-        'Z' to byteArrayOf(0xC3.toByte(), 0x85.toByte(), 0x85.toByte(), 0x89.toByte(), 0x91.toByte(), 0xA1.toByte(), 0xC1.toByte(), 0x00.toByte()),
-        '0' to byteArrayOf(0x7E.toByte(), 0x81.toByte(), 0x81.toByte(), 0x81.toByte(), 0x81.toByte(), 0x81.toByte(), 0x7E.toByte(), 0x00.toByte()),
-        '1' to byteArrayOf(0x00.toByte(), 0x21.toByte(), 0x41.toByte(), 0xFF.toByte(), 0x01.toByte(), 0x01.toByte(), 0x00.toByte(), 0x00.toByte()),
-        '2' to byteArrayOf(0x63.toByte(), 0x85.toByte(), 0x89.toByte(), 0x89.toByte(), 0x91.toByte(), 0x91.toByte(), 0x61.toByte(), 0x00.toByte()),
-        '3' to byteArrayOf(0x42.toByte(), 0xC3.toByte(), 0x81.toByte(), 0x81.toByte(), 0x91.toByte(), 0x91.toByte(), 0x6E.toByte(), 0x00.toByte()),
-        '4' to byteArrayOf(0x1C.toByte(), 0x24.toByte(), 0x44.toByte(), 0x85.toByte(), 0xFF.toByte(), 0x05.toByte(), 0x04.toByte(), 0x00.toByte()),
-        '5' to byteArrayOf(0xF2.toByte(), 0x93.toByte(), 0x91.toByte(), 0x91.toByte(), 0x91.toByte(), 0x91.toByte(), 0x8E.toByte(), 0x00.toByte()),
-        '6' to byteArrayOf(0x7E.toByte(), 0x91.toByte(), 0x91.toByte(), 0x91.toByte(), 0x91.toByte(), 0x91.toByte(), 0x8E.toByte(), 0x00.toByte()),
-        '7' to byteArrayOf(0x80.toByte(), 0x80.toByte(), 0x80.toByte(), 0x87.toByte(), 0x88.toByte(), 0x90.toByte(), 0xE0.toByte(), 0x00.toByte()),
-        '8' to byteArrayOf(0x76.toByte(), 0x89.toByte(), 0x89.toByte(), 0x89.toByte(), 0x89.toByte(), 0x89.toByte(), 0x76.toByte(), 0x00.toByte()),
-        '9' to byteArrayOf(0x72.toByte(), 0x89.toByte(), 0x89.toByte(), 0x89.toByte(), 0x89.toByte(), 0x89.toByte(), 0x7E.toByte(), 0x00.toByte()),
-        ' ' to byteArrayOf(0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte()),
-        '!' to byteArrayOf(0x00.toByte(), 0x00.toByte(), 0xF9.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte()),
-        '-' to byteArrayOf(0x10.toByte(), 0x10.toByte(), 0x10.toByte(), 0x10.toByte(), 0x10.toByte(), 0x10.toByte(), 0x00.toByte(), 0x00.toByte()),
-        '.' to byteArrayOf(0x00.toByte(), 0x01.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte()),
-        '?' to byteArrayOf(0x60.toByte(), 0x80.toByte(), 0x80.toByte(), 0x8D.toByte(), 0x90.toByte(), 0x60.toByte(), 0x00.toByte(), 0x00.toByte())
+        ' ' to ByteArray(8) { 0x00 }
     )
 
     fun renderColumns(text: String): ByteArray {
         val out = mutableListOf<Byte>()
-        text.uppercase().forEach { ch -> out += (glyphs[ch] ?: glyphs['?']!!).toList() }
+        text.uppercase().forEach { ch ->
+            out += (apkGlyphs[ch] ?: fallback5x7(ch)).toList()
+        }
         return out.toByteArray()
     }
+
+    private fun fallback5x7(ch: Char): ByteArray {
+        val rows = fallbackRows[ch] ?: fallbackRows['?']!!
+        val columns = ByteArray(8) { 0x00 }
+        for (x in 0 until 5) {
+            var value = 0
+            for (y in rows.indices) {
+                if (rows[y][x] == '1') value = value or (1 shl (y + 1))
+            }
+            columns[x + 1] = value.toByte()
+        }
+        return columns
+    }
+
+    private val fallbackRows = mapOf(
+        'A' to listOf("01110", "10001", "10001", "11111", "10001", "10001", "10001"),
+        'B' to listOf("11110", "10001", "10001", "11110", "10001", "10001", "11110"),
+        'C' to listOf("01111", "10000", "10000", "10000", "10000", "10000", "01111"),
+        'D' to listOf("11110", "10001", "10001", "10001", "10001", "10001", "11110"),
+        'F' to listOf("11111", "10000", "10000", "11110", "10000", "10000", "10000"),
+        'G' to listOf("01111", "10000", "10000", "10011", "10001", "10001", "01111"),
+        'I' to listOf("11111", "00100", "00100", "00100", "00100", "00100", "11111"),
+        'M' to listOf("10001", "11011", "10101", "10101", "10001", "10001", "10001"),
+        'N' to listOf("10001", "11001", "10101", "10011", "10001", "10001", "10001"),
+        'S' to listOf("01111", "10000", "10000", "01110", "00001", "00001", "11110"),
+        'T' to listOf("11111", "00100", "00100", "00100", "00100", "00100", "00100"),
+        'U' to listOf("10001", "10001", "10001", "10001", "10001", "10001", "01110"),
+        '0' to listOf("01110", "10001", "10011", "10101", "11001", "10001", "01110"),
+        '1' to listOf("00100", "01100", "00100", "00100", "00100", "00100", "01110"),
+        '2' to listOf("01110", "10001", "00001", "00010", "00100", "01000", "11111"),
+        '3' to listOf("11110", "00001", "00001", "01110", "00001", "00001", "11110"),
+        '4' to listOf("00010", "00110", "01010", "10010", "11111", "00010", "00010"),
+        '5' to listOf("11111", "10000", "10000", "11110", "00001", "00001", "11110"),
+        '6' to listOf("01110", "10000", "10000", "11110", "10001", "10001", "01110"),
+        '7' to listOf("11111", "00001", "00010", "00100", "01000", "01000", "01000"),
+        '8' to listOf("01110", "10001", "10001", "01110", "10001", "10001", "01110"),
+        '9' to listOf("01110", "10001", "10001", "01111", "00001", "00001", "01110"),
+        '?' to listOf("01110", "10001", "00001", "00010", "00100", "00000", "00100")
+    )
 }
