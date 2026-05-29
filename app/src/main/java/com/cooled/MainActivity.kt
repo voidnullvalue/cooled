@@ -161,6 +161,8 @@ private fun AppScreenContent(vm: AppViewModel, missingPermissions: List<String>)
     var alarmReminderMinutes by remember { mutableStateOf("5") }
     var reminderId by remember { mutableStateOf("0") }
     var assetRefresh by remember { mutableIntStateOf(0) }
+    var assetUploadPath by remember { mutableStateOf("") }
+    var assetUploadKind by remember { mutableStateOf("payload-asset") }
     val ledAssetSummary = remember(assetRefresh, transportMode) { OriginalLedAssetCatalogs.active.summary() }
     val hasBlePermissions = missingPermissions.isEmpty()
     val isFakeMode = transportMode == "Fake demo"
@@ -199,7 +201,10 @@ private fun AppScreenContent(vm: AppViewModel, missingPermissions: List<String>)
             Button(onClick = { assetRefresh++ }) { Text("Refresh Asset Catalog") }
         }
         ledAssetSummary.examples.take(6).forEach { asset ->
-            WhiteText("${asset.kind}: ${asset.path} (${asset.sizeBytes} bytes)")
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(onClick = { assetUploadPath = asset.path; assetUploadKind = asset.kind }) { Text("Select") }
+                WhiteText("${asset.kind}: ${asset.path} (${asset.sizeBytes} bytes)")
+            }
         }
 
         SectionTitle("Core LED Controls")
@@ -303,16 +308,7 @@ private fun AppScreenContent(vm: AppViewModel, missingPermissions: List<String>)
             SmallTextField(alarmDurationSeconds, { alarmDurationSeconds = it }, "Duration s")
             SmallTextField(alarmReminderMinutes, { alarmReminderMinutes = it }, "Remind m")
             Button(
-                onClick = {
-                    vm.setAlarm(
-                        true,
-                        alarmHour.toIntOrNull() ?: 7,
-                        alarmMinute.toIntOrNull() ?: 30,
-                        alarmRepeatMask.toIntOrNull() ?: 62,
-                        alarmDurationSeconds.toIntOrNull() ?: 600,
-                        alarmReminderMinutes.toIntOrNull() ?: 5
-                    )
-                },
+                onClick = { vm.setAlarm(true, alarmHour.toIntOrNull() ?: 7, alarmMinute.toIntOrNull() ?: 30, alarmRepeatMask.toIntOrNull() ?: 62, alarmDurationSeconds.toIntOrNull() ?: 600, alarmReminderMinutes.toIntOrNull() ?: 5) },
                 enabled = hasBlePermissions && caps.supportsAlarms
             ) { Text("Set Alarm") }
             Button(onClick = { vm.setAlarm(false, alarmHour.toIntOrNull() ?: 7, alarmMinute.toIntOrNull() ?: 30, alarmRepeatMask.toIntOrNull() ?: 62, alarmDurationSeconds.toIntOrNull() ?: 600, alarmReminderMinutes.toIntOrNull() ?: 5) }, enabled = hasBlePermissions && caps.supportsAlarms) { Text("Disable Alarm") }
@@ -353,6 +349,18 @@ private fun AppScreenContent(vm: AppViewModel, missingPermissions: List<String>)
             Button(onClick = { vm.sendTextProgram(uploadText, uploadSpeed.toIntOrNull() ?: 255, uploadEffect.toIntOrNull() ?: 2, uploadProgramType.toIntOrNull(), uploadExtraType.toIntOrNull()) }, enabled = hasBlePermissions) { Text("Upload Text Program") }
             Button(onClick = vm::timeoutTransfer) { Text("Timeout Tick") }
             Button(onClick = vm::cancelTransfer) { Text("Cancel Transfer") }
+        }
+
+        SectionTitle("Original Asset Program Upload")
+        TextField(value = assetUploadPath, onValueChange = { assetUploadPath = it }, modifier = Modifier.fillMaxWidth(), label = { Text("Original APK asset path") }, enabled = hasBlePermissions, colors = textFieldColors())
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            SmallTextField(assetUploadKind, { assetUploadKind = it }, "Asset kind")
+            SmallTextField(uploadSpeed, { uploadSpeed = it }, "Speed")
+            SmallTextField(uploadEffect, { uploadEffect = it }, "Effect")
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Button(onClick = { vm.sendOriginalAssetProgram(assetUploadPath, assetUploadKind, uploadSpeed.toIntOrNull() ?: 255, uploadEffect.toIntOrNull() ?: 2, uploadProgramType.toIntOrNull(), uploadExtraType.toIntOrNull()) }, enabled = hasBlePermissions) { Text("Upload Original Asset") }
+            Button(onClick = { assetUploadPath = ""; assetUploadKind = "payload-asset" }) { Text("Clear Asset") }
         }
 
         SectionTitle("Fake/Test Controls")
