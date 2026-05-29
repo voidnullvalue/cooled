@@ -6,7 +6,8 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.APPLICATION_KEY
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.CreationExtras
-import com.cooled.core.assets.OriginalLedAssetCatalogs
+import com.cooled.core.assets.OriginalLedAssetKinds
+import com.cooled.core.assets.OriginalLedAssetProgramPlanner
 import com.cooled.core.ble.AndroidBleTransport
 import com.cooled.core.ble.BleIoDirection
 import com.cooled.core.ble.BleTransport
@@ -174,41 +175,46 @@ class AppViewModel(
     }
 
     fun sendOriginalAssetProgram(assetPath: String, kind: String, speed: Int, effect: Int, programType: Int?, extraTypeByte: Int?) = viewModelScope.launch {
-        val cleanPath = assetPath.trim().trimStart('/').take(512)
-        if (cleanPath.isBlank()) {
+        val selection = OriginalLedAssetProgramPlanner.selectByPath(
+            assetPath = assetPath,
+            kind = kind,
+            displayColumns = connectedMetadata.columns,
+            displayRows = connectedMetadata.rows,
+            speed = speed,
+            effect = effect,
+            programType = programType,
+            extraTypeByte = extraTypeByte
+        )
+        if (selection == null) {
             appendEvent("${ts()} Original asset upload skipped: blank asset path")
             return@launch
         }
-        val cleanKind = kind.ifBlank { "payload-asset" }.take(32)
-        queueOriginalAssetProgram(cleanPath, cleanKind, speed, effect, programType, extraTypeByte)
+        queueOriginalAssetSelection(selection.toProgramContent(), selection.debugSummary(), selection.programType, selection.extraTypeByte)
     }
 
     fun sendPreferredOriginalAssetProgram(kind: String, speed: Int, effect: Int, programType: Int?, extraTypeByte: Int?) = viewModelScope.launch {
-        val cleanKind = kind.ifBlank { "payload-asset" }.take(32)
-        val asset = OriginalLedAssetCatalogs.active.firstPreferred(cleanKind)
-        if (asset == null) {
+        val cleanKind = kind.ifBlank { OriginalLedAssetKinds.PAYLOAD_ASSET }.take(32)
+        val selection = OriginalLedAssetProgramPlanner.selectPreferred(
+            kind = cleanKind,
+            displayColumns = connectedMetadata.columns,
+            displayRows = connectedMetadata.rows,
+            speed = speed,
+            effect = effect,
+            programType = programType,
+            extraTypeByte = extraTypeByte
+        )
+        if (selection == null) {
             appendEvent("${ts()} Preferred original asset upload skipped: no asset found for kind=$cleanKind")
             return@launch
         }
-        queueOriginalAssetProgram(asset.path, asset.kind, speed, effect, programType, extraTypeByte)
+        queueOriginalAssetSelection(selection.toProgramContent(), selection.debugSummary(), selection.programType, selection.extraTypeByte)
     }
 
     fun sendTextProgram() = sendTextProgram("HELLO", 255, 2, if (family.value == DeviceFamily.ILEDCLOCK) 14 else null, if (family.value == DeviceFamily.ILEDCLOCK) 1 else null)
 
-    private fun queueOriginalAssetProgram(assetPath: String, kind: String, speed: Int, effect: Int, programType: Int?, extraTypeByte: Int?) {
-        val pack = buildProgramPackage(
-            content = ProgramContent.OriginalAsset(
-                assetPath = assetPath,
-                kind = kind,
-                speed = speed.coerceIn(0, 255),
-                effect = effect.coerceIn(0, 255),
-                displayColumns = connectedMetadata.columns,
-                displayRows = connectedMetadata.rows
-            ),
-            programType = programType,
-            extraTypeByte = extraTypeByte
-        )
-        queueProgramUpload(pack, "asset='$assetPath' kind=$kind matrix=${connectedMetadata.columns ?: "?"}x${connectedMetadata.rows ?: "?"} speed=${speed.coerceIn(0, 255)} effect=${effect.coerceIn(0, 255)} programType=${programType ?: "none"} extra=${extraTypeByte ?: "none"}")
+    private fun queueOriginalAssetSelection(content: ProgramContent.OriginalAsset, description: String, programType: Int?, extraTypeByte: Int?) {
+        val pack = buildProgramPackage(content = content, programType = programType, extraTypeByte = extraTypeByte)
+        queueProgramUpload(pack, description)
     }
 
     private fun buildProgramPackage(content: ProgramContent, programType: Int?, extraTypeByte: Int?): ProgramPackage {
@@ -245,7 +251,10 @@ class AppViewModel(
                 } else if (payload.status == 1 && pendingStartRetries > 0) {
                     pendingStartRetries--
                     appendEvent("${ts()} Program start NACK; retrying start (${pendingStartRetries} left)")
-                    viewModelScope.launch { delay(300L); if (pendingProgram === pack) repo.sendRawFrame(pack.startHeaderFrame) }
+                    viewModelScope.launch {
+                        delay(300L)
+                        if (pendingProgram === pack) repo.sendRawFrame(pack.startHeaderFrame)
+                    }
                 } else {
                     pendingProgram = null
                     pendingChunkIndex = 0
@@ -261,7 +270,9 @@ class AppViewModel(
                         pendingProgram = null
                         pendingChunkIndex = 0
                         pendingStartRetries = 0
-                    } else sendPendingChunk(pack)
+                    } else {
+                        sendPendingChunk(pack)
+                    }
                 } else if (payload.status == 1) {
                     appendEvent("${ts()} Program chunk ${payload.chunkIndex} NACK; resending")
                     pendingChunkIndex = payload.chunkIndex.coerceIn(0, pack.chunkFrames.lastIndex)
@@ -284,33 +295,69 @@ class AppViewModel(
     }
 
     fun startFakeTransfer() = viewModelScope.launch {
-        val fakeTransport = fake ?: run { appendEvent("${ts()} Fake scripted transfer is unavailable in Android BLE mode"); return@launch }
+        val fakeTransport = fake ?: run {
+            appendEvent("${ts()} Fake scripted transfer is unavailable in Android BLE mode")
+            return@launch
+        }
         val compressed = ByteArray(2500) { (it % 17).toByte() }
         val chunks = compressed.toList().chunked(1024).map { it.toByteArray() }
         transferMachine.startSession(chunks.size)
         repo.sendProgramStart(family.value, ProgramStartRequest(compressed = compressed, index = 0, count = 1, showCount = 1, programType = 14, extraTypeByte = 1))
         fakeTransport.enqueueRxPayload(byteArrayOf(0x02, 0x00), "start-ack")
-        chunks.forEachIndexed { idx, c -> repo.sendDataChunk(0x03, compressed.size, idx, c); fakeTransport.enqueueRxPayload(byteArrayOf(0x03, 0x00, ((idx shr 8) and 0xFF).toByte(), (idx and 0xFF).toByte(), 0x00), "chunk-ack") }
+        chunks.forEachIndexed { idx, c ->
+            repo.sendDataChunk(0x03, compressed.size, idx, c)
+            fakeTransport.enqueueRxPayload(byteArrayOf(0x03, 0x00, ((idx shr 8) and 0xFF).toByte(), (idx and 0xFF).toByte(), 0x00), "chunk-ack")
+        }
     }
 
     fun scriptTransferScenario(name: String) {
-        val fakeTransport = fake ?: run { appendEvent("${ts()} Script '$name' ignored; Android BLE mode has no fake response queue"); return }
+        val fakeTransport = fake ?: run {
+            appendEvent("${ts()} Script '$name' ignored; Android BLE mode has no fake response queue")
+            return
+        }
         fakeTransport.clearScripted()
         when (name) {
-            "happy" -> { fakeTransport.enqueueRxPayload(byteArrayOf(0x02, 0x00), "start-ok"); repeat(6) { i -> fakeTransport.enqueueRxPayload(byteArrayOf(0x03, 0x00, 0x00, i.toByte(), 0x00), "chunk-ok-$i") } }
-            "delayed_ack" -> { fakeTransport.enqueueRawFrame(byteArrayOf(0x7E, 0x00, 0x7E), "unexpected-frame"); fakeTransport.enqueueRxPayload(byteArrayOf(0x02, 0x00), "late-start-ok") }
-            "nack_then_success" -> { fakeTransport.enqueueRxPayload(byteArrayOf(0x02, 0x00), "start-ok"); fakeTransport.enqueueRxPayload(byteArrayOf(0x03, 0x00, 0x00, 0x00, 0x01), "nack-1"); fakeTransport.enqueueRxPayload(byteArrayOf(0x03, 0x00, 0x00, 0x00, 0x01), "nack-2"); fakeTransport.enqueueRxPayload(byteArrayOf(0x03, 0x00, 0x00, 0x00, 0x00), "finally-ok") }
-            "retry_exhaust" -> { fakeTransport.enqueueRxPayload(byteArrayOf(0x02, 0x00), "start-ok"); repeat(5) { fakeTransport.enqueueRxPayload(byteArrayOf(0x03, 0x00, 0x00, 0x00, 0x01), "nack") } }
+            "happy" -> {
+                fakeTransport.enqueueRxPayload(byteArrayOf(0x02, 0x00), "start-ok")
+                repeat(6) { i -> fakeTransport.enqueueRxPayload(byteArrayOf(0x03, 0x00, 0x00, i.toByte(), 0x00), "chunk-ok-$i") }
+            }
+            "delayed_ack" -> {
+                fakeTransport.enqueueRawFrame(byteArrayOf(0x7E, 0x00, 0x7E), "unexpected-frame")
+                fakeTransport.enqueueRxPayload(byteArrayOf(0x02, 0x00), "late-start-ok")
+            }
+            "nack_then_success" -> {
+                fakeTransport.enqueueRxPayload(byteArrayOf(0x02, 0x00), "start-ok")
+                fakeTransport.enqueueRxPayload(byteArrayOf(0x03, 0x00, 0x00, 0x00, 0x01), "nack-1")
+                fakeTransport.enqueueRxPayload(byteArrayOf(0x03, 0x00, 0x00, 0x00, 0x01), "nack-2")
+                fakeTransport.enqueueRxPayload(byteArrayOf(0x03, 0x00, 0x00, 0x00, 0x00), "finally-ok")
+            }
+            "retry_exhaust" -> {
+                fakeTransport.enqueueRxPayload(byteArrayOf(0x02, 0x00), "start-ok")
+                repeat(5) { fakeTransport.enqueueRxPayload(byteArrayOf(0x03, 0x00, 0x00, 0x00, 0x01), "nack") }
+            }
             "unexpected_packet" -> fakeTransport.enqueueRawFrame(byteArrayOf(0x7E, 0x01, 0x02, 0x03), "garbage")
         }
         appendEvent("${ts()} Loaded transfer script=$name")
     }
 
-    fun timeoutTransfer() { transferMachine.onTimeout(); appendEvent("${ts()} Transfer timeout tick -> ${transferMachine.state.value}") }
-    fun cancelTransfer() { pendingProgram = null; pendingChunkIndex = 0; pendingStartRetries = 0; transferMachine.cancel(); appendEvent("${ts()} Transfer cancelled") }
+    fun timeoutTransfer() {
+        transferMachine.onTimeout()
+        appendEvent("${ts()} Transfer timeout tick -> ${transferMachine.state.value}")
+    }
+
+    fun cancelTransfer() {
+        pendingProgram = null
+        pendingChunkIndex = 0
+        pendingStartRetries = 0
+        transferMachine.cancel()
+        appendEvent("${ts()} Transfer cancelled")
+    }
+
     fun copyDebugLog(): String = events.value.joinToString("\n")
 
-    private fun appendEvent(text: String) { _events.value = (listOf(text) + _events.value).take(200) }
+    private fun appendEvent(text: String) {
+        _events.value = (listOf(text) + _events.value).take(200)
+    }
 
     private fun ParsedPayload.summary(): String = when (this) {
         is ParsedPayload.Unknown -> "Unknown payload (${data.size} bytes): ${data.toHex()}"
@@ -340,7 +387,14 @@ class AppViewModel(
         is ParsedPayload.TransferChunkResponse -> "Transfer chunk response opcode=0x${opcode.hex2()} chunk=$chunkIndex status=$status (${transferStatusLabel(status)})"
     }
 
-    private fun transferStatusLabel(status: Int): String = when (status) { 0 -> "OK"; 1 -> "retry/nack"; 2 -> "busy/invalid state"; 3 -> "rejected/unsupported"; else -> "unknown" }
+    private fun transferStatusLabel(status: Int): String = when (status) {
+        0 -> "OK"
+        1 -> "retry/nack"
+        2 -> "busy/invalid state"
+        3 -> "rejected/unsupported"
+        else -> "unknown"
+    }
+
     private fun ByteArray.toHex(): String = joinToString(" ") { "%02X".format(it) }
     private fun Int.hex2(): String = "%02X".format(this and 0xFF)
     private fun ts() = System.currentTimeMillis().toString()
