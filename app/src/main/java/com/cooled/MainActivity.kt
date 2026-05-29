@@ -3,6 +3,7 @@ package com.cooled
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
@@ -27,6 +28,7 @@ import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -73,6 +75,7 @@ fun AppScreen() {
 private fun rememberMissingBlePermissions(): List<String> {
     val context = LocalContext.current
     var refresh by remember { mutableIntStateOf(0) }
+    var hasAutoRequested by remember { mutableStateOf(false) }
     val permissions = remember {
         buildList {
             add(Manifest.permission.ACCESS_FINE_LOCATION)
@@ -88,6 +91,14 @@ private fun rememberMissingBlePermissions(): List<String> {
     val missing = permissions.filter {
         ContextCompat.checkSelfPermission(context, it) != PackageManager.PERMISSION_GRANTED
     }
+
+    LaunchedEffect(missing.joinToString(separator = "|")) {
+        if (missing.isNotEmpty() && !hasAutoRequested) {
+            hasAutoRequested = true
+            launcher.launch(missing.toTypedArray())
+        }
+    }
+
     if (missing.isNotEmpty()) {
         Column(
             modifier = Modifier
@@ -96,9 +107,16 @@ private fun rememberMissingBlePermissions(): List<String> {
                 .padding(12.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Text("BLE scanning needs Bluetooth and Location permissions on many Android builds.", color = Color.White)
-            Button(onClick = { launcher.launch(missing.toTypedArray()) }) { Text("Grant BLE permissions") }
-            Button(onClick = { context.startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)) }) { Text("Open Location Settings") }
+            Text("BLE permissions are missing: ${missing.joinToString { permissionLabel(it) }}", color = Color.White)
+            Text("Android may refuse to show the permission popup again after denial. Use App Permission Settings if Retry does not show a dialog.", color = Color.White)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(onClick = { launcher.launch(missing.toTypedArray()) }) { Text("Retry Permission Prompt") }
+                Button(onClick = { context.startActivity(appPermissionSettingsIntent(context.packageName)) }) { Text("App Permission Settings") }
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(onClick = { refresh++ }) { Text("Refresh Permission State") }
+                Button(onClick = { context.startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)) }) { Text("Location Settings") }
+            }
         }
     }
     refresh
@@ -142,6 +160,7 @@ private fun AppScreenContent(vm: AppViewModel, missingPermissions: List<String>)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Button(onClick = { context.startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)) }) { Text("Location Settings") }
             Button(onClick = { context.startActivity(Intent(Settings.ACTION_BLUETOOTH_SETTINGS)) }) { Text("Bluetooth Settings") }
+            Button(onClick = { context.startActivity(appPermissionSettingsIntent(context.packageName)) }) { Text("App Permissions") }
         }
         WhiteText("State=$state MTU=$mtu Family=$family")
         WhiteText("Transfer=$transfer")
@@ -235,6 +254,17 @@ private fun AppScreenContent(vm: AppViewModel, missingPermissions: List<String>)
             }
         }
     }
+}
+
+private fun permissionLabel(permission: String): String = when (permission) {
+    Manifest.permission.ACCESS_FINE_LOCATION -> "Location"
+    Manifest.permission.BLUETOOTH_SCAN -> "Nearby devices scan"
+    Manifest.permission.BLUETOOTH_CONNECT -> "Nearby devices connect"
+    else -> permission.substringAfterLast('.')
+}
+
+private fun appPermissionSettingsIntent(packageName: String): Intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+    data = Uri.fromParts("package", packageName, null)
 }
 
 @Composable
