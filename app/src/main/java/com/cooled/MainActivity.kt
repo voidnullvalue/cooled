@@ -8,6 +8,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -21,6 +22,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -29,16 +32,30 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.cooled.ui.AppViewModel
 
+private val CooledColors = darkColorScheme(
+    background = Color(0xFF111014),
+    surface = Color(0xFF111014),
+    onBackground = Color.White,
+    onSurface = Color.White,
+    primary = Color(0xFF7E57C2),
+    onPrimary = Color.White,
+    secondary = Color(0xFFB39DDB),
+    onSecondary = Color.White,
+    error = Color(0xFFFFB4AB),
+    onError = Color(0xFF690005)
+)
+
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContent { MaterialTheme { AppScreen() } }
+        setContent { MaterialTheme(colorScheme = CooledColors) { AppScreen() } }
     }
 }
 
@@ -68,8 +85,14 @@ private fun rememberMissingBlePermissions(): List<String> {
         ContextCompat.checkSelfPermission(context, it) != PackageManager.PERMISSION_GRANTED
     }
     if (missing.isNotEmpty()) {
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text("BLE permissions are required for real device scanning and connection.")
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(MaterialTheme.colorScheme.background)
+                .padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text("BLE permissions are required for real device scanning and connection.", color = Color.White)
             Button(onClick = { launcher.launch(missing.toTypedArray()) }) { Text("Grant BLE permissions") }
         }
     }
@@ -94,8 +117,14 @@ private fun AppScreenContent(vm: AppViewModel, missingPermissions: List<String>)
     val hasBlePermissions = missingPermissions.isEmpty()
     val isFakeMode = transportMode == "Fake demo"
 
-    Column(modifier = Modifier.fillMaxSize().padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text("Mode=$transportMode")
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+            .padding(12.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        WhiteText("Mode=$transportMode")
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Button(onClick = vm::scan, enabled = hasBlePermissions) { Text("Scan") }
             Button(onClick = vm::stopScan, enabled = hasBlePermissions) { Text("Stop Scan") }
@@ -104,11 +133,11 @@ private fun AppScreenContent(vm: AppViewModel, missingPermissions: List<String>)
             Button(onClick = { vm.power(true) }, enabled = hasBlePermissions) { Text("On") }
             Button(onClick = { vm.power(false) }, enabled = hasBlePermissions) { Text("Off") }
         }
-        Text("State=$state MTU=$mtu Family=$family")
-        Text("Transfer=$transfer")
-        Text("Caps: clock=${caps.supportsClock} alarms=${caps.supportsAlarms} reminders=${caps.supportsReminders} night=${caps.supportsNightMode} scoreboard=${caps.supportsScoreboard}")
+        WhiteText("State=$state MTU=$mtu Family=$family")
+        WhiteText("Transfer=$transfer")
+        WhiteText("Caps: clock=${caps.supportsClock} alarms=${caps.supportsAlarms} reminders=${caps.supportsReminders} night=${caps.supportsNightMode} scoreboard=${caps.supportsScoreboard}")
 
-        Text("Brightness")
+        WhiteText("Brightness")
         Slider(value = brightness, onValueChange = { brightness = it }, valueRange = 1f..100f, enabled = hasBlePermissions)
         Button(onClick = { vm.brightness(brightness.toInt()) }, enabled = hasBlePermissions) { Text("Send Brightness") }
 
@@ -120,14 +149,30 @@ private fun AppScreenContent(vm: AppViewModel, missingPermissions: List<String>)
             Button(onClick = { vm.colorMode(5) }, enabled = hasBlePermissions && caps.supportsColorModes) { Text("ColorMode 5") }
         }
 
-        TextField(value = password, onValueChange = { password = it }, modifier = Modifier.fillMaxWidth(), label = { Text("Password (hex-ish digits)") }, enabled = hasBlePermissions)
+        TextField(
+            value = password,
+            onValueChange = { password = it },
+            modifier = Modifier.fillMaxWidth(),
+            label = { Text("Password (hex-ish digits)") },
+            enabled = hasBlePermissions,
+            colors = TextFieldDefaults.colors(
+                focusedTextColor = Color.White,
+                unfocusedTextColor = Color.White,
+                disabledTextColor = Color.White.copy(alpha = 0.45f),
+                focusedLabelColor = Color.White,
+                unfocusedLabelColor = Color.White.copy(alpha = 0.7f),
+                focusedContainerColor = Color(0xFF2A2830),
+                unfocusedContainerColor = Color(0xFF2A2830),
+                disabledContainerColor = Color(0xFF2A2830)
+            )
+        )
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Button(onClick = { vm.checkPassword(password) }, enabled = hasBlePermissions) { Text("Check Password") }
             Button(onClick = { vm.setPassword(password) }, enabled = hasBlePermissions) { Text("Set Password") }
         }
 
         if (caps.supportsClock) {
-            Text("Clock Controls")
+            WhiteText("Clock Controls")
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Button(onClick = vm::syncTimeNow, enabled = hasBlePermissions) { Text("Sync Time") }
                 Button(onClick = { vm.timer(10, true) }, enabled = hasBlePermissions) { Text("Timer 10m") }
@@ -165,13 +210,13 @@ private fun AppScreenContent(vm: AppViewModel, missingPermissions: List<String>)
             Button(onClick = { vm.scriptTransferScenario("retry_exhaust") }, enabled = isFakeMode) { Text("Script Exhaust") }
         }
 
-        Text("Parsed packet: $parsed")
-        Text("Debug events (latest first)")
+        WhiteText("Parsed packet: $parsed")
+        WhiteText("Debug events (latest first)")
         LazyColumn(modifier = Modifier.weight(1f, fill = false)) {
-            items(events) { e -> Text(e) }
+            items(events) { e -> WhiteText(e) }
         }
 
-        Text("Scan results")
+        WhiteText("Scan results")
         LazyColumn {
             items(scans) { d ->
                 Button(onClick = { vm.connect(d.address, d.name) }, enabled = hasBlePermissions, modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp)) {
@@ -180,4 +225,9 @@ private fun AppScreenContent(vm: AppViewModel, missingPermissions: List<String>)
             }
         }
     }
+}
+
+@Composable
+private fun WhiteText(value: String) {
+    Text(value, color = Color.White)
 }
