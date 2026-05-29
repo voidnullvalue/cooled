@@ -9,6 +9,7 @@ sealed class ParsedPayload {
     data class MirrorState(val value: Int) : ParsedPayload()
     data class PasswordCheckResult(val success: Boolean, val code: Int) : ParsedPayload()
     data class PasswordSetResult(val success: Boolean, val code: Int) : ParsedPayload()
+    data class DriveState(val opcode: Int, val state: Int) : ParsedPayload()
 
     data class DeviceInfo(
         val model: Int,
@@ -94,7 +95,8 @@ object ProtocolParsers {
             0x16 -> parseAlarms(payload)
             0x19 -> parseTemperatureHumidity(payload)
             0x1A -> parseReminder(payload)
-            0x1E -> parseVolume(payload)
+            0x1C -> ParsedPayload.DriveState(opcode = 0x1C, state = payload.u8OrZero(1))
+            0x1E -> if (payload.u8OrZero(1) == 0x03) parseVolume(payload) else ParsedPayload.DriveState(opcode = 0x1E, state = payload.u8OrZero(1))
             0x1F -> parseDeviceInfo(payload)
             0xFD -> parseOtaInfo(payload)
             0x02, 0xFE -> parseTransferStart(payload)
