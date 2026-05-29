@@ -46,7 +46,8 @@ object ProgramComposer {
                 showCount = showCount,
                 useAlternateOpcode = family == DeviceFamily.COOLLEDU,
                 programType = programType,
-                extraTypeByte = extraTypeByte
+                extraTypeByte = extraTypeByte,
+                startSource = if (family == DeviceFamily.COOLLEDUX) body else null
             )
         )
         val chunks = CommandBuilders.splitChunks(compressed).mapIndexed { i, c ->
