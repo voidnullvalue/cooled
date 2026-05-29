@@ -10,6 +10,7 @@ import android.bluetooth.BluetoothGattCharacteristic
 import android.bluetooth.BluetoothGattDescriptor
 import android.bluetooth.BluetoothGattService
 import android.bluetooth.BluetoothManager
+import android.bluetooth.BluetoothProfile
 import android.bluetooth.le.ScanCallback
 import android.bluetooth.le.ScanFilter
 import android.bluetooth.le.ScanResult
@@ -43,7 +44,7 @@ class AndroidBleTransport(private val context: Context) : BleTransport {
 
     private val callback = object : BluetoothGattCallback() {
         override fun onConnectionStateChange(g: BluetoothGatt, status: Int, newState: Int) {
-            if (newState == BluetoothGatt.STATE_CONNECTED) {
+            if (newState == BluetoothProfile.STATE_CONNECTED) {
                 _state.value = ConnectionState.CONNECTED
                 if (hasConnectPermission()) g.discoverServices()
             } else {
