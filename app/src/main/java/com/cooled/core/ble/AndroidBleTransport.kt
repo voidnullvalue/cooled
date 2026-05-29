@@ -100,14 +100,8 @@ class AndroidBleTransport(private val context: Context) : BleTransport {
     }
 
     private val scanCallback = object : ScanCallback() {
-        override fun onScanResult(callbackType: Int, result: ScanResult) {
-            addScanResult(result)
-        }
-
-        override fun onBatchScanResults(results: MutableList<ScanResult>) {
-            results.forEach { addScanResult(it) }
-        }
-
+        override fun onScanResult(callbackType: Int, result: ScanResult) { addScanResult(result) }
+        override fun onBatchScanResults(results: MutableList<ScanResult>) { results.forEach { addScanResult(it) } }
         override fun onScanFailed(errorCode: Int) {
             isScanning = false
             scanWatchdog?.cancel()
@@ -141,10 +135,7 @@ class AndroidBleTransport(private val context: Context) : BleTransport {
         scanWatchdog?.cancel()
         _scan.value = emptyList()
 
-        val settings = ScanSettings.Builder()
-            .setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY)
-            .setReportDelay(0L)
-            .build()
+        val settings = ScanSettings.Builder().setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY).setReportDelay(0L).build()
         scanner.startScan(null, settings, scanCallback)
         isScanning = true
         _io.value = BleIoEvent(System.currentTimeMillis(), BleIoDirection.RX, byteArrayOf(), "scan started: unfiltered BLE scan")
@@ -210,7 +201,8 @@ class AndroidBleTransport(private val context: Context) : BleTransport {
         val advertisedName = result.scanRecord?.deviceName
         val bondedName = if (hasConnectPermission()) device.name else null
         val name = advertisedName ?: bondedName
-        _scan.value = (_scan.value + ScanDevice(name, device.address, result.rssi)).distinctBy { it.address }
+        val metadata = LedScanRecordParser.parse(result.scanRecord?.bytes)
+        _scan.value = (_scan.value + ScanDevice(name, device.address, result.rssi, metadata)).distinctBy { it.address }
         if (_scan.value.size == 1) {
             _io.value = BleIoEvent(System.currentTimeMillis(), BleIoDirection.RX, byteArrayOf(), "scan result received")
         }
@@ -219,9 +211,7 @@ class AndroidBleTransport(private val context: Context) : BleTransport {
     private fun hasScanPermission(): Boolean {
         val scanAllowed = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             ContextCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_SCAN) == PackageManager.PERMISSION_GRANTED
-        } else {
-            true
-        }
+        } else true
         val locationAllowed = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
         return scanAllowed && locationAllowed
     }
@@ -233,9 +223,7 @@ class AndroidBleTransport(private val context: Context) : BleTransport {
 
     private fun isLocationEnabled(): Boolean {
         val lm = context.getSystemService(LocationManager::class.java) ?: return true
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-            lm.isLocationEnabled
-        } else {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) lm.isLocationEnabled else {
             @Suppress("DEPRECATION")
             lm.isProviderEnabled(LocationManager.GPS_PROVIDER) || lm.isProviderEnabled(LocationManager.NETWORK_PROVIDER)
         }
