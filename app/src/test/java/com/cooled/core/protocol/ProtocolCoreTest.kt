@@ -170,6 +170,62 @@ class ProtocolCoreTest {
     }
 
     @Test
+    fun coolLedUxTextProgram_matchesRecoveredApkBlockLayout() {
+        val glyphBytes = byteArrayOf(0x00, 0x01, 0x00, 0x08, 0x00, 0x08, 0x12, 0x34)
+        val content = CoolLedUxTextContentProgramContent(
+            text = "A",
+            layerType = 2,
+            startColumn = 3,
+            startRow = 4,
+            showWidth = 32,
+            showHeight = 16,
+            mode = 5,
+            speed = 6,
+            stayTime = 7,
+            moveSpace = 8,
+            glyphBytes = glyphBytes
+        )
+
+        val block = ProgramComposer.getDataWithTextContentProgramContent(content)
+
+        assertEquals(block.size, readBe32(block, 0))
+        assertEquals(0x01, block[4].toInt() and 0xFF)
+        assertEquals(0x02, block[12].toInt() and 0xFF)
+        assertEquals(3, readBe16(block, 13))
+        assertEquals(4, readBe16(block, 15))
+        assertEquals(32, readBe16(block, 17))
+        assertEquals(16, readBe16(block, 19))
+        assertEquals(5, block[21].toInt() and 0xFF)
+        assertEquals(6, block[22].toInt() and 0xFF)
+        assertEquals(7, block[23].toInt() and 0xFF)
+        assertEquals(8, readBe16(block, 24))
+        assertArrayEquals(glyphBytes, block.copyOfRange(26, block.size))
+    }
+
+    @Test
+    fun coolLedUxTextProgram_wrapsContentLikeApkGetDataWithProgram() {
+        val content = ProgramContent.CoolLedUxText(
+            CoolLedUxTextContentProgramContent(text = "A", glyphBytes = byteArrayOf(0x00, 0x00, 0x00, 0x00))
+        )
+        val body = ProgramComposer.encodeContentForTest(DeviceFamily.COOLLEDUX, content)
+
+        assertEquals(0x00, body[0].toInt() and 0xFF)
+        assertEquals(0x01, body[8].toInt() and 0xFF)
+        assertEquals(0x00, body[9].toInt() and 0xFF)
+        assertEquals(0x01, body[14].toInt() and 0xFF)
+        assertEquals(body.size - 10, readBe32(body, 10))
+    }
+
+    private fun readBe16(bytes: ByteArray, offset: Int): Int =
+        ((bytes[offset].toInt() and 0xFF) shl 8) or (bytes[offset + 1].toInt() and 0xFF)
+
+    private fun readBe32(bytes: ByteArray, offset: Int): Int =
+        ((bytes[offset].toInt() and 0xFF) shl 24) or
+            ((bytes[offset + 1].toInt() and 0xFF) shl 16) or
+            ((bytes[offset + 2].toInt() and 0xFF) shl 8) or
+            (bytes[offset + 3].toInt() and 0xFF)
+
+    @Test
     fun passwordAndClockBuilders_emitExpectedOpcodes() {
         assertEquals(0x16, FrameCodec.decode(CommandBuilders.setAlarmList(listOf(AlarmCommand(true, 6, 30, 0x7F, 120, 2))))[0].toInt() and 0xFF)
         assertEquals(0x14, FrameCodec.decode(CommandBuilders.setNightMode(true, 22, 0, 6, 0))[0].toInt() and 0xFF)
