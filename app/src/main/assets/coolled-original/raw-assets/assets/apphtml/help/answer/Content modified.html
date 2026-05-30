@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+	<meta name="viewport" content="initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <title>answer-content</title>
+    
+	<!-- 放到head中确保被渲染之前加载 -->
+	<link rel="stylesheet" href="../public-style.css" type="text/css"/>
+</head>
+<body>
+	<div class="answer-list-container">
+		<h3 id="answer-title">			
+		</h3>
+		<div id="divider-div" class="divider">
+		</div>
+		<div id="answer-content">
+		</div>
+	</div>
+
+    <div id="footer"></div>
+	
+	<script src="../public-script.js"></script>
+	
+	<!-- 放到body中，确保所有 JavaScript 代码在页面渲染之前加载完成 -->
+	<script>
+		// 答案内容
+		var answer = {
+			/// 内容用html语法编写，加粗用<b>，换行用<br>，其他写法请参考html语法
+			content: {
+				"zh-CN": "1. 使用APP对屏幕设置密码，防止别人通过APP更改内容。<br>2. 将遥控器与屏幕绑定，防止别人通过遥控器切换内容。长按遥控器“ON”按钮，约5秒，屏幕控制器会发送“嘀”的一声并显示“绑定图标”，表示绑定成功。<br><br><b>提示</b>：部分系列产品不搭配遥控器。",
+				"en": "1. Set a password for the screen using the app to prevent others from changing the content through the app.<br>2. Bind the remote control to the screen to prevent others from switching content using the remote control. Press and hold the 'ON' button on the remote control for about 5 seconds. The screen controller will emit a 'beep' sound and display a 'bind icon'.<br><br><b>Note</b>: Some product series do not come with a remote control.",
+				"ja": "1. アプリを使用して画面にパスワードを設定し、他の人がアプリを介してコンテンツを変更するのを防ぎます。<br>2. リモコンを画面にバインドして、リモコンを使用してコンテンツを切り替える他の人を防ぎます。リモコンの「ON」ボタンを約5秒間長押しします。画面コントローラは「ビープ」という音を発し、「バインドアイコン」を表示します。<br><br><b>注意</b>：一部の製品シリーズにはリモコンが付属していません。",
+				"fr": "1. Définissez un mot de passe pour l'écran à l'aide de l'application pour empêcher les autres de modifier le contenu via l'application.<br>2. Associez la télécommande à l'écran pour empêcher les autres de basculer le contenu à l'aide de la télécommande. Maintenez le bouton 'ON' de la télécommande enfoncé pendant environ 5 secondes. Le contrôleur de l'écran émettra un son de 'bip' et affichera une 'icône de liaison'.<br><br><b>Remarque</b> : Certaines séries de produits ne sont pas livrées avec une télécommande.",
+				"de": "1. Verwenden Sie die App, um für den Bildschirm ein Passwort festzulegen, um zu verhindern, dass andere den Inhalt über die App ändern.<br>2. Binden Sie die Fernbedienung an den Bildschirm, um zu verhindern, dass andere den Inhalt mit der Fernbedienung wechseln. Halten Sie die 'ON'-Taste auf der Fernbedienung etwa 5 Sekunden lang gedrückt. Der Bildschirmcontroller gibt einen 'Piep'-Ton von sich und zeigt ein 'Bindungssymbol' an.<br><br><b>Hinweis</b>: Einige Produktserien werden ohne Fernbedienung geliefert.",
+				"ko": "1. 앱을 사용하여 화면에 비밀번호를 설정하여 다른 사람이 앱을 통해 내용을 변경하는 것을 방지하십시오.<br>2. 리모컨을 화면에 바인딩하여 다른 사람이 리모컨을 사용하여 내용을 전환하는 것을 방지하십시오. 리모컨의 'ON' 버튼을 약 5초 동안 길게 누르십시오. 화면 컨트롤러는 '삐 소리'를 내며 '바인딩 아이콘'을 표시합니다.<br><br><b>참고</b>: 일부 제품 시리즈에는 리모컨이 포함되어 있지 않습니다.",
+				"it": "1. Imposta una password per lo schermo utilizzando l'app per evitare che altri modifichino il contenuto tramite l'app stessa.<br>2. Associa il telecomando allo schermo per evitare che altri passino da un contenuto all'altro utilizzando il telecomando. Tieni premuto il pulsante 'ON' del telecomando per circa 5 secondi. Il controller dello schermo emetterà un segnale acustico e visualizzerà un'icona di associazione.<br><br><b>Nota</b>: Alcune serie di prodotti non sono dotate di telecomando.",
+				"pt": "1. Defina uma senha para a tela usando o aplicativo para evitar que outras pessoas alterem o conteúdo através do aplicativo.<br>2. Associe o controle remoto à tela para evitar que outras pessoas alternem o conteúdo usando o controle remoto. Pressione e segure o botão 'ON' no controle remoto por cerca de 5 segundos. O controlador de tela emitirá um som de 'bipe' e exibirá um 'ícone de associação'.<br><br><b>Observação</b>: Algumas séries de produtos não vêm com um controle remoto.",
+				"es": "1. Establezca una contraseña para la pantalla mediante la aplicación para evitar que otros cambien el contenido a través de la aplicación.<br>2. Asocie el control remoto a la pantalla para evitar que otros cambien el contenido mediante el control remoto. Mantenga presionado el botón 'ON' del control remoto durante unos 5 segundos. El controlador de pantalla emitirá un sonido de 'pitido' y mostrará un 'ícono de asociación'.<br><br><b>Nota</b>: Algunas series de productos no vienen con un control remoto.",
+				"zh-TW": "1. 使用應用程式為螢幕設定密碼，以防止他人透過應用程式更改內容。<br>2. 將遙控器與螢幕綁定，以防止他人透過遙控器切換內容。長按遙控器上的 'ON' 按鈕約5秒。螢幕控制器將發出 '嘀'的聲音並顯示 '綁定圖示'，表示綁定成功。<br><br><b>提示</b>：某些產品系列不附帶遙控器。",
+				"ru": "1. Установите пароль для экрана с помощью приложения, чтобы предотвратить изменение содержимого другими пользователями через приложение.<br>2. Привяжите пульт дистанционного управления к экрану, чтобы предотвратить переключение содержимого другими пользователями с помощью пульта дистанционного управления. Удерживайте кнопку 'ON' на пульте дистанционного управления около 5 секунд. Контроллер экрана издаст звук 'гудка' и отобразит 'значок связи'.<br><br><b>Примечание</b>: Некоторые серии продуктов не поставляются с пультом дистанционного управления.",
+				"vi": "1. Sử dụng APP để đặt mật khẩu cho màn hình nhằm ngăn người khác thay đổi nội dung thông qua APP.<br>2. Gắn điều khiển từ xa vào màn hình để ngăn người khác chuyển đổi nội dung thông qua điều khiển từ xa. Nhấn và giữ nút \"BẬT\" trên điều khiển từ xa trong khoảng 5 giây, bộ điều khiển màn hình sẽ gửi \"tiếng bíp\" và hiển thị \"biểu tượng liên kết\", cho biết việc liên kết thành công.<br><br><b>gợi ý</b>: Một số dòng sản phẩm không được trang bị điều khiển từ xa.",
+				"th": "1. ใช้แอพเพื่อตั้งรหัสผ่านบนหน้าจอเพื่อป้องกันไม่ให้ผู้อื่นเปลี่ยนเนื้อหาผ่านแอพ<br>2. ผูกรีโมทคอนโทรลเข้ากับหน้าจอเพื่อป้องกันไม่ให้ผู้อื่นเปลี่ยนเนื้อหาผ่านรีโมทคอนโทรล กดปุ่ม \"ON\" บนรีโมทคอนโทรลค้างไว้ประมาณ 5 วินาที ตัวควบคุมหน้าจอจะส่งเสียง \"บี๊บ\" และแสดง \"ไอคอนการเย็บเล่ม\" เพื่อระบุว่าการผูกสำเร็จ<br><br><b>คำแนะนำ</b>: ผลิตภัณฑ์บางชุดไม่ตรงกับรีโมทคอนโทรล",
+			},
+			title: {
+				"zh-CN": "内容被他人更改",
+				"en": "Content has been modified by others",
+				"ja": "コンテンツが他の人によって変更されました",
+				"fr": "Le contenu a été modifié par d'autres personnes",
+				"de": "Inhalt wurde von anderen geändert",
+				"ko": "내용이 다른 사람에 의해 수정되었습니다",
+				"it": "Il contenuto è stato modificato da altri",
+				"pt": "O conteúdo foi modificado por outras pessoas",
+				"es": "El contenido ha sido modificado por otros",
+				"zh-TW": "內容被他人更改",
+				"ru": "Содержимое было изменено другими",
+				"vi": "Nội dung đã được sửa đổi bởi người khác",
+				"th": "เนื้อหาได้รับการแก้ไขโดยผู้อื่น",
+			}
+		};
+		
+		var footer = document.getElementById("footer"); 
+		footer.innerHTML = answerBottomBtnHtml;
+
+		// 获取访问参数中的language字段，如果不存在，则默认使用英语
+		var language = (getParameterByName("language") || defaultLanguage);
+
+		// 答案标题
+		var answerTitle = document.getElementById("answer-title");
+		var answerTitleText = answer.title[language];
+		if (answerTitleText === undefined) {
+			answerTitleText = answer.title[defaultLanguage];
+		}
+		answerTitle.textContent = answerTitleText;
+		
+		// 答案内容
+		var answerContent = document.getElementById("answer-content");
+		var textElemet = document.createElement("p");
+		
+		var answerContentText = answer.content[language];
+		if (answerContentText === undefined) {
+			answerContentText = answer.content[defaultLanguage];
+		}
+		
+		textElemet.innerHTML = answerContentText;
+		answerContent.appendChild(textElemet);
+	</script>
+</body>
+</html>

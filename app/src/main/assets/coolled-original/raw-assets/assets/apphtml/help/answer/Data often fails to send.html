@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+	<meta name="viewport" content="initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <title>answer-content</title>
+    
+	<!-- 放到head中确保被渲染之前加载 -->
+	<link rel="stylesheet" href="../public-style.css" type="text/css"/>
+</head>
+<body>
+	<div class="answer-list-container">
+		<h3 id="answer-title">			
+		</h3>
+		<div id="divider-div" class="divider">
+		</div>
+		<div id="answer-content">
+		</div>
+	</div>
+
+    <div id="footer"></div>
+	
+	<script src="../public-script.js"></script>
+	
+	<script>
+		var footer = document.getElementById("footer"); 
+		footer.innerHTML = answerBottomBtnHtml;
+	</script>
+	
+	<!-- 放到body中，确保所有 JavaScript 代码在页面渲染之前加载完成 -->
+	<script>
+		// 答案内容
+		var answer = {
+			/// 内容用html语法编写，加粗用<b>，换行用<br>，其他写法请参考html语法
+			content: {
+				"zh-CN": "<b>注意</b>：请勿用金属包裹显示屏和控制器，否则会导致数据发送异常。<br><br>1. 检查电源供应的功率是否符合要求。<br>2. 确认设备正常工作且连接正确。<br>3. 尝试在较近的距离发送数据。<br>4. 重新开启设备，退出APP，然后再次打开APP，并重新连接以发送数据。",
+				"en": "<b>Note</b>: Please do not wrap the display screen and controller with metal, which will cause abnormal data transmission.<br><br>1. Check whether the power of the power supply meets the requirements.<br>2. Confirm that the device is working and connected properly.<br>3. Try sending data at a closer distance.<br>4. Power on the device again, exit the APP, then open the APP again, and reconnect to send data.",
+				"ja": "<b>注意</b>：ディスプレイ画面とコントローラーを金属で包まないでください。これにより異常なデータ伝送が発生します。<br><br>1. 電源供給の電力が要件を満たしているかどうかを確認します。<br>2. デバイスが正常に動作し、適切に接続されていることを確認します。<br>3. より近い距離でデータを送信してみてください。<br>4. デバイスを再度電源に入れ、アプリを終了し、再度アプリを開いてデータを送信するために再接続します。",
+				"fr": "<b>Note</b> : Veuillez ne pas envelopper l'écran d'affichage et le contrôleur avec du métal, ce qui provoquerait une transmission de données anormale.<br><br>1. Vérifiez si la puissance de l'alimentation électrique répond aux exigences.<br>2. Vérifiez que l'appareil fonctionne et est correctement connecté.<br>3. Essayez d'envoyer les données à une distance plus proche.<br>4. Allumez à nouveau l'appareil, quittez l'application, puis ouvrez à nouveau l'application et reconnectez-vous pour envoyer les données.",
+				"de": "<b>Hinweis</b>: Bitte wickeln Sie den Displaybildschirm und den Controller nicht mit Metall ein, da dies zu einer abnormalen Datenübertragung führen kann.<br><br>1. Überprüfen Sie, ob die Stromversorgung den Anforderungen entspricht.<br>2. Stellen Sie sicher, dass das Gerät ordnungsgemäß funktioniert und korrekt verbunden ist.<br>3. Versuchen Sie, die Daten aus einer kürzeren Entfernung zu senden.<br>4. Schalten Sie das Gerät erneut ein, beenden Sie die APP, öffnen Sie dann die APP erneut und stellen Sie eine erneute Verbindung her, um Daten zu senden.",
+				"ko": "<b>주의</b>: 디스플레이 스크린과 컨트롤러를 금속으로 감싸지 마세요. 이는 비정상적인 데이터 전송을 야기할 수 있습니다.<br><br>1. 전원 공급의 전력이 요구 사항을 충족하는지 확인하세요.<br>2. 장치가 올바르게 작동하고 정확하게 연결되었는지 확인하세요.<br>3. 더 가까운 거리에서 데이터를 전송해 보세요.<br>4. 장치를 다시 켜고 APP을 종료한 다음 APP을 다시 열고 데이터를 보내기 위해 다시 연결하세요.",
+				"it": "<b>Nota</b>: Si prega di non avvolgere lo schermo del display e il controller con metallo, poiché ciò causerà una trasmissione anomala dei dati.<br><br>1. Verificare se la potenza dell'alimentazione elettrica soddisfa i requisiti.<br>2. Verificare che il dispositivo funzioni e sia correttamente collegato.<br>3. Provare ad inviare i dati a distanza più ravvicinata.<br>4. Riaccendere il dispositivo, uscire dall'APP, quindi aprire nuovamente l'APP e riconnettersi per inviare i dati.",
+				"pt": "<b>Observação</b>: Por favor, não envolva a tela do display e o controlador com metal, pois isso causará uma transmissão anormal de dados.<br><br>1. Verifique se a potência da fonte de alimentação atende aos requisitos.<br>2. Verifique se o dispositivo está funcionando e conectado corretamente.<br>3. Tente enviar dados a uma distância mais próxima.<br>4. Ligue o dispositivo novamente, saia do APP, abra novamente o APP e reconecte para enviar os dados.",
+				"es": "<b>Nota</b>: Por favor, no envuelva la pantalla del dispositivo y el controlador con metal, ya que esto puede causar una transmisión anormal de datos.<br><br>1. Verifique si la potencia del suministro cumple con los requisitos.<br>2. Asegúrese de que el dispositivo esté funcionando y conectado correctamente.<br>3. Intente enviar los datos a una distancia más cercana.<br>4. Encienda el dispositivo nuevamente, salga de la aplicación, luego abra la aplicación nuevamente y vuelva a conectarse para enviar los datos.",
+				"zh-TW": "<b>注意</b>：請勿用金屬包裹顯示屏和控制器，這將導致異常數據傳輸。<br><br>1. 檢查電源供應是否符合要求。<br>2. 確認設備正常工作且連接正確。<br>3. 嘗試在較近的距離傳送數據。<br>4. 再次開啟設備，退出APP，然後再次打開APP並重新連接以傳送數據。",
+				"ru": "<b>Примечание</b>: Пожалуйста, не оборачивайте экран и контроллер металлом, это может вызвать неправильную передачу данных.<br><br>1. Проверьте, соответствует ли мощность источника питания требованиям.<br>2. Убедитесь, что устройство работает и правильно подключено.<br>3. Попробуйте отправить данные на ближайшем расстоянии.<br>4. Включите устройство снова, выйдите из приложения, затем снова откройте приложение и повторно подключитесь для отправки данных.",
+				"vi": "<b>Để ý</b>: Không bọc màn hình và bộ điều khiển bằng kim loại, nếu không sẽ gây ra hiện tượng truyền dữ liệu bất thường.<br><br>1. Kiểm tra xem nguồn điện do bộ nguồn cung cấp có đáp ứng yêu cầu hay không.<br>2. Xác nhận rằng thiết bị đang hoạt động bình thường và được kết nối chính xác.<br>3. Thử gửi dữ liệu ở khoảng cách gần hơn.<br>4. Khởi động lại thiết bị, thoát khỏi APP, sau đó mở lại APP và kết nối lại để gửi dữ liệu.",
+				"th": "<b>สังเกต</b>: อย่าพันจอแสดงผลและตัวควบคุมด้วยโลหะ ไม่เช่นนั้นจะทำให้เกิดการส่งข้อมูลที่ผิดปกติ<br><br>1. ตรวจสอบว่ากำลังไฟที่จ่ายจากแหล่งจ่ายไฟตรงตามข้อกำหนดหรือไม่<br>2. ตรวจสอบว่าอุปกรณ์ทำงานและเชื่อมต่ออย่างถูกต้อง<br>3. ลองส่งข้อมูลในระยะใกล้กว่านี้<br>4. รีสตาร์ทอุปกรณ์ ออกจากแอป จากนั้นเปิดแอปอีกครั้ง และเชื่อมต่อใหม่เพื่อส่งข้อมูล",
+			},
+			title: {
+				"zh-CN": "数据经常发送失败",
+				"en": "Data often fails to send",
+				"ja": "データの送信が頻繁に失敗します",
+				"fr": "Échec fréquent de l'envoi des données",
+				"de": "Daten werden häufig nicht gesendet",
+				"ko": "데이터 전송이 자주 실패합니다",
+				"it": "Spesso si verificano errori nell'invio dei dati",
+				"pt": "Falha frequente no envio de dados",
+				"es": "A menudo falla el envío de datos",
+				"zh-TW": "資料經常傳送失敗",
+				"ru": "Часто не удается отправить данные",
+				"vi": "Dữ liệu thường không gửi được",
+				"th": "ข้อมูลมักจะล้มเหลวในการส่ง",
+			}
+		};
+
+		// 获取访问参数中的language字段，如果不存在，则默认使用英语
+		var language = (getParameterByName("language") || defaultLanguage);
+
+		// 答案标题
+		var answerTitle = document.getElementById("answer-title");
+		var answerTitleText = answer.title[language];
+		if (answerTitleText === undefined) {
+			answerTitleText = answer.title[defaultLanguage];
+		}
+		answerTitle.textContent = answerTitleText;
+		
+		// 答案内容
+		var answerContent = document.getElementById("answer-content");
+		var textElemet = document.createElement("p");
+		
+		var answerContentText = answer.content[language];
+		if (answerContentText === undefined) {
+			answerContentText = answer.content[defaultLanguage];
+		}
+		
+		textElemet.innerHTML = answerContentText;
+		answerContent.appendChild(textElemet);
+	</script>
+</body>
+</html>

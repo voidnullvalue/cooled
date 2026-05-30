@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+	<meta name="viewport" content="initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <title>answer-content</title>
+    
+	<!-- 放到head中确保被渲染之前加载 -->
+	<link rel="stylesheet" href="../public-style.css" type="text/css"/>
+	<style>
+		/* 样式 */
+		.image-container {
+		  display: flex;
+		  flex-direction: column;
+		  align-items: center;
+		}
+		.image-container img {
+		  width: 200px;
+		  height: auto;
+		  margin-bottom: 10px;
+		}
+		.image-container span {
+		  font-size: 14px;
+		  font-weight: bold;
+		}
+	</style>
+</head>
+<body>
+	<div class="answer-list-container">
+		<h3 id="answer-title">			
+		</h3>
+		<div id="divider-div" class="divider">
+		</div>
+		<div id="answer-content">
+		</div>
+		
+		<img id="prompt-image" src=""></img>
+	</div>
+
+    <div id="footer"></div>
+
+    <script src="../public-script.js"></script>
+
+    <script>
+        var footer = document.getElementById("footer"); 
+        footer.innerHTML = answerBottomBtnHtml;
+    </script>
+
+	
+	<!-- 放到body中，确保所有 JavaScript 代码在页面渲染之前加载完成 -->
+	<script>
+		// 答案内容
+		var answer = {
+			/// 内容用html语法编写，加粗用<b> \"，换行用<br>，其他写法请参考html语法
+			content: {
+				"zh-CN": "遥控器最大通讯距离为5米，请在有效范围内使用。<br><br>1.请确认遥控器底部电池隔离片是否被取掉。<br>2.按键时观察遥控器前端<b> \"LED灯\" </b>是否闪红光，若不闪烁，可能是遥控器电池没有电了。可以购买2025纽扣电池进行更换。<br>3.请参照<b> \"恢复出厂设置\" </b>章节，给设备恢复出厂设置。<br><br><b>提示</b>：部分系列产品不搭配遥控器。<br>",
+
+				"en": "The maximum communication distance for the remote controller is 5 meters. Please use it within the effective range.<br><br>1. Please make sure that the battery isolation film at the bottom of the remote controller is removed.<br>2. When pressing the buttons, observe if the <b> \"LED light\" </b> at the front of the remote controller flashes red. If it does not blink, it may be due to low battery power. You can replace it with a CR2025 button battery.<br>3. Please refer to the section on <b> \"Factory Reset\" </b> to restore the device to its factory settings.<br><br><b>Note</b>: Some product series do not come with a remote controller.<br>",
+
+				"ja": "リモコンの最大通信距離は5メートルです。有効範囲内で使用してください。<br><br>1. リモコンの底部にある電池の絶縁フィルムが取り外されているか確認してください。<br>2. ボタンを押す際に、リモコンの前部の<b> \"LEDライト\" </b>が赤く点滅するかを確認してください。点滅しない場合は、電池が切れている可能性があります。CR2025ボタン電池に交換してください。<br>3. デバイスを工場出荷時の設定に復元するには、<b> \"工場出荷時のリセット\" </b>のセクションを参照してください。<br><br><b> \"注意\" </b>：一部の製品シリーズにはリモコンは付属していません。<br>",
+
+				"fr": "La distance de communication maximale pour la télécommande est de 5 mètres. Veuillez l'utiliser dans la plage effective.<br><br>1. Assurez-vous que le film d'isolation de la pile au bas de la télécommande est retiré.<br>2. Lorsque vous appuyez sur les boutons, observez si le voyant <b> \"LED\" </b> à l'avant de la télécommande clignote en rouge. S'il ne clignote pas, cela peut être dû à une pile faible. Vous pouvez la remplacer par une pile bouton CR2025.<br>3. Veuillez vous référer à la section sur la <b> \"Réinitialisation d'usine\" </b> pour restaurer l'appareil à ses paramètres d'usine.<br><br><b>Remarque</b> : Certaines séries de produits ne sont pas livrées avec une télécommande.<br>",
+
+				"de": "Die maximale Kommunikationsentfernung für die Fernbedienung beträgt 5 Meter. Bitte verwenden Sie sie innerhalb des effektiven Bereichs.<br><br>1. Stellen Sie sicher, dass die Batterie-Isolierfolie am unteren Teil der Fernbedienung entfernt wurde.<br>2. Beobachten Sie beim Drücken der Tasten, ob die <b> \"LED-Leuchte\" </b> an der Vorderseite der Fernbedienung rot aufleuchtet. Wenn sie nicht blinkt, liegt möglicherweise ein niedriger Batteriestand vor. Sie können sie durch eine CR2025-Knopfzelle ersetzen.<br>3. Bitte beachten Sie den Abschnitt zur <b>Werkseinstellung</b>, um das Gerät auf die Werkseinstellungen zurückzusetzen.<br><br><b> \"Hinweis\" </b>: Einige Produktserien werden ohne Fernbedienung geliefert.<br>",
+
+				"ko": "리모컨의 최대 통신 거리는 5m입니다. 유효 범위 내에서 사용하십시오.<br><br>1. 리모컨 하단의 배터리 절연 필름이 제거되었는지 확인하십시오.<br>2. 버튼을 누를 때 리모컨 전면의 <b> \"LED 램프\" </b>가 붉은 빛으로 깜박이는지 확인하십시오. 깜박거리지 않는 경우, 배터리가 방전된 것일 수 있습니다. CR2025 버튼형 배터리로 교체할 수 있습니다.<br>3. 기기를 공장 초기화하려면 <b> \"공장 초기화\" </b> 섹션을 참조하십시오.<br><br><b> \"참고\" </b>: 일부 제품 시리즈에는 리모컨이 제공되지 않습니다.<br>",
+
+				"it": "La distanza massima di comunicazione per il telecomando è di 5 metri. Si prega di utilizzarlo all'interno della portata effettiva.<br><br>1. Assicurarsi che la pellicola di isolamento della batteria nella parte inferiore del telecomando sia stata rimossa.<br>2. Quando si premono i pulsanti, osservare se il <b> \"LED\" </b> anteriore del telecomando lampeggia in rosso. Se non lampeggia, potrebbe essere dovuto alla batteria scarica. È possibile sostituirla con una batteria a bottone CR2025.<br>3. Consultare la sezione sul <b> \"Ripristino alle impostazioni di fabbrica\" </b> per ripristinare il dispositivo alle impostazioni di fabbrica.<br><br><b>Nota</b>: Alcune serie di prodotti non sono dotate di telecomando.<br>",
+
+				"pt": "A distância máxima de comunicação para o controle remoto é de 5 metros. Por favor, use dentro da faixa efetiva.<br><br>1. Verifique se a película de isolamento da bateria na parte inferior do controle remoto foi removida.<br>2. Ao pressionar os botões, observe se a <b> \"luz LED\" </b> na frente do controle remoto pisca em vermelho. Se não piscar, pode ser devido à bateria fraca. Você pode substituí-la por uma bateria CR2025.<br>3. Consulte a seção de <b> \"Restauração de fábrica\" </b> para restaurar o dispositivo às configurações de fábrica.<br><br><b>Observação</b>: Algumas séries de produtos não vêm com um controle remoto.<br>",
+
+				"es": "La distancia máxima de comunicación para el control remoto es de 5 metros. Por favor, utilícelo dentro del rango efectivo.<br><br>1. Asegúrese de que se haya retirado la película aislante de la batería en la parte inferior del control remoto.<br>2. Al presionar los botones, observe si el <b> \"LED\" </b> en la parte frontal del control remoto parpadea en color rojo. Si no parpadea, puede ser debido a una batería baja. Puede reemplazarla con una batería de botón CR2025.<br>3. Consulte la sección de <b> \"Restauración de fábrica\" </b> para restablecer el dispositivo a la configuración de fábrica.<br><br><b>Nota</b>: Algunas series de productos no incluyen un control remoto.<br>",
+
+				"zh-TW": "遙控器最大通訊距離為5米，請在有效範圍內使用。<br><br>1. 請確認遙控器底部電池隔離片是否被取下。<br>2. 按鍵時觀察遙控器前端的<b> \"LED燈\" </b>是否閃紅光，若不閃爍，可能是遙控器電池沒電了。您可以購買2025紐扣電池進行更換。<br>3. 請參考<b> \"恢復出廠設定\" </b>章節，給設備恢復出廠設定。<br><br><b>提示</b>：部分系列產品不搭配遙控器。<br>",
+
+				"ru": "Максимальное расстояние для связи с пультом дистанционного управления составляет 5 метров. Пожалуйста, используйте его в пределах действующего диапазона.<br><br>1. Убедитесь, что изоляционная пленка батареи на нижней части пульта дистанционного управления снята.<br>2. При нажатии кнопок наблюдайте, мигает ли <b> \"светодиодная индикация\" </b> на передней части пульта дистанционного управления красным цветом. Если она не мигает, возможно, батарея разряжена. Вы можете заменить ее на кнопочную батарейку CR2025.<br>3. Обратитесь к разделу <b> \"Сброс к заводским настройкам\" </b>, чтобы вернуть устройство к заводским параметрам.<br><br><b>Примечание</b>: Некоторые серии продуктов не поставляются с пультом дистанционного управления.<br>",
+				"vi": "Khoảng cách liên lạc tối đa của bộ điều khiển từ xa là 5 mét. Hãy sử dụng nó trong phạm vi hiệu quả.<br><br>1. Hãy đảm bảo rằng tấm phim cách ly pin ở dưới cùng của bộ điều khiển từ xa đã được tháo ra.<br>2. Khi nhấn các nút, hãy quan sát xem <b> \"đèn LED\" </b> ở phía trước bộ điều khiển từ xa có nhấp nháy màu đỏ hay không. Nếu nó không nhấp nháy thì có thể là do pin yếu. Bạn có thể thay thế bằng pin nút CR2025.<br>3. Vui lòng tham khảo phần <b> \"Khôi phục cài đặt gốc\" </b> để khôi phục thiết bị về cài đặt gốc.<br><br><b>Note</b>: Một số dòng sản phẩm không đi kèm bộ điều khiển từ xa.<br>",
+				"th": "ระยะการสื่อสารสูงสุดสำหรับรีโมทคอนโทรลคือ 5 เมตร กรุณาใช้ภายในขอบเขตที่มีประสิทธิภาพ<br><br>1. โปรดตรวจสอบให้แน่ใจว่าได้ถอดฟิล์มแยกแบตเตอรี่ที่ด้านล่างของรีโมทคอนโทรลออกแล้ว<br>2. เมื่อกดปุ่ม ให้สังเกตว่า <b> \"ไฟ LED\" </b> ที่ด้านหน้าของรีโมทคอนโทรลกะพริบเป็นสีแดงหรือไม่ หากไม่กะพริบ อาจเนื่องมาจากพลังงานแบตเตอรี่เหลือน้อย คุณสามารถเปลี่ยนเป็นแบตเตอรี่ปุ่ม CR2025 ได้<br>3. โปรดดูส่วน <b> \"การรีเซ็ตเป็นค่าเริ่มต้นจากโรงงาน\" </b> เพื่อคืนค่าอุปกรณ์ให้เป็นการตั้งค่าจากโรงงาน<br><br><b>หมายเหตุ</b>: ผลิตภัณฑ์บางซีรีส์ไม่ มาพร้อมกับรีโมทคอนโทรล<br>",
+
+			},
+			content_iledbike: {
+				"zh-CN": "遥控器最大通讯距离为5米，请在有效范围内使用。<br><br>1.请给遥控器充电。<br>2.请参照 \"恢复出厂设置\" 章节，给设备恢复出厂设置。",
+				"en": "The maximum communication distance of the remote control is 5 meters, please use it within the effective range. <br><br>1. Please charge the remote control. <br>2. Please refer to the \"Restore Factory Settings\" chapter to restore the device to factory settings.",
+				"ja": "リモコンの最大通信距離は5メートルですので、有効範囲内でご使用ください。 <br><br>1. リモコンを充電してください。 <br>2. デバイスを工場出荷時の設定に復元するには、「工場出荷時の設定の復元」の章を参照してください。",
+				"fr": "La distance de communication maximale de la télécommande est de 5 mètres, veuillez l'utiliser dans la plage effective. <br><br>1. Veuillez charger la télécommande. <br>2. Veuillez vous référer au chapitre « Restaurer les paramètres d'usine » pour restaurer l'appareil aux paramètres d'usine.",
+				"de": "Die maximale Kommunikationsentfernung der Fernbedienung beträgt 5 Meter. Bitte verwenden Sie sie innerhalb der effektiven Reichweite. <br><br>1. Bitte laden Sie die Fernbedienung auf. <br>2. Informationen zum Zurücksetzen des Geräts auf die Werkseinstellungen finden Sie im Kapitel „Werkseinstellungen wiederherstellen“.",
+				"ko": "리모콘의 최대 통신 거리는 5미터이므로 유효 범위 내에서 사용해 주십시오. <br><br>1. 리모컨을 충전해주세요. <br>2. 장치를 공장 설정으로 복원하려면 \"공장 설정 복원\" 장을 참조하십시오.",
+				"it": "La distanza massima di comunicazione del telecomando è di 5 metri, utilizzarlo entro il raggio d'azione effettivo. <br><br>1. Caricare il telecomando. <br>2. Fare riferimento al capitolo \"Ripristino delle impostazioni di fabbrica\" ​​per ripristinare il dispositivo alle impostazioni di fabbrica.",
+				"pt": "A distância máxima de comunicação do controle remoto é de 5 metros, use-o dentro do alcance efetivo. <br><br>1. Carregue o controle remoto. <br>2. Consulte o capítulo \"Restaurar configurações de fábrica\" ​​para restaurar as configurações de fábrica do dispositivo.",
+				"es": "La distancia máxima de comunicación del control remoto es de 5 metros, utilícelo dentro del alcance efectivo. <br><br>1. Cargue el control remoto. <br>2. Consulte el capítulo \"Restaurar configuración de fábrica\" ​​para restaurar el dispositivo a la configuración de fábrica.",
+				"zh-TW": "遙控器最大通訊距離為5米，請在有效範圍內使用。 <br><br>1.請為遙控器充電。 <br>2.請參考 \"恢復出廠設定\" 章節，給設備恢復出廠設定。",
+				"ru": "Максимальное расстояние связи пульта дистанционного управления составляет 5 метров, используйте его в пределах эффективног о диапазона. <br><br>1. Пожалуйста, зарядите пульт дистанционного управления. <br>2. Обратитесь к главе «Восстановление заводских настроек», чтобы восстановить заводские настройки устройства.",
+				"vi": "Khoảng cách liên lạc tối đa của điều khiển từ xa là 5 mét, vui lòng sử dụng nó trong phạm vi hiệu quả. <br><br>1. Vui lòng sạc điều khiển từ xa. <br>2. Vui lòng tham khảo chương \"Khôi phục cài đặt gốc\" để khôi phục thiết bị về cài đặt gốc.",
+				"th": "ระยะการสื่อสารสูงสุดของรีโมทคอนโทรลคือ 5 เมตร โปรดใช้ภายในช่วงที่มีประสิทธิภาพ <br><br>1. โปรดชาร์จรีโมทคอนโทรล <br>2. โปรดดูบท \"คืนค่าการตั้งค่าจากโรงงาน\" เพื่อคืนค่าอุปกรณ์เป็นการตั้งค่าจากโรงงาน",
+			},
+			title: {
+				"zh-CN": "遥控器无响应",
+				"en": "Remote control not responding",
+				"ja": "リモコンが反応しない",
+				"fr": "Télécommande ne répond pas",
+				"de": "Fernbedienung reagiert nicht",
+				"ko": "리모컨이 응답하지 않습니다",
+				"it": "Il telecomando non risponde",
+				"pt": "Controle remoto não está respondendo",
+				"es": "Control remoto no responde",
+				"zh-TW": "遙控器無回應",
+				"ru": "Пульт не реагирует",
+				"vi": "Điều khiển từ xa không phản hồi",
+				"th": "รีโมทคอนโทรลไม่ตอบสนอง",
+			}
+		};
+
+		// 获取访问参数中的language字段，如果不存在，则默认使用英语
+		var language = (getParameterByName("language") || defaultLanguage);
+		// 获取当前的设备类型，如果不存在，默认为CoolLEDX的类型
+		var devName = (getParameterByName("dev_name") || "CoolLEDX").toLowerCase();
+
+		var remoteImage = document.getElementById("prompt-image");
+		if (devName == "iledbike") {
+			remoteImage.src = "./images/iledbike_remote.jpg";
+			answerContentArray = answer.content_iledbike;
+		} else {
+			remoteImage.src = "./images/remote led.jpg";
+			answerContentArray = answer.content;
+		}
+
+		// 答案标题
+		var answerTitle = document.getElementById("answer-title");
+		var answerTitleText = answer.title[language];
+		if (answerTitleText === undefined) {
+			answerTitleText = answer.title[defaultLanguage];
+		}
+		answerTitle.textContent = answerTitleText;
+		
+		// 答案内容
+		var answerContent = document.getElementById("answer-content");
+		var textElemet = document.createElement("p");
+		
+		var answerContentText = answerContentArray[language];
+		if (answerContentText === undefined) {
+			answerContentText = answerContentArray[defaultLanguage];
+		}
+		
+		textElemet.innerHTML = answerContentText;
+		answerContent.appendChild(textElemet);
+		
+		var imageElement = document.createElement(p);
+
+	</script>
+</body>
+</html>

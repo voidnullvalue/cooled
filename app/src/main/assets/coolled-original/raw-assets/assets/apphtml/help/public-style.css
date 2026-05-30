@@ -1,0 +1,47 @@
+@charset "UTF-8";
+
+/*===================================
+文件名  ：bottom-btn.css
+修改人  ：yangshun
+修改时间：2023-07-11
+版  本  ：V1.0
+说  明  ：页面底部按钮统一样式
+====================================*/
+.navigation-buttons-div {
+  position: fixed;
+  bottom: 0px;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  background-color: #f1f1f1; /* 灰色背景色 */
+  padding: 20px;
+  /* display: none; */
+}
+
+.navigation-buttons-button {
+  margin: 0 30px;
+  border: none;
+  background-color: #f1f1f1; /* 灰色背景色 */
+}
+
+.navigation-buttons-button-img {
+	width: 32px;
+	height: 32px;
+}
+
+/*===================================
+文件名  ：answer-detail.css
+修改人  ：yangshun
+修改时间：2023-07-11
+版  本  ：V1.0
+说  明  ：问题详情页统一样式
+====================================*/
+.answer-list-container {
+  padding-bottom: 60px; /* 调整为按钮区域的高度加上一些额外的内边距 防止被底部的按钮区域挡住*/
+}
+
+.divider {
+  margin: 20px 0;
+  border-top: 1px solid #ccc;
+}

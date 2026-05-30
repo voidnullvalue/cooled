@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+	<meta name="viewport" content="initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <title>Help</title>
+	<link rel="stylesheet" href="./public-style.css" type="text/css"/>
+	<style>
+		.question-list-container {
+		  padding-bottom: 60px; /* 调整为按钮区域的高度加上一些额外的内边距 防止被底部的按钮区域挡住*/
+		}
+
+		.question {
+		  display: flex;
+		  align-items: center;
+		  padding: 10px;
+		  border-bottom: 1px solid #ccc;
+		  cursor: pointer;
+		}
+
+		.question-title {
+		  flex-grow: 1;
+		  font-size: 19px;
+		}
+
+		.arrow {
+		  margin-left: 10px;
+		}
+	</style>
+</head>
+<body>
+    <div class="question-list-container">
+		<div id="question-list">
+		  <!-- 动态生成问题列表 -->
+		</div>
+	</div>
+
+    <div id="navigation-buttons" class="navigation-buttons-div">
+        <button id="back-button" class="navigation-buttons-button" disabled>
+			<img class="navigation-buttons-button-img" src="./public-images/left-normal.png">
+		</button>
+        <button id="forward-button" class="navigation-buttons-button" onclick="goForward()">
+			<img class="navigation-buttons-button-img"src="./public-images/right-select.png">
+		</button>
+    </div>
+	
+	<script src="public-script.js"></script>
+	
+	<script>
+		// 问题数据
+		var questions = [{
+			id: "User manual",  // html文件名称（不包含后缀）
+			title: {
+				"zh-CN":"使用说明书",
+				"en":"User Manual",
+				"ja":"取扱説明書",
+				"fr":"Manuel d'utilisation",
+				"de":"Benutzerhandbuch",
+				"ko":"사용 설명서",
+				"it":"Manuale utente",
+				"pt":"Manual do usuário",
+				"es":"Manual de usuario",
+				"zh-TW":"使用說明書",
+				"ru":"Руководство пользователя",
+				"vi":"Hướng dẫn sử dụng",
+				"th":"คู่มือการใช้",
+			},
+			nosupport: [ // 不支持的设备类型，有才填写
+				
+			]
+		},
+		{
+			id: "Operation video",
+			title: {
+				"zh-CN": "操作演示视频",
+				"en": "Operation demonstration video",
+				"ja": "操作デモ動画",
+				"fr": "Vidéo de démonstration du fonctionnement",
+				"de": "Demonstrationsvideo zur Bedienung",
+				"ko": "작동 데모 비디오",
+				"it": "Video dimostrativo del funzionamento",
+				"pt": "Vídeo de demonstração da operação",
+				"es": "Vídeo de demostración del funcionamiento",
+				"zh-TW": "操作演示視頻",
+				"ru": "Демонстрационное видео работы",
+				"vi": "Video trình diễn hoạt động",
+				"th": "วีดีโอสาธิตการใช้งาน",
+			},
+			nosupport: [ // 不支持的设备类型，有才填写
+				
+			]
+		},
+		{
+			id: "Device no display",
+			title: {
+				"zh-CN":"设备不显示",
+				"en":"The device does not display",
+				"ja":"デバイスが表示されない",
+				"fr":"Affichage non disponible sur le périphérique",
+				"de":"Gerät wird nicht angezeigt",
+				"ko":"장치가 표시되지 않음",
+				"it":"Dispositivo non in visualizzazione",
+				"pt":"Dispositivo não sendo exibido",
+				"es":"El dispositivo no se muestra",
+				"zh-TW":"設備無顯示",
+				"ru":"Устройство не отображается",
+				"vi": "Thiết bị không hiển thị",
+				"th": "วอุปกรณ์ไม่แสดงผล",
+			},
+			nosupport: [ // 不支持的设备类型，有才填写
+				
+			]
+		},
+		{
+			id: "Device not searched",
+			title: {
+				"zh-CN":"搜索不到设备",
+				"en":"Device not searched",
+				"ja":"デバイスが見つかりません",
+				"fr":"Appareil introuvable",
+				"de":"Gerät nicht gefunden",
+				"ko":"장치를 찾을 수 없음",
+				"it":"Dispositivo non trovato",
+				"pt":"Dispositivo não encontrado",
+				"es":"Dispositivo no encontrado",
+				"zh-TW":"搜尋不到設備",
+				"ru":"Устройство не найдено",
+				"vi": "Chưa tìm kiếm được thiết bị",
+				"th": "ไม่ได้ค้นหาอุปกรณ์",
+			},
+			nosupport: [ // 不支持的设备类型，有才填写
+				
+			]
+		},
+		{
+			id: "Device cannot connect",
+			title: {
+				"zh-CN": "设备连接不上",
+				"en": "Device cannot connect",
+				"ja": "デバイスが接続できません",
+				"fr": "Impossible de connecter l'appareil",
+				"de": "Gerät kann keine Verbindung herstellen",
+				"ko": "장치를 연결할 수 없음",
+				"it": "Impossibile connettere il dispositivo",
+				"pt": "Não é possível conectar o dispositivo",
+				"es": "No se puede conectar el dispositivo",
+				"zh-TW": "設備連接不上",
+				"ru": "Не удалось подключить устройство",
+				"vi": "Thiết bị không thể kết nối",
+				"th": "อุปกรณ์ไม่สามารถเชื่อมต่อได้",
+			},
+			nosupport: [ // 不支持的设备类型，有才填写
+				
+			]
+		},
+		{
+			id: "Data often fails to send",
+			title: {
+				"zh-CN": "数据经常发送失败",
+				"en": "Data often fails to send",
+				"ja": "データの送信が頻繁に失敗します",
+				"fr": "Échec fréquent de l'envoi des données",
+				"de": "Daten werden häufig nicht gesendet",
+				"ko": "데이터 전송이 자주 실패합니다",
+				"it": "Spesso si verificano errori nell'invio dei dati",
+				"pt": "Falha frequente no envio de dados",
+				"es": "A menudo falla el envío de datos",
+				"zh-TW": "資料經常傳送失敗",
+				"ru": "Часто не удается отправить данные",
+				"vi": "Dữ liệu thường không gửi được",
+				"th": "ข้อมูลมักจะล้มเหลวในการส่ง",
+
+			},
+			nosupport: [ // 不支持的设备类型，有才填写
+				
+			]
+		},
+		{
+			id: "Display keeps restarting",
+			title: {
+				"zh-CN": "显示屏不断重启、显示偏色",
+				"en": "The display keeps restarting and displays a color cast",
+				"ja": "ディスプレイが継続的に再起動し、色のキャストが表示されます",
+				"fr": "L'écran redémarre en continu et affiche une dominante de couleur",
+				"de": "Der Bildschirm startet ständig neu und zeigt eine Farbstich",
+				"ko": "디스플레이가 계속해서 재시작되며 색상이 비틀림을 보입니다",
+				"it": "Il display si riavvia continuamente e mostra una dominante di colore",
+				"pt": "O display continua reiniciando e exibe uma tonalidade de cor",
+				"es": "La pantalla se reinicia continuamente y muestra una dominante de color",
+				"zh-TW": "顯示屏持續重新啟動並顯示色彩偏差",
+				"ru": "Дисплей продолжает перезагружаться и отображает оттенок цвета",
+				"vi": "Màn hình tiếp tục khởi động lại và hiển thị một màu sắc",
+				"th": "จอแสดงผลจะรีสตาร์ทอย่างต่อเนื่องและแสดงสีเพี้ยน",
+			},
+			nosupport: [ // 不支持的设备类型，有才填写
+				
+			]
+		},
+		{
+			id: "Device frozen",
+			title: {
+				"zh-CN": "设备死机或显示异常",
+				"en": "The device is frozen or displaying abnormally",
+				"ja": "デバイスがフリーズするか、異常に表示されています",
+				"fr": "L'appareil est bloqué ou affiche anormalement",
+				"de": "Das Gerät ist eingefroren oder zeigt eine abnormale Anzeige",
+				"ko": "장치가 멈추거나 비정상적으로 표시됩니다",
+				"it": "Il dispositivo si blocca o mostra un comportamento anomalo",
+				"pt": "O dispositivo está travando ou exibindo de forma anormal",
+				"es": "El dispositivo se bloquea o muestra una pantalla anormal",
+				"zh-TW": "設備死機或顯示異常",
+				"ru": "Устройство зависает или отображает ненормальную информацию",
+				"vi": "Máy bị treo hoặc hiển thị bất thường",
+				"th": "อุปกรณ์ค้างหรือแสดงผลผิดปกติ",
+			},
+			nosupport: [ // 不支持的设备类型，有才填写
+				"CoolLED536"
+			]
+		},
+		{
+			id: "Factory reset",
+			title: {
+				"zh-CN": "恢复出厂设置",
+				"en": "Factory Reset",
+				"ja": "工場出荷時のリセット",
+				"fr": "Réinitialisation d'usine",
+				"de": "Werkseinstellungen wiederherstellen",
+				"ko": "공장 초기화",
+				"it": "Ripristino delle impostazioni di fabbrica",
+				"pt": "Redefinir para as configurações de fábrica",
+				"es": "Restablecer a valores de fábrica",
+				"zh-TW": "恢復出廠設置",
+				"ru": "Сброс до заводских настроек",
+				"vi": "Khôi phục cài đặt gốc",
+				"th": "รีเซ็ตเป็นค่าจากโรงงาน",
+			},
+			nosupport: [ // 不支持的设备类型，有才填写
+				"CoolLED536"
+			]
+		},
+		{
+			id: "Set mirror",
+			title: {
+				"zh-CN": "显示内容上下颠倒",
+				"en": "Display content upside down",
+				"ja": "表示内容が上下逆さまになっています",
+				"fr": "Le contenu de l'affichage est inversé verticalement",
+				"de": "Anzeigeinhalt ist auf den Kopf gestellt",
+				"ko": "디스플레이 내용이 뒤집혀 있습니다",
+				"it": "Il contenuto dello schermo è capovolto",
+				"pt": "O conteúdo da tela está de cabeça para baixo",
+				"es": "El contenido de la pantalla está boca abajo",
+				"zh-TW": "顯示內容上下顛倒",
+				"ru": "Содержимое дисплея перевернуто вверх ногами",
+				"vi": "Hiển thị nội dung lộn ngược",
+				"th": "แสดงเนื้อหากลับหัว",
+			},
+			nosupport: [ // 不支持的设备类型，有才填写
+				"iLedBike"
+			]
+		},
+		{
+			id: "Forgot password",
+			title: {
+				"zh-CN": "忘记密码",
+				"en": "Forgot password",
+				"ja": "パスワードを忘れました",
+				"fr": "Mot de passe oublié",
+				"de": "Passwort vergessen",
+				"ko": "비밀번호를 잊어버렸습니다",
+				"it": "Password dimenticata",
+				"pt": "Esqueci minha senha",
+				"es": "Olvidé mi contraseña",
+				"zh-TW": "忘記密碼",
+				"ru": "Забыли пароль",
+				"vi": "Quên mật khẩu",
+				"th": "ลืมพาสเวิร์ด",
+			},
+			nosupport: [ // 不支持的设备名称，有才填写
+				"CoolLEDX", "CoolLED", "CoolLED536"
+			]
+		},
+		{
+			id: "Content modified",
+			title: {
+				"zh-CN": "内容被他人更改",
+				"en": "Content has been modified by others",
+				"ja": "コンテンツが他の人によって変更されました",
+				"fr": "Le contenu a été modifié par d'autres personnes",
+				"de": "Inhalt wurde von anderen geändert",
+				"ko": "내용이 다른 사람에 의해 수정되었습니다",
+				"it": "Il contenuto è stato modificato da altri",
+				"pt": "O conteúdo foi modificado por outras pessoas",
+				"es": "El contenido ha sido modificado por otros",
+				"zh-TW": "內容被他人更改",
+				"ru": "Содержимое было изменено другими",
+				"vi": "Nội dung đã được sửa đổi bởi người khác",
+				"th": "เนื้อหาได้รับการแก้ไขโดยผู้อื่น",
+			},
+			nosupport: [ // 不支持的设备名称，有才填写
+				"CoolLEDX", "CoolLED", "CoolLED536"
+			]
+		},
+		{
+			id: "Remote not responding",
+			title: {
+				"zh-CN": "遥控器无响应",
+				"en": "Remote control not responding",
+				"ja": "リモコンが反応しない",
+				"fr": "Télécommande ne répond pas",
+				"de": "Fernbedienung reagiert nicht",
+				"ko": "리모컨이 응답하지 않습니다",
+				"it": "Il telecomando non risponde",
+				"pt": "Controle remoto não está respondendo",
+				"es": "Control remoto no responde",
+				"zh-TW": "遙控器無回應",
+				"ru": "Пульт не реагирует",
+				"vi": "Điều khiển từ xa không phản hồi",
+				"th": "รีโมทคอนโทรลไม่ตอบสนอง",
+			},
+			nosupport: [ // 不支持的设备名称，有才填写
+				"CoolLEDX", "CoolLEDS", "CoolLED", "CoolLED536"
+			]
+		},
+		{
+			id: "Remote bind",
+			title: {
+				"zh-CN": "遥控器绑定和解绑",
+				"en": "Remote control pairing and unpairing",
+				"ja": "リモコンのペアリングと解除",
+				"fr": "Appairage et désappairage de la télécommande",
+				"de": "Fernbedienung koppeln und entkoppeln",
+				"ko": "리모컨 연결 및 해제",
+				"it": "Associazione e disassociazione del telecomando",
+				"pt": "Vinculação e desvinculação do controle remoto",
+				"es": "Emparejamiento y desemparejamiento del control remoto",
+				"zh-TW": "遙控器綁定和解綁",
+				"ru": "Привязка и отвязка пульта дистанционного управления",
+				"vi": "Ghép nối và hủy ghép nối điều khiển từ xa",
+				"th": "การจับคู่และการยกเลิกการจับคู่รีโมทคอนโทรล",
+			},
+			nosupport: [ // 不支持的设备名称，有才填写
+				"CoolLEDX", "CoolLEDS", "CoolLED", "CoolLED536"
+			]
+		},
+		{
+			id: "Share Animation",
+			title: {
+				"zh-CN": "涂鸦和动画内容分享、导入",
+				"en": "Graffiti and animation content sharing and importing",
+				"ja": "落書きやアニメーションのコンテンツの共有とインポート",
+				"fr": "Partage et importation de contenu graffiti et animation",
+				"de": "Teilen und Importieren von Graffiti- und Animationsinhalten",
+				"ko": "그래피티 및 애니메이션 콘텐츠 공유 및 가져오기",
+				"it": "Condivisione e importazione di contenuti di graffiti e animazioni",
+				"pt": "Compartilhamento e importação de conteúdo de graffiti e animação",
+				"es": "Intercambio e importación de contenido de graffiti y animación",
+				"zh-TW": "塗鴉和動畫內容分享、導入",
+				"ru": "Совместное использование и импорт граффити и анимационного контента",
+				"vi": "Chia sẻ và nhập nội dung graffiti và hoạt hình",
+				"th": "การแบ่งปันและการนำเข้าเนื้อหากราฟฟิตีและแอนิเมชั่น",
+			},
+			nosupport: [ // 不支持的设备类型，有才填写
+				"CoolLED", "CoolLED536", "iLedBike", "CoolLEDU", "CoolLEDUD"
+			]
+		},
+		{
+			id: "Music add",
+			title: {
+				"zh-CN": "添加音乐到手机APP",
+				"en": "Adding music to the mobile app",
+				"ja": "音楽をモバイルアプリに追加する",
+				"fr": "Ajouter de la musique à l'application mobile",
+				"de": "Musik zur mobilen App hinzufügen",
+				"ko": "음악을 모바일 앱에 추가하기",
+				"it": "Aggiungere musica all'app mobile",
+				"pt": "Adicionando música ao aplicativo móvel",
+				"es": "Agregar música a la aplicación móvil",
+				"zh-TW": "添加音樂到手機應用程式",
+				"ru": "Добавление музыки в мобильное приложение",
+				"vi": "Thêm nhạc vào ứng dụng di động",
+				"th": "การเพิ่มเพลงลงในแอพมือถือ",
+
+			},
+			nosupport: [ // 不支持的设备名称，有才填写
+				
+			]
+		},
+		{
+			id: "Requested Permissions",
+			title: {
+				"zh-CN": "请求的权限说明",
+				"en": "Requested Permissions Explanation",
+				"ja": "リクエストされた許可の説明",
+				"fr": "Explication des autorisations demandées",
+				"de": "Erklärung der angeforderten Berechtigungen",
+				"ko": "요청된 권한 설명",
+				"it": "Spiegazione delle autorizzazioni richieste",
+				"pt": "Explicação das permissões solicitadas",
+				"es": "Explicación de los permisos solicitados",
+				"zh-TW": "請求的權限說明",
+				"ru": "Объяснение запрошенных разрешений",
+				"vi": "Giải thích quyền được yêu cầu",
+				"th": "คำอธิบายสิทธิ์ที่ร้องขอ",
+			},
+			nosupport: [ // 不支持的设备名称，有才填写
+				
+			]
+		},
+		{
+			id: "Contact us",
+			title: {
+				"zh-CN": "如何联系我们",
+				"en": "How to contact us",
+				"ja": "お問い合わせ方法",
+				"fr": "Comment nous contacter",
+				"de": "Wie Sie uns kontaktieren können",
+				"ko": "문의하는 방법",
+				"it": "Come contattarci",
+				"pt": "Como entrar em contato conosco",
+				"es": "Cómo contactarnos",
+				"zh-TW": "如何聯繫我們",
+				"ru": "Как связаться с нами",
+				"vi": "Làm sao để liên lạc với chúng tôi",
+				"th": "วิธีการติดต่อเรา",
+			},
+			nosupport: [ // 不支持的设备名称，有才填写
+				
+			]
+		}
+		];
+
+		// 获取访问参数中的language字段，如果不存在，使用默认
+		var language = getParameterByName("language") || defaultLanguage;
+		// 获取当前的设备类型，如果不存在，默认为CoolLEDX的类型
+		var devName = getParameterByName("dev_name") || "CoolLEDX";
+		// 获取当前设备的分辨率，如果不存在，默认为1664
+		var height = getParameterByName("height") || "16";
+		var width = getParameterByName("width") || "64";
+		<!-- var basePath = getParameterByName("path") || ""; -->
+		var pl = getParameterByName("pl") || "android"; // 当前平台
+		
+		<!-- // 使用正则表达式匹配路径末尾的斜杠   -->
+		<!-- if (basePath !== "" && basePath.match(/\/$/) === null) {   -->
+			<!-- // 如果路径末尾没有斜杠，就加上   -->
+			<!-- basePath += "/";   -->
+		<!-- }   -->
+
+		console.log("language=" + language);
+		console.log("devName=" + devName);
+		console.log("pixel=" + height + ", " + width);
+		console.log("pl=" + pl);
+		<!-- console.log("basePath=" + basePath); -->
+
+		// 动态生成问题列表
+		var questionList = document.getElementById("question-list");
+		questions.forEach(function(question) {
+			var nosupportArr = question.nosupport;
+			if (nosupportArr.includes(devName)) {
+				return;  // 跳过该次循环
+			}
+		
+			var questionItem = document.createElement("div");
+			questionItem.classList.add("question");
+
+			var title = document.createElement("h3");
+			title.classList.add("question-title");
+			
+			var titleText = question.title[language];
+			if (titleText === undefined) {
+				titleText = question.title[defaultLanguage];
+			}
+			title.textContent = titleText;
+			questionItem.appendChild(title);
+
+			var arrow = document.createElement("i");
+			arrow.classList.add("fas", "fa-chevron-right", "arrow");
+			questionItem.appendChild(arrow);
+
+			questionItem.addEventListener("click",
+			function() {
+				// 点击问题时跳转到问题详情页面，并传递问题ID和语言参数
+				window.location.href = "answer/" + question.id + ".html?language=" + language + "&dev_name=" + devName + "&height=" + height + "&width=" + width + "&pl=" + pl;
+			});
+
+			questionList.appendChild(questionItem);
+		});
+		
+		// 恢复上次记录的滚动位置
+		var scrollPosition = sessionStorage.getItem('scrollPosition');
+		if (scrollPosition) {
+			questionList.scrollTop = scrollPosition;
+		}
+
+		// 监听滚动事件，并记录滚动位置
+		questionList.addEventListener('scroll', function() {
+			sessionStorage.setItem('scrollPosition', questionList.scrollTop);
+		});
+	</script>
+</body>
+</html>

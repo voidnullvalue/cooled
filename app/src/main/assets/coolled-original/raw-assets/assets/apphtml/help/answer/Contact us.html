@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+	<meta name="viewport" content="initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <title>answer-content</title>
+	<!-- 放到head中确保被渲染之前加载 -->
+	<link rel="stylesheet" href="../public-style.css" type="text/css"/>
+</head>
+<body>
+	<div class="answer-list-container">
+		<h3 id="answer-title">			
+		</h3>
+		<div id="divider-div" class="divider">
+		</div>
+		<div id="answer-content">
+		</div>
+	</div>
+
+	<div id="footer"></div>
+	
+	<script src="../public-script.js"></script>
+	
+	<!-- 放到body中，确保所有 JavaScript 代码在页面渲染之前加载完成 -->
+	<script>
+		var emailAddr = "coolled1248@163.com";
+
+		// 答案内容
+		var answer = {
+			/// 内容用html语法编写，加粗用<b>，换行用<br>，其他写法请参考html语法
+			content: {
+				"zh-CN": "感谢您购买我们的产品！如果您对我们的产品有任何意见、建议或需要寻求帮助，请通过电子邮件与我们联系。我们非常乐于提供帮助，并将尽快回复您！我们的官方邮箱为：",
+				"en": "Thank you for purchasing our product! If you have any comments, suggestions or need to ask for help about our products, please contact us by email. We're more than happy to help and will get back to you as soon as possible! Our official email address is: ",
+				"ja": "当社の製品をお買い上げいただきありがとうございます。当社の製品に関してご意見、ご提案がある場合、またはサポートが 必要な場合は、電子メールでお問い合わせください。喜んでお手伝いさせていただきます。できるだけ早くご連絡いたします。 弊社の正式な電子メール アドレスは、",
+				"fr": "Merci d'avoir acheté notre produit! Si vous avez des commentaires, des suggestions ou si vous avez besoin d'aide sur nos produits, veuillez nous contacter par e-mail. Nous sommes plus qu'heureux de vous aider et nous vous répondrons dans les plus brefs délais ! Notre adresse e-mail officielle est : ",
+				"de": "Vielen Dank, dass Sie sich für unser Produkt entschieden haben! Wenn Sie Kommentare oder Vorschläge haben oder Hilfe zu unseren Produkten benötigen, kontaktieren Sie uns bitte per E-Mail. Wir helfen Ihnen gerne weiter und werden uns so schnell wie möglich bei Ihnen melden! Unsere offizielle E-Mail-Adresse lautet: ",
+				"ko": "저희 제품을 구매해주셔서 감사합니다! 의견이나 제안이 있거나 당사 제품에 대한 도움이 필요한 경우 이메일로 문의하십시오. 최선을 다해 도와드리겠습니다. 최대한 빨리 연락드리겠습니다! 공식 이메일 주소는 ",
+				"it": "Grazie per aver acquistato il nostro prodotto! Se hai commenti, suggerimenti o hai bisogno di chiedere aiuto sui nostri prodotti, ti preghiamo di contattarci via e-mail. Siamo più che felici di aiutarti e ti risponderemo il prima possibile! Il nostro indirizzo email ufficiale è: ",
+				"pt": "Obrigado por adquirir nosso produto! Se você tiver algum comentário, sugestão ou precisar pedir ajuda sobre nossos produtos, entre em contato conosco por e-mail. Teremos o maior prazer em ajudar e retornaremos o mais breve possível! Nosso endereço de e-mail oficial é: ",
+				"es": "¡Gracias por comprar nuestro producto! Si tiene algún comentario, sugerencia o necesita solicitar ayuda sobre nuestros productos, contáctenos por correo electrónico. ¡Estamos más que felices de ayudar y nos pondremos en contacto con usted lo antes posible! Nuestra dirección de correo electrónico oficial es: ",
+				"zh-TW": "感謝您購買我們的產品！如果您對我們的產品有任何意見、建議或需要尋求幫助，請通過電子郵件與我們聯繫。我們非常樂於提供幫助，並將盡快回复您！ 我們的官方郵箱為：",
+				"ru": "Спасибо за покупку нашего продукта! Если у вас есть комментар ии, предложения или вам нужна помощь в отношении наших продуктов, свяжитесь с нами по электронной почте. Мы более чем рады помочь и  свяжемся с вами как можно скорее! Наш официальный адрес электронной почты: ",
+				"vi": "Cảm ơn bạn đã mua sản phẩm của chúng tôi! Nếu bạn có bất kỳ ý kiến, đề xuất hoặc cần trợ giúp về sản phẩm của chúng tôi, vui lòng liên hệ với chúng tôi qua email. Chúng tôi rất vui được trợ giúp và sẽ liên hệ lại với bạn sớm nhất có thể!Email chính thức của chúng tôi là:",
+				"th": "ขอบคุณสำหรับการซื้อผลิตภัณฑ์ของเรา! หากคุณมีความคิดเห็น ข้อเสนอแนะ หรือต้องการความช่วยเหลือเกี่ยวกับผลิตภัณฑ์ของเรา โปรดติดต่อเราทางอีเมล เรายินดีอย่างยิ่งที่จะช่วยเหลือและจะติดต่อกลับโดยเร็วที่สุด!ที่อยู่อีเมลอย่างเป็นทางการของเราคือ:",
+			},
+			title: {
+				"zh-CN": "如何联系我们",
+				"en": "How to contact us",
+				"ja": "お問い合わせ方法",
+				"fr": "Comment nous contacter",
+				"de": "Wie Sie uns kontaktieren können",
+				"ko": "문의하는 방법",
+				"it": "Come contattarci",
+				"pt": "Como entrar em contato conosco",
+				"es": "Cómo contactarnos",
+				"zh-TW": "如何聯繫我們",
+				"ru": "Как связаться с нами",
+			    "vi": "Làm sao để liên lạc với chúng tôi",
+				"th": "วิธีการติดต่อเรา",
+			},
+		};
+		
+		var footer = document.getElementById("footer"); 
+		footer.innerHTML = answerBottomBtnHtml;
+
+		// 获取访问参数中的language字段，如果不存在，则默认使用英语
+		var language = (getParameterByName("language") || defaultLanguage);
+
+		// 答案标题
+		var answerTitle = document.getElementById("answer-title");
+		var answerTitleText = answer.title[language];
+		if (answerTitleText === undefined) {
+			answerTitleText = answer.title[defaultLanguage];
+		}
+		answerTitle.textContent = answerTitleText;
+		
+		// 答案内容
+		var answerContent = document.getElementById("answer-content");
+		var textElemet = document.createElement("p");
+		
+		var answerContentText = answer.content[language];
+		if (answerContentText === undefined) {
+			answerContentText = answer.content[defaultLanguage];
+		}
+		
+		// 创建文本节点
+		var textNode = document.createTextNode(answerContentText);
+
+		// 创建超链接元素
+		var emailLink = document.createElement('a');
+		emailLink.href = 'mailto:' + emailAddr;
+		emailLink.textContent = emailAddr;
+
+		// 创建容器元素
+		var container = document.createElement('span');
+		container.appendChild(textNode);
+		container.appendChild(emailLink);
+
+		answerContent.appendChild(container);
+
+	</script>
+</body>
+</html>

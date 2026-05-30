@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+	<meta name="viewport" content="initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <title>answer-content</title>
+    
+	<!-- 放到head中确保被渲染之前加载 -->
+	<link rel="stylesheet" href="../public-style.css" type="text/css"/>
+	<style>
+	</style>
+</head>
+<body>
+	<div class="answer-list-container">
+		<h3 id="answer-title">			
+		</h3>
+		<div id="divider-div" class="divider">
+		</div>
+		<div id="answer-content">
+		</div>
+	</div>
+
+    <div id="footer"></div>
+
+    <script src="../public-script.js"></script>
+
+    <script>
+        var footer = document.getElementById("footer"); 
+        footer.innerHTML = answerBottomBtnHtml;
+    </script>
+
+	
+	<!-- 放到body中，确保所有 JavaScript 代码在页面渲染之前加载完成 -->
+	<script>
+		// 答案内容
+		var answer = {
+			/// 内容用html语法编写，加粗用<b>，换行用<br>，其他写法请参考html语法
+			content: {
+				"zh-CN": "<b>注意</b>：APP并不会搜集任何个人信息，请求权限是为了保证您的正常使用。<br><br><b>1.蓝牙权限</b><br>由于APP和设备采用的蓝牙低功耗协议进行通讯，所以需要请求蓝牙权限才能保证APP可以正常搜索、连接、控制设备。<br><br><b>2.位置权限</b><br>部分型号的手机需要开启位置权限，才能正常搜索到设备。<br><br><b>3.网络权限</b><br>APP的版本检测和本地动画素材更新功能需要该权限。<br><br><b>4.媒体文件访问权限</b><br>如未启用该权限，则无法加载和显示音乐。当您授予媒体文件访问权限时，APP会搜索您手机中的音乐文件，然后将其显示在音乐列表中。如果没有显示音乐列表，请先检查APP的媒体文件访问权限是否被授权。<br><br><b>5.麦克风访问权限</b><br>APP需要您授权麦克风访问权限才能采集声音进行律动效果。<br>",
+				"en": "<b>Note</b>: APP does not collect any personal information, and the permission is requested to ensure your normal use. <br><br><b>1. Bluetooth permission</b><br>Because the APP and the device use the Bluetooth low energy protocol to communicate, it is necessary to request the Bluetooth permission to ensure that the APP can search, connect and control the device normally . <br><br><b>2. Location permission</b><br>Some models of mobile phones need to enable location permission to search for the device normally. <br><br><b>3. Network permission</b><br>APP's version detection and local animation material update functions require this permission. <br><br><b>4. Media file access permission</b><br>If this permission is not enabled, music cannot be loaded and displayed. When you grant access to media files, the APP will search for music files in your phone, and then display them in the music list. If the music list is not displayed, please check whether the media file access permission of the APP is authorized. <br><br><b>5. Microphone access authority</b><br>APP needs you to authorize microphone access authority to collect sound for rhythm effect. <br>",
+				"ja": "<b>注</b>: APP は個人情報を収集しません。通常の使用を保証するために許可が要求されます。 <br><br><b>1. Bluetooth  許可</b><br>アプリとデバイスは通信に Bluetooth Low Energy プロトコルを使用するため、アプリが確実に検索できるように Bluetooth 許可をリクエストする必要があります。 、デバイスを正常に接続して制御します。 <br><br><b>2. 位置情報の許可</b><br>携 帯電話の一部のモデルでは、デバイスを正常に検索するには位置情報の許可を有効にする必要があります。 <br><br><b>3. ネットワ ーク許可</b><br>APP のバージョン検出およびローカル アニメーション素材の更新機能には、この許可が必要です。 <br><br><b>4. メディア ファイルのアクセス許可</b><br>この許可が有効になっていない場合、音楽を読み込んで表示することができません。メデ ィア ファイルへのアクセスを許可すると、APP は携帯電話内の音楽ファイルを検索し、音楽リストに表示します。音楽リストが表示 されない場合は、アプリのメディアファイルへのアクセス権限が許可されているかどうかを確認してください。 <br><br><b>5. マイ クアクセス権限</b><br>アプリでは、リズムエフェクト用の音を収集するためにマイクアクセス権限を許可する必要があります。 <br>",
+				"fr": "<b>Remarque</b> : L'APP ne collecte aucune information personnelle et l'autorisation est demandée pour garantir votre utilisation normale. <br><br><b>1. Autorisation Bluetooth</b><br>Parce que l'APP et l'appareil utilisent le protocole Bluetooth à faible consommation d'énergie pour communiquer, il est nécessaire de demander l'autorisation Bluetooth pour s'assurer que l'APP peut rechercher , connectez et contrôlez l'appareil normalement. <br><br><b>2. Autorisation de localisation</b><br> Certains modèles de téléphones portables doivent activer l'autorisation de localisation pour rechercher l'appareil normalement. <br><br><b>3. Autorisation réseau</b><br> Les fonctions de détection de version de l'APP et de mise à jour du matériel d'animation local nécessitent cette autorisation. <br><br><b>4. Autorisation d'accès au fichier multimédia</b><br> Si cette autorisation n'est pas activée, la musique ne peut pas être chargée et affichée. Lorsque vous autorisez l'accès aux fichiers multimédias, l'APP recherche les fichiers musicaux sur votre téléphone, puis les affiche dans la liste de musique. Si la liste de musique ne s'affiche pas, veuillez vérifier si l'autorisation d'accès au fichier multimédia de l'APP est autorisée. <br><br><b>5. Autorité d'accès au microphone</b><br> L'APP a besoin que vous autorisiez l'autorité d'accès au microphone pour collecter le son pour l'effet rythmique. <br>",
+				"de": "<b>Hinweis</b>: Die APP sammelt keine persönlichen Daten und es wird die Erlaubnis eingeholt, um Ihre normale Nutzung sicherzustellen. <br><br><b>1. Bluetooth-Berechtigung</b><br>Da die APP und das Gerät für die Kommunikation das Bluetooth-Low-Energy-Protokoll verwenden, ist es notwendig, die Bluetooth-Berechtigung anzufordern, um sicherzustellen, dass die APP suchen kann Schließen Sie das Gerät normal an und steuern Sie es. <br><br><b>2. Standortberechtigung</b><br>Einige Mobiltelefonmodelle müssen die Standortberechtigung aktivieren, um normal nach dem Gerät suchen zu können. <br><br><b>3. Netzwerkberechtigung</b><br>APPs Versionserkennung und lokale Aktualisierungsfunktionen für Animationsmaterial erfordern diese Berechtigung. <br><br><b>4. Zugriffsberechtigung für Mediendateien</b><br>Wenn diese Berechtigung nicht aktiviert ist, kann Musik nicht geladen und angezeigt werden. Wenn Sie Zugriff auf Mediendateien gewähren, sucht die APP nach Musikdateien auf Ihrem Telefon und zeigt sie dann in der Musikliste an. Wenn die Musikliste nicht angezeigt wird, überprüfen Sie bitte, ob die Zugriffsberechtigung für Mediendateien der APP autorisiert ist. <br><br><b>5. Mikrofon-Zugriffsberechtigung</b><br>Für die APP müssen Sie die Mikrofon-Zugriffsberechtigung autorisieren, um Ton für den Rhythmuseffekt zu sammeln. <br>",
+				"ko": "<b>참고</b>: APP은 어떠한 개인정보도 수집하지 않으며, 정상적인 사용을 위해 권한을 요청합니다. <br><br><b>1. 블루 투스 권한</b><br>앱과 장치는 블루투스 저에너지 프로토콜을 사용하여 통신하기 때문에 앱이 검색할 수 있도록 하려면 블루투스 권한을 요청해야 합니다. , 장치를 정상적으로 연결하고 제어하십시오. <br><br><b>2. 위치 권한</b><br>일부 휴대폰 기종에 따라 기기를 정상적으로 검색하려면 위치 권한을 허용해야 합니다. <br><br><b>3. 네트워크 권한</b><br>APP의 버전 감지 및 로컬 애니메이션 소재 업데이트 기능에 이 권한이 필요합니다. <br><br><b>4. 미디어 파일 액세스 권한</b><br>이 권한이 활성화되어 있지 않으면 음악을 로드하고 표시할 수 없습니다. 미디어 파일에 대한 액세스 권한을 부여하면 앱이 휴대폰에서 음악 파일을 검색한 다음 음악 목록에 표시합니다. 음악 목록이 표시되지 않는 경우 APP의 미디어 파일 액세스 권한이 승인되었는지 확인하십시오. <br><br><b>5. 마이크 접근 권한</b><br>앱은 리듬 효과를 위한 사운드 수집을 위해 마이크 접근 권한을 승인해야 합니다. <br>",
+				"it": "<b>Nota</b>: l'APP non raccoglie alcuna informazione personale e l'autorizzazione è richiesta per garantire il normale utilizzo. <br><br><b>1. Autorizzazione Bluetooth</b><br>Poiché l'APP e il dispositivo utilizzano il protocollo Bluetooth a bassa energia per comunicare, è necessario richiedere l'autorizzazione Bluetooth per garantire che l'APP possa cercare , collegare e controllare il dispositivo normalmente . <br><br><b>2. Autorizzazione alla posizione</b><br>Alcuni modelli di telefoni cellulari devono abilitare l'autorizzazione alla posizione per cercare normalmente il dispositivo. <br><br><b>3. Autorizzazione di rete</b><br>Le funzioni di rilevamento della versione dell'APP e di aggiornamento del materiale di animazione locale richiedono questa autorizzazione. <br><br><b>4. Autorizzazione di accesso ai file multimediali</b><br>Se questa autorizzazione non è abilitata, la musica non può essere caricata e visualizzata. Quando concedi l'accesso ai file multimediali, l'APP cercherà i file musicali nel telefono e li visualizzerà nell'elenco della musica. Se l'elenco musicale non viene visualizzato, verificare se l'autorizzazione di accesso ai file multimediali dell'APP è autorizzata. <br><br><b>5. Autorità di accesso al microfono</b><br>APP richiede che tu autorizzi l'autorità di accesso al microfono per raccogliere il suono per l'effetto ritmico. <br>",
+				"pt": "<b>Nota</b>: A APP não recolhe qualquer informação pessoal, pelo que a autorização é solicitada para assegurar a sua utilização normal. <br><br><b>1. Permissão Bluetooth</b><br>Como o APP e o dispositivo usam o protocolo Bluetooth de baixa energia para se comunicar, é necessário solicitar a permissão Bluetooth para garantir que o APP possa pesquisar , conecte e controle o dispositivo normalmente. <br><br><b>2. Permissão de localização</b><br>Alguns modelos de telefones celulares precisam ativar a permissão de localização para procurar o dispositivo normalmente. <br><br><b>3. Permissão de rede</b><br>As funções de detecção de versão do APP e atualização de material de animação local requerem essa permissão. <br><br><b>4. Permissão de acesso a arquivos de mídia</b><br>Se esta permissão não estiver ativada, a música não poderá ser carregada e exibida. Quando você concede acesso a arquivos de mídia, o APP procura arquivos de música em seu telefone e os exibe na lista de músicas. Se a lista de músicas não for exibida, verifique se a permissão de acesso ao arquivo de mídia do APP está autorizada. <br><br><b>5. Autoridade de acesso ao microfone</b><br>O APP precisa que você autorize a autoridade de acesso ao microfone para coletar som para efeito de ritmo. <br>",
+				"es": "<b>Nota</b>: la aplicación no recopila ninguna información personal y se solicita permiso para garantizar su uso normal. <br><br><b>1. Permiso de Bluetooth</b><br>Debido a que la aplicación y el dispositivo utilizan el protocolo Bluetooth de baja energía para comunicarse, es necesario solicitar el permiso de Bluetooth para garantizar que la aplicación pueda buscar , conecte y controle el dispositivo normalmente. <br><br><b>2. Permiso de ubicación</b><br>Algunos modelos de teléfonos móviles necesitan habilitar el permiso de ubicación para buscar el dispositivo normalmente. <br><br><b>3. Permiso de red</b><br>Las funciones de actualización de material de animación local y detección de versión de la aplicación requieren este permiso. <br><br><b>4. Permiso de acceso a archivos multimedia</b><br>Si este permiso no está habilitado, la música no se puede cargar ni mostrar. Cuando otorga acceso a archivos multimedia, la aplicación buscará archivos de música en su teléfono y luego los mostrará en la lista de música. Si no se muestra la lista de música, verifique si el permiso de acceso a archivos multimedia de la aplicación está autorizado. <br><br><b>5. Autorización de acceso al micrófono</b><br>La aplicación necesita que autorices la autorización de acceso al micrófono para recopilar sonido para efectos de ritmo. <br>",
+				"zh-TW": "<b>注意</b>：APP並不會蒐集任何個人信息，請求權限是為了保證您的正常使用。 <br><br><b>1.藍牙權限</b><br>由於APP 和設備採用的藍牙低功耗協議進行通訊，所以需要請求藍牙權限才能保證APP可以正常搜索、連接、控制設備。 <br><br><b>2.位置權限</b><br>部分型號的手機需要開啟位置權限，才能正常搜索到設備。 <br><br><b>3.網絡權限</b><br>APP的版本檢測和本地動畫素材更新功能需要該權限。 <br><br><b>4.媒體文件訪問權限</b><br>如未啟用該權限，則無法加載和顯示音樂。當您授予媒體文件訪問權限時，APP會搜索您手機中的音樂文件，然後將其顯示在音樂列表中。如果沒有顯示音樂列表，請先檢查APP的媒體文件訪問權限是否被授權。 <br><br><b>5.麥克風訪問權限</b><br>APP需要您授權麥克風訪問權限才能採集聲音進行律動效果。 <br>",
+				"ru": "<b>Примечание</b>: APP не собирает личную информацию, и разрешение запрашивается для обеспечения вашего нормального использования. <br><br><b>1. Разрешение Bluetooth</b><br>Поскольку приложение и устройство используют для связи протокол Bluetooth с низким энергопотреблением, необходимо запросить разрешение Bluetooth, чтобы приложение могло иск ать , подключите и управляйте устройством в обычном режиме. <br><br><b>2. Разрешение на определение местоположения</b><br>Некоторым моделя м мобильных телефонов необходимо разрешить разрешение на опреде ление местоположения для нормального поиска устройства. <br><br><b>3.  Сетевое разрешение</b><br>Это разрешение требуется для определения версии приложения и функций локального обновления анимационного материала. <br><br><b>4. Разрешение на доступ к медиафайлам</b><br>Если это разрешение не включено, музыка не может быть загружена и отобра жена. Когда вы предоставляете доступ к медиафайлам, APP будет искать музыкальные файлы в вашем телефоне, а затем отображать их в списке музыки. Если список музыки не отображается, проверьте, авториз овано ли разрешение на доступ к медиафайлам приложения. <br><br><b>5. П олномочия доступа к микрофону</b><br>Приложению требуется разрешен ие доступа к микрофону для сбора звука для создания ритмического эффекта. <br>",
+				"vi": "<b>Ghi chú</b>: APP không thu thập bất kỳ thông tin cá nhân nào và cần có sự cho phép để đảm bảo việc sử dụng bình thường của bạn. <br><br><b>1. Quyền Bluetooth</b><br>Vì APP và thiết bị sử dụng giao thức Bluetooth năng lượng thấp để liên lạc nên cần yêu cầu quyền Bluetooth để đảm bảo APP có thể tìm kiếm, kết nối và điều khiển thiết bị một cách bình thường.<br><br><b>2. Location permission</b><br>Một số kiểu điện thoại di động cần bật quyền truy cập vị trí để tìm kiếm thiết bị một cách bình thường.<br><br><b>3. Quyền mạng</b><br>Chức năng phát hiện phiên bản và cập nhật tài liệu hoạt hình cục bộ của APP cần có quyền này. <br><br><b>4. Quyền truy cập tệp phương tiện</b><br>Nếu quyền này không được bật, nhạc sẽ không thể được tải và hiển thị. Khi bạn cấp quyền truy cập vào các tệp phương tiện, APP sẽ tìm kiếm các tệp nhạc trong điện thoại của bạn và sau đó hiển thị chúng trong danh sách nhạc. Nếu danh sách nhạc không được hiển thị, vui lòng kiểm tra xem quyền truy cập tệp phương tiện của APP có được cấp phép hay không.<br><br><b>5. Quyền truy cập micrô</b><br>APP cần bạn cấp quyền truy cập micrô để thu thập âm thanh để tạo hiệu ứng nhịp điệu.<br>",
+				"th": "<b>ตัวโน้ต</b>: APP ไม่ได้เก็บรวบรวมข้อมูลส่วนบุคคลใด ๆ และขออนุญาตเพื่อให้แน่ใจว่าการใช้งานปกติของคุณ<br><br><b>1. Bluetooth permission</b><br>เนื่องจากแอปและอุปกรณ์ใช้โปรโตคอลบลูทูธพลังงานต่ำในการสื่อสาร จึงจำเป็นต้องขออนุญาตบลูทูธเพื่อให้แน่ใจว่าแอปสามารถค้นหา เชื่อมต่อ และควบคุมอุปกรณ์ได้ตามปกติ <br><br><b>2. การอนุญาตสถานที่</b><br>โทรศัพท์มือถือบางรุ่นจำเป็นต้องเปิดใช้งานการอนุญาตตำแหน่งเพื่อค้นหาอุปกรณ์ตามปกติ <br><br><b>3. การอนุญาตเครือข่าย</b><br>การตรวจจับเวอร์ชันของ APP และฟังก์ชันการอัปเดตเนื้อหาภาพเคลื่อนไหวในเครื่องจำเป็นต้องได้รับการอนุญาตนี้<br><br><b>4. สิทธิ์การเข้าถึงไฟล์มีเดีย</b><br>หากไม่ได้เปิดใช้งานการอนุญาตนี้ จะไม่สามารถโหลดและแสดงเพลงได้ เมื่อคุณให้สิทธิ์การเข้าถึงไฟล์มีเดีย แอปจะค้นหาไฟล์เพลงในโทรศัพท์ของคุณ จากนั้นจึงแสดงไฟล์เหล่านั้นในรายการเพลง หากรายการเพลงไม่ปรากฏขึ้น โปรดตรวจสอบว่าการอนุญาตการเข้าถึงไฟล์มีเดียของแอปนั้นได้รับอนุญาตหรือไม่<br><br><b>5. สิทธิ์ในการเข้าถึงไมโครโฟน</b><br>APP ต้องการให้คุณอนุญาตสิทธิ์ในการเข้าถึงไมโครโฟนเพื่อรวบรวมเสียงเพื่อสร้างเอฟเฟกต์จังหวะ <br>",
+			},
+			title: {
+				"zh-CN": "请求的权限说明",
+				"en": "Requested Permissions Explanation",
+				"ja": "リクエストされた許可の説明",
+				"fr": "Explication des autorisations demandées",
+				"de": "Erklärung der angeforderten Berechtigungen",
+				"ko": "요청된 권한 설명",
+				"it": "Spiegazione delle autorizzazioni richieste",
+				"pt": "Explicação das permissões solicitadas",
+				"es": "Explicación de los permisos solicitados",
+				"zh-TW": "請求的權限說明",
+				"ru": "Объяснение запрошенных разрешений",
+				"vi": "Giải thích quyền được yêu cầu",
+				"th": "คำอธิบายสิทธิ์ที่ร้องขอ",
+			}
+		};
+
+		// 获取访问参数中的language字段，如果不存在，则默认使用英语
+		var language = (getParameterByName("language") || defaultLanguage);
+
+		// 答案标题
+		var answerTitle = document.getElementById("answer-title");
+		var answerTitleText = answer.title[language];
+		if (answerTitleText === undefined) {
+			answerTitleText = answer.title[defaultLanguage];
+		}
+		answerTitle.textContent = answerTitleText;
+		
+		// 答案内容
+		var answerContent = document.getElementById("answer-content");
+		var textElemet = document.createElement("p");
+		
+		var answerContentText = answer.content[language];
+		if (answerContentText === undefined) {
+			answerContentText = answer.content[defaultLanguage];
+		}
+		
+		textElemet.innerHTML = answerContentText;
+		answerContent.appendChild(textElemet);
+	</script>
+</body>
+</html>

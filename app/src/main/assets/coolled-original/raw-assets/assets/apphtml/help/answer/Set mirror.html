@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+	<meta name="viewport" content="initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <title>answer-content</title>
+    
+	<!-- 放到head中确保被渲染之前加载 -->
+	<link rel="stylesheet" href="../public-style.css" type="text/css"/>
+	<style>
+		/* 样式 */
+		.image-container {
+		  display: flex;
+		  flex-direction: column;
+		  align-items: center;
+		}
+		.image-container img {
+		  width: 200px;
+		  height: auto;
+		  margin-bottom: 10px;
+		}
+		.image-container span {
+		  font-size: 14px;
+		  font-weight: bold;
+		}
+	</style>
+</head>
+<body>
+	<div class="answer-list-container">
+		<h3 id="answer-title">			
+		</h3>
+		<div id="divider-div" class="divider">
+		</div>
+		<div id="answer-content">
+		</div>
+		
+		<img id="prompt-image" src="./images/key.jpg" width="100%"></img>
+	</div>
+
+    <div id="footer"></div>
+
+    <script src="../public-script.js"></script>
+
+    <script>
+        var footer = document.getElementById("footer"); 
+        footer.innerHTML = answerBottomBtnHtml;
+    </script>
+
+	
+	<!-- 放到body中，确保所有 JavaScript 代码在页面渲染之前加载完成 -->
+	<script>
+		// 答案内容
+		var answer = {
+			/// 内容用html语法编写，加粗用<b>，换行用<br>，其他写法请参考html语法
+			content: {
+				"zh-CN": "如遇到显示内容（文字、图案等）上下颠倒，可快速双击“控制器上的按键”或者在APP“设置页面”点击切换镜像显示的按钮进行调整。",
+				"en": "If you encounter upside-down display content (text, images, etc.), you can quickly double-tap the button on the controller or click the mirror display toggle button in the 'Settings' page of the app to adjust it.",
+				"ja": "表示内容（テキスト、画像など）が上下逆さまになった場合は、「コントローラーのボタン」を素早くダブルタップするか、アプリの「設定ページ」でミラー表示切り替えボタンをクリックして調整できます。",
+				"fr": "Si le contenu de l'affichage est inversé verticalement (texte, images, etc.), vous pouvez double-cliquer rapidement sur le bouton de la manette ou cliquer sur le bouton de basculement de l'affichage miroir dans la page 'Paramètres' de l'application pour l'ajuster.",
+				"de": "Wenn der Anzeigeinhalt (Text, Bilder usw.) auf dem Kopf steht, können Sie schnell auf die Taste des Controllers doppelklicken oder in der App auf die Schaltfläche für die Spiegelanzeige in den 'Einstellungen' klicken, um dies anzupassen.",
+				"ko": "만약 디스플레이 내용(텍스트, 이미지 등)이 뒤집혀 있다면, 컨트롤러의 버튼을 빠르게 두 번 클릭하거나 앱의 '설정' 페이지에서 미러 디스플레이 전환 버튼을 클릭하여 조정할 수 있습니다.",
+				"it": "Se incontri un contenuto dello schermo capovolto (testo, immagini, ecc.), puoi fare doppio tap velocemente sul pulsante del controller o fare clic sul pulsante di commutazione dello specchio nell'app nella pagina 'Impostazioni' per aggiustarlo.",
+				"pt": "Se você encontrar conteúdo de tela de cabeça para baixo (texto, imagens, etc.), você pode fazer um toque duplo rápido no botão do controle ou clicar no botão de alternar espelhamento de tela na página de 'Configurações' do aplicativo para ajustá-lo.",
+				"es": "Si te encuentras con contenido de pantalla boca abajo (texto, imágenes, etc.), puedes hacer doble clic rápidamente en el botón del controlador o hacer clic en el botón de alternar la pantalla en espejo en la página de 'Configuración' de la aplicación para ajustarlo.",
+				"zh-TW": "如遇到顯示內容（文字、圖案等）上下顛倒，可快速雙擊“控制器上的按鍵”或者在APP“設置頁面”點擊切換鏡像顯示的按鈕進行調整。",
+				"ru": "Если возникла проблема с перевёрнутым содержимым дисплея (текст, изображения и т. д.), вы можете быстро дважды нажать кнопку на контроллере или щелкнуть кнопку переключения зеркального отображения на странице 'Настройки' в приложении, чтобы исправить это.",
+				"vi": "Nếu gặp nội dung hiển thị lộn ngược \(văn bản, hình ảnh, v.v.\), bạn có thể nhanh chóng nhấn đúp vào nút trên bộ điều khiển hoặc nhấp vào nút chuyển đổi màn hình gương trong trang \'Cài đặt\' của ứng dụng để điều chỉnh.",
+				"th": "หากคุณพบเนื้อหาที่แสดงกลับหัว (ข้อความ รูปภาพ ฯลฯ) คุณสามารถแตะสองครั้งที่ปุ่มบนคอนโทรลเลอร์อย่างรวดเร็ว หรือคลิกปุ่มสลับการแสดงผลแบบมิเรอร์ในหน้า \"การตั้งค่า\" ของแอปเพื่อปรับเปลี่ยน",
+			},
+			title: {
+				"zh-CN": "显示内容上下颠倒",
+				"en": "Display content upside down",
+				"ja": "表示内容が上下逆さまになっています",
+				"fr": "Le contenu de l'affichage est inversé verticalement",
+				"de": "Anzeigeinhalt ist auf den Kopf gestellt",
+				"ko": "디스플레이 내용이 뒤집혀 있습니다",
+				"it": "Il contenuto dello schermo è capovolto",
+				"pt": "O conteúdo da tela está de cabeça para baixo",
+				"es": "El contenido de la pantalla está boca abajo",
+				"zh-TW": "顯示內容上下顛倒",
+				"ru": "Содержимое дисплея перевернуто вверх ногами",
+				"vi": "Hiển thị nội dung lộn ngược",
+				"th": "แสดงเนื้อหากลับหัว",
+			}
+		};
+
+		// 获取访问参数中的language字段，如果不存在，则默认使用英语
+		var language = (getParameterByName("language") || defaultLanguage);
+
+		// 答案标题
+		var answerTitle = document.getElementById("answer-title");
+		var answerTitleText = answer.title[language];
+		if (answerTitleText === undefined) {
+			answerTitleText = answer.title[defaultLanguage];
+		}
+		answerTitle.textContent = answerTitleText;
+		
+		// 答案内容
+		var answerContent = document.getElementById("answer-content");
+		var textElemet = document.createElement("p");
+		
+		var answerContentText = answer.content[language];
+		if (answerContentText === undefined) {
+			answerContentText = answer.content[defaultLanguage];
+		}
+		
+		textElemet.innerHTML = answerContentText;
+		answerContent.appendChild(textElemet);
+		
+		var imageElement = document.createElement(p);
+	</script>
+</body>
+</html>

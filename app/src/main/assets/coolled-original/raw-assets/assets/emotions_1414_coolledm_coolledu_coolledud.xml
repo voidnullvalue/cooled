@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<emotions>
+    <emotion>
+        <id>0</id>
+        <code><![CDATA[[em:1:]]]></code>
+        <name>i001</name>
+    </emotion>
+    <emotion>
+        <id>1</id>
+        <code><![CDATA[[em:2:]]]></code>
+        <name>i002</name>
+    </emotion>
+    <emotion>
+        <id>2</id>
+        <code><![CDATA[[em:3:]]]></code>
+        <name>i003</name>
+    </emotion>
+</emotions>

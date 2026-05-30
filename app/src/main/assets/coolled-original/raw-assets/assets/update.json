@@ -1,0 +1,17 @@
+{
+  "versionName": "1.1.0",
+  "versionCode": 20,
+  "isForceUpdate": true,
+  "apkUrl": "https://ifdef.gitee.io/appdownload/CoolLED1248/apk/app-release.apk",
+  "englishContent": "英文",
+  "chineseContent": "中文",
+  "spanishContent": "西班牙语言",
+  "portugueseContent": "葡萄牙语",
+  "franceContent": "法语",
+  "russiaContent": "俄语",
+  "koreaContent": "韩语",
+  "japaneseContent": "日语",
+  "italyContent": "意大利语",
+  "hongKongContent": "繁体中午",
+  "germanyContent": "德语"
+}
