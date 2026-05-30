@@ -26,6 +26,7 @@ import com.cooled.core.assets.OriginalLedAssetCatalogs
 import com.cooled.core.protocol.AssetCoolleduxFontSource
 import com.cooled.core.protocol.BleProtocolConstants
 import com.cooled.core.protocol.CoolleduxFontSources
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -35,6 +36,9 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withTimeoutOrNull
 
 @SuppressLint("MissingPermission")
 class AndroidBleTransport(private val context: Context) : BleTransport {
@@ -44,6 +48,8 @@ class AndroidBleTransport(private val context: Context) : BleTransport {
     private var gatt: BluetoothGatt? = null
     private var isScanning = false
     private var scanWatchdog: Job? = null
+    private val writeMutex = Mutex()
+    @Volatile private var pendingWriteAck: CompletableDeferred<Int>? = null
 
     private val _state = MutableStateFlow(ConnectionState.DISCONNECTED)
     private val _mtu = MutableStateFlow(23)
@@ -69,6 +75,8 @@ class AndroidBleTransport(private val context: Context) : BleTransport {
                 _state.value = ConnectionState.CONNECTED
                 if (hasConnectPermission()) g.discoverServices()
             } else {
+                pendingWriteAck?.complete(status)
+                pendingWriteAck = null
                 _state.value = ConnectionState.DISCONNECTED
             }
         }
@@ -100,6 +108,10 @@ class AndroidBleTransport(private val context: Context) : BleTransport {
             val value = characteristic.value ?: return
             _rx.value = RxFrame(value)
             _io.value = BleIoEvent(System.currentTimeMillis(), BleIoDirection.RX, value, "notify")
+        }
+
+        override fun onCharacteristicWrite(gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic, status: Int) {
+            pendingWriteAck?.complete(status)
         }
 
         override fun onMtuChanged(gatt: BluetoothGatt, mtu: Int, status: Int) { _mtu.value = mtu }
@@ -175,6 +187,8 @@ class AndroidBleTransport(private val context: Context) : BleTransport {
     }
 
     override suspend fun disconnect() {
+        pendingWriteAck?.complete(BluetoothGatt.GATT_FAILURE)
+        pendingWriteAck = null
         if (hasConnectPermission()) {
             gatt?.disconnect()
             gatt?.close()
@@ -183,22 +197,37 @@ class AndroidBleTransport(private val context: Context) : BleTransport {
         _state.value = ConnectionState.DISCONNECTED
     }
 
-    override suspend fun write(bytes: ByteArray) {
+    override suspend fun write(bytes: ByteArray) = writeMutex.withLock {
         if (!hasConnectPermission()) {
             _io.value = BleIoEvent(System.currentTimeMillis(), BleIoDirection.RX, byteArrayOf(), "write skipped: missing BLUETOOTH_CONNECT permission")
-            return
+            return@withLock
         }
-        val g = gatt ?: return
-        val service = g.getService(BleProtocolConstants.serviceUuid) ?: return
-        val ch = service.getCharacteristic(BleProtocolConstants.commandCharacteristicUuid) ?: return
-        val splitSize = if (_mtu.value >= 247) 180 else 20
+        val g = gatt ?: return@withLock
+        val service = g.getService(BleProtocolConstants.serviceUuid) ?: return@withLock
+        val ch = service.getCharacteristic(BleProtocolConstants.commandCharacteristicUuid) ?: return@withLock
+        ch.writeType = BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
+        val splitSize = if (_mtu.value > 23) (_mtu.value - 3).coerceAtMost(180) else 20
         val chunks = bytes.toList().chunked(splitSize).map { it.toByteArray() }
         chunks.forEachIndexed { index, chunk ->
+            val ack = CompletableDeferred<Int>()
+            pendingWriteAck = ack
             ch.value = chunk
             val note = if (chunks.size == 1) "write" else "write split ${index + 1}/${chunks.size}"
             _io.value = BleIoEvent(System.currentTimeMillis(), BleIoDirection.TX, chunk, note)
-            g.writeCharacteristic(ch)
-            if (index != chunks.lastIndex) delay(15L)
+            val accepted = g.writeCharacteristic(ch)
+            if (!accepted) {
+                pendingWriteAck = null
+                _io.value = BleIoEvent(System.currentTimeMillis(), BleIoDirection.RX, byteArrayOf(), "write failed to enqueue split ${index + 1}/${chunks.size}")
+                return@withLock
+            }
+            val status = withTimeoutOrNull(2500L) { ack.await() }
+            pendingWriteAck = null
+            if (status != BluetoothGatt.GATT_SUCCESS) {
+                val detail = status?.toString() ?: "timeout"
+                _io.value = BleIoEvent(System.currentTimeMillis(), BleIoDirection.RX, byteArrayOf(), "write failed split ${index + 1}/${chunks.size}: $detail")
+                return@withLock
+            }
+            if (index != chunks.lastIndex) delay(25L)
         }
     }
 
