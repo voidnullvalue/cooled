@@ -6,7 +6,6 @@ import com.cooled.core.assets.OriginalLedAssetKinds
 import com.cooled.core.model.DeviceFamily
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class CoolleduxProgramBytecodeParityTest {
@@ -120,6 +119,17 @@ class CoolleduxProgramBytecodeParityTest {
         } finally {
             OriginalLedAssetByteSources.active = previous
         }
+    }
+
+    @Test
+    fun rgb444TransferUsesApkNibblePackingAndThresholds() {
+        assertArrayEquals(byteArrayOf(0x00, 0x00), OriginalLedAssetPayloadEncoder.rgb444TransferColorBytes(0xFF000000.toInt()))
+        assertArrayEquals(byteArrayOf(0x0F, 0x00), OriginalLedAssetPayloadEncoder.rgb444TransferColorBytes(0xFFFF0000.toInt()))
+        assertArrayEquals(byteArrayOf(0x00, 0xF0.toByte()), OriginalLedAssetPayloadEncoder.rgb444TransferColorBytes(0xFF00FF00.toInt()))
+        assertArrayEquals(byteArrayOf(0x00, 0x0F), OriginalLedAssetPayloadEncoder.rgb444TransferColorBytes(0xFF0000FF.toInt()))
+        assertArrayEquals(byteArrayOf(0x0F, 0xFF.toByte()), OriginalLedAssetPayloadEncoder.rgb444TransferColorBytes(0xFFFFFFFF.toInt()))
+        assertArrayEquals(byteArrayOf(0x06, 0x66), OriginalLedAssetPayloadEncoder.rgb444TransferColorBytes(0xFF808080.toInt()))
+        assertArrayEquals(byteArrayOf(0x00, 0x00), OriginalLedAssetPayloadEncoder.rgb444TransferColorBytes(0x00000000, alpha = 0))
     }
 
     private fun readU16(bytes: ByteArray, offset: Int): Int = ((bytes[offset].toInt() and 0xFF) shl 8) or (bytes[offset + 1].toInt() and 0xFF)
