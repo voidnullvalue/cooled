@@ -12,6 +12,7 @@ import com.cooled.core.protocol.ProgramComposer
 import com.cooled.core.protocol.ProgramPackage
 import com.cooled.core.protocol.ProgramStartRequest
 import com.cooled.core.protocol.ProtocolParsers
+import com.cooled.core.protocol.TimerSwitchCommand
 import com.cooled.data.persistence.RememberedDeviceStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -35,21 +36,33 @@ class DeviceRepository(
 
     suspend fun disconnect() = transport.disconnect()
 
+    suspend fun sendRawFrame(frame: ByteArray) = transport.write(frame)
+
     suspend fun sendPower(on: Boolean) = transport.write(CommandBuilders.setPower(on))
     suspend fun sendBrightness(value: Int) = transport.write(CommandBuilders.setBrightness(value))
     suspend fun sendRhythm(type: Int) = transport.write(CommandBuilders.setRhythm(type))
     suspend fun sendMirror(v: Int) = transport.write(CommandBuilders.setMirror(v))
     suspend fun sendColorMode(modeIndex: Int) = transport.write(CommandBuilders.setColorMode(modeIndex))
     suspend fun sendQueryInfo() = transport.write(CommandBuilders.queryDeviceInfo())
+    suspend fun sendQueryOtaVersion() = transport.write(CommandBuilders.queryOtaVersion())
+    suspend fun sendQueryDriveState() = transport.write(CommandBuilders.queryDriveState())
+    suspend fun sendDriveState(state: Int) = transport.write(CommandBuilders.setDriveState(state))
     suspend fun sendCheckPassword(password: String) = transport.write(CommandBuilders.checkPassword(password))
     suspend fun sendSetPassword(password: String) = transport.write(CommandBuilders.setPassword(password))
 
-    suspend fun sendTimeSync(epochSeconds: Int) = transport.write(CommandBuilders.syncTime(epochSeconds))
+    suspend fun sendTimeSyncNow() = transport.write(CommandBuilders.syncTimeNow())
+    suspend fun sendTimeSync(epochSeconds: Int) = transport.write(CommandBuilders.syncTimeNow())
     suspend fun sendSetTimer(minutes: Int, enabled: Boolean) = transport.write(CommandBuilders.setTimer(minutes, enabled))
+    suspend fun sendTimerSwitches(items: List<TimerSwitchCommand>) = transport.write(CommandBuilders.setTimerSwitches(items))
+    suspend fun sendQueryTimerSwitches() = transport.write(CommandBuilders.queryTimerSwitches())
+    suspend fun sendQueryCountdownStatus() = transport.write(CommandBuilders.queryCountdownStatus())
+    suspend fun resetCountdown(hour: Int = 0, minute: Int = 0, second: Int = 0) = transport.write(CommandBuilders.resetCountdown(hour, minute, second))
     suspend fun sendCountdown(running: Boolean) = transport.write(CommandBuilders.setCountdownRunning(running))
-    suspend fun sendStopwatch(running: Boolean) = transport.write(CommandBuilders.setStopwatchRunning(running))
-    suspend fun resetCountdown() = transport.write(CommandBuilders.resetCountdown())
+    suspend fun sendQueryStopwatchStatus() = transport.write(CommandBuilders.queryStopwatchStatus())
     suspend fun resetStopwatch() = transport.write(CommandBuilders.resetStopwatch())
+    suspend fun sendStopwatch(running: Boolean) = transport.write(CommandBuilders.setStopwatchRunning(running))
+    suspend fun sendQueryScoreboardStatus() = transport.write(CommandBuilders.queryScoreboardStatus())
+    suspend fun resetScoreboard(left: Int = 0, right: Int = 0) = transport.write(CommandBuilders.resetScoreboard(left, right))
     suspend fun sendScoreboard(running: Boolean) = transport.write(CommandBuilders.setScoreboardRunning(running))
     suspend fun sendVolume(value: Int) = transport.write(CommandBuilders.setVolume(value))
     suspend fun sendQueryTomato() = transport.write(CommandBuilders.queryTomato())
@@ -68,6 +81,16 @@ class DeviceRepository(
     suspend fun sendDataChunk(messageType: Int, totalCompressedLength: Int, chunkIndex: Int, chunk: ByteArray) =
         transport.write(CommandBuilders.buildDataChunk(messageType, totalCompressedLength, chunkIndex, chunk))
 
+    fun composeProgram(
+        family: DeviceFamily,
+        content: ProgramContent,
+        index: Int = 0,
+        count: Int = 1,
+        showCount: Int = 1,
+        programType: Int? = null,
+        extraTypeByte: Int? = null
+    ): ProgramPackage = ProgramComposer.compose(family, content, index, count, showCount, programType, extraTypeByte)
+
     suspend fun sendComposedProgram(
         family: DeviceFamily,
         content: ProgramContent,
@@ -77,7 +100,7 @@ class DeviceRepository(
         programType: Int? = null,
         extraTypeByte: Int? = null
     ): ProgramPackage {
-        val pack = ProgramComposer.compose(family, content, index, count, showCount, programType, extraTypeByte)
+        val pack = composeProgram(family, content, index, count, showCount, programType, extraTypeByte)
         transport.write(pack.startHeaderFrame)
         pack.chunkFrames.forEach { transport.write(it) }
         return pack

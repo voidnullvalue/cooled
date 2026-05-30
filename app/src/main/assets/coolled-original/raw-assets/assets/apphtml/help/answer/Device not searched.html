@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+	<meta name="viewport" content="initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <title>answer-content</title>
+    
+	<!-- 放到head中确保被渲染之前加载 -->
+	<link rel="stylesheet" href="../public-style.css" type="text/css"/>
+	<style>
+		/* 样式 */
+		.image-container {
+		  display: flex;
+		  flex-direction: column;
+		  align-items: center;
+		}
+		.image-container img {
+		  width: 200px;
+		  height: auto;
+		  margin-bottom: 10px;
+		}
+		.image-container span {
+		  font-size: 14px;
+		  font-weight: bold;
+		}
+	</style>
+</head>
+<body>
+	<div class="answer-list-container">
+		<h3 id="answer-title">			
+		</h3>
+		<div id="divider-div" class="divider">
+		</div>
+		<div id="answer-content">
+		</div>
+		
+		<img id="prompt-image" src="./images/Device no display.jpg" width="100%"></img>
+	</div>
+
+    <div id="footer"></div>
+
+    <script src="../public-script.js"></script>
+
+    <script>
+        var footer = document.getElementById("footer"); 
+        footer.innerHTML = answerBottomBtnHtml;
+    </script>
+
+	
+	<!-- 放到body中，确保所有 JavaScript 代码在页面渲染之前加载完成 -->
+	<script>
+		// 答案内容
+		var answer = {
+			/// 内容用html语法编写，加粗用<b>，换行用<br>，其他写法请参考html语法
+			content: {
+				"zh-CN":"1.确认设备是否正常工作并且显示内容。<br>2.检查手机“蓝牙”是否打开，“位置权限”是否打开。（苹果手机一定要确保“控制中心”【1】蓝牙被打开）<br>3.重新给设备通电，在设备列表页面【2】再次下拉刷新或者点击“搜索设备”按钮搜索设备。<br>4.退出APP，然后再次打开APP进入设备列表，重新搜索设备。<br>5.尝试更近距离搜索设备。",
+				"en":"1. Check if the device is functioning properly and displaying content.<br>2. Verify if the Bluetooth is enabled on your phone and check if the location permission is granted. (For iPhone, make sure the Bluetooth is turned on in the Control Center [1])<br>3. Reconnect the device to the power source, then on the device list page [2], pull down to refresh or click the 'Search Devices' button to search for the device again.<br>4. Exit the app, then reopen the app and go to the device list to search for the device again.<br>5. Try searching for the device at a closer distance.",
+				"ja":"1. デバイスが正常に動作しているかどうか、表示されているかを確認します。<br>2. スマートフォンのBluetoothがオンになっているか、および位置情報の許可がされているかを確認します。（iPhoneの場合、Bluetoothがコントロールセンター[1]でオンになっていることを確認してください）<br>3. デバイスを再度電源に接続し、デバイスリストページ[2]で下にスクロールしてリフレッシュするか、「デバイスを検索」ボタンをクリックしてデバイスを検索します。<br>4. アプリを終了し、再度アプリを開いてデバイスリストに移動し、デバイスを再度検索します。<br>5. より近い距離からデバイスを検索してみてください。",
+				"fr":"1. Vérifiez si l'appareil fonctionne correctement et affiche du contenu.<br>2. Vérifiez si le Bluetooth est activé sur votre téléphone et si l'autorisation de localisation est accordée. (Pour iPhone, assurez-vous que le Bluetooth est activé dans le Centre de contrôle [1])<br>3. Rebranchez l'appareil à la source d'alimentation, puis sur la page de la liste des appareils [2], faites défiler vers le bas pour rafraîchir ou cliquez sur le bouton 'Rechercher des appareils' pour rechercher à nouveau l'appareil.<br>4. Quittez l'application, puis rouvrez-la et accédez à la liste des appareils pour rechercher à nouveau l'appareil.<br>5. Essayez de rechercher l'appareil à une distance plus proche.",
+				"de":"1. Überprüfen Sie, ob das Gerät ordnungsgemäß funktioniert und Inhalte angezeigt werden.<br>2. Stellen Sie sicher, dass Bluetooth auf Ihrem Telefon aktiviert ist und die Standortberechtigung erteilt wurde. (Bei iPhone stellen Sie sicher, dass Bluetooth im Kontrollzentrum [1] aktiviert ist)<br>3. Verbinden Sie das Gerät erneut mit der Stromquelle und ziehen Sie auf der Geräteliste-Seite [2] nach unten, um zu aktualisieren, oder klicken Sie auf die Schaltfläche 'Geräte suchen', um das Gerät erneut zu suchen.<br>4. Beenden Sie die App, öffnen Sie sie erneut und gehen Sie zur Geräteliste, um das Gerät erneut zu suchen.<br>5. Versuchen Sie, das Gerät aus kürzerer Entfernung zu suchen.",
+				"ko":"1. 장치가 정상적으로 작동하고 내용이 표시되는지 확인하십시오.<br>2. 휴대폰의 Bluetooth가 활성화되어 있는지와 위치 권한이 허용되었는지 확인하십시오. (아이폰의 경우, Bluetooth가 제어 센터 [1]에서 활성화되어 있는지 확인하십시오.)<br>3. 장치를 다시 전원에 연결하고, 장치 목록 페이지 [2]에서 아래로 스크롤하여 새로 고침하거나 '장치 검색' 버튼을 클릭하여 장치를 다시 검색하십시오.<br>4. 앱을 종료한 다음 다시 열고 장치 목록으로 이동하여 장치를 다시 검색하십시오.<br>5. 장치를 더 가까운 거리에서 검색해 보십시오.",
+				"it":"1. Verifica se il dispositivo funziona correttamente e mostra i contenuti.<br>2. Verifica se il Bluetooth è attivato sul tuo telefono e controlla se l'autorizzazione alla posizione è concessa. (Per iPhone, assicurati che il Bluetooth sia attivato nel Centro di controllo [1])<br>3. Ricollega il dispositivo alla fonte di alimentazione, quindi sulla pagina dell'elenco dei dispositivi [2], scorri verso il basso per aggiornare o fai clic sul pulsante 'Cerca dispositivi' per cercare nuovamente il dispositivo.<br>4. Esci dall'app, quindi riaprila e vai all'elenco dei dispositivi per cercare nuovamente il dispositivo.<br>5. Prova a cercare il dispositivo a distanza più ravvicinata.",
+				"pt":"1. Verifique se o dispositivo está funcionando corretamente e exibindo conteúdo.<br>2. Verifique se o Bluetooth está ativado no seu telefone e se a permissão de localização foi concedida. (Para iPhone, certifique-se de que o Bluetooth esteja ativado no Centro de Controle [1])<br>3. Reconecte o dispositivo à fonte de energia e, na página da lista de dispositivos [2], deslize para baixo para atualizar ou clique no botão 'Procurar dispositivos' para procurar o dispositivo novamente.<br>4. Saia do aplicativo, em seguida, abra-o novamente e vá para a lista de dispositivos para procurar o dispositivo novamente.<br>5. Tente procurar o dispositivo a uma distância mais próxima.",
+				"es":"1. Verifica si el dispositivo está funcionando correctamente y mostrando contenido.<br>2. Verifica si el Bluetooth está activado en tu teléfono y si se ha otorgado el permiso de ubicación. (Para iPhone, asegúrate de que el Bluetooth esté activado en el Centro de control [1])<br>3. Vuelve a conectar el dispositivo a la fuente de alimentación, luego en la página de la lista de dispositivos [2], desliza hacia abajo para actualizar o haz clic en el botón 'Buscar dispositivos' para buscar el dispositivo nuevamente.<br>4. Cierra la aplicación y vuelve a abrirla, ve a la lista de dispositivos y busca el dispositivo nuevamente.<br>5. Intenta buscar el dispositivo a una distancia más cercana.",
+				"zh-TW":"1. 確認設備是否正常工作並顯示內容。<br>2. 檢查手機的藍牙是否已開啟，並檢查位置權限是否已開啟。（對於 iPhone，請確保在控制中心【1】中已開啟藍牙）<br>3. 重新給設備通電，在設備列表頁面【2】再次下拉以刷新或點擊「搜尋設備」按鈕進行設備搜索。<br>4. 退出應用，然後再次打開應用進入設備列表，重新搜索設備。<br>5. 嘗試更近距離搜索設備。",
+				"ru":"1. Проверьте, работает ли устройство нормально и отображает ли содержимое.<br>2. Проверьте, включен ли Bluetooth на вашем телефоне, и открыты ли разрешения для местоположения. (Для iPhone убедитесь, что Bluetooth включен в Центре управления [1])<br>3. Переподключите устройство к источнику питания, затем на странице списка устройств [2] проведите вниз, чтобы обновить или нажмите кнопку 'Поиск устройств', чтобы повторно найти устройство.<br>4. Выйдите из приложения, затем снова откройте его и перейдите в список устройств, чтобы повторно выполнить поиск устройства.<br>5. Попробуйте выполнить поиск устройства на более коротком расстоянии.",
+				"vi":"1. Kiểm tra xem thiết bị có hoạt động bình thường và hiển thị nội dung hay không.<br>2. Xác minh xem Bluetooth có được bật trên điện thoại của bạn hay không và kiểm tra xem quyền truy cập vị trí có được cấp hay không. (Đối với iPhone, đảm bảo Bluetooth được bật trong Trung tâm điều khiển [1])<br>3. Kết nối lại thiết bị với nguồn điện, sau đó tại trang danh sách thiết bị [2], kéo xuống để làm mới hoặc nhấn vào nút “Search Devices” để tìm kiếm lại thiết bị.<br>4. Thoát ứng dụng, sau đó mở lại ứng dụng và vào danh sách thiết bị để tìm kiếm lại thiết bị.<br>5. Thử tìm kiếm thiết bị ở khoảng cách gần hơn.",
+				"th":"1. ตรวจสอบว่าอุปกรณ์ทำงานอย่างถูกต้องและแสดงเนื้อหาหรือไม่<br>2. ตรวจสอบว่าเปิดใช้งาน Bluetooth บนโทรศัพท์ของคุณหรือไม่ และตรวจสอบว่าได้รับอนุญาตจากตำแหน่งหรือไม่ (สำหรับ iPhone ตรวจสอบให้แน่ใจว่าได้เปิดบลูทูธในศูนย์ควบคุม [1])<br>3. เชื่อมต่ออุปกรณ์กับแหล่งจ่ายไฟอีกครั้ง จากนั้นไปที่หน้ารายการอุปกรณ์ [2] ให้ดึงลงเพื่อรีเฟรชหรือคลิกปุ่ม 'ค้นหาอุปกรณ์' เพื่อค้นหาอุปกรณ์อีกครั้ง<br>4. ออกจากแอป จากนั้นเปิดแอปอีกครั้งแล้วไปที่รายการอุปกรณ์เพื่อค้นหาอุปกรณ์อีกครั้ง<br>5. ลองค้นหาอุปกรณ์ในระยะใกล้กว่านี้",
+			},
+			title: {
+				"zh-CN":"搜索不到设备",
+				"en":"Device not searched",
+				"ja":"デバイスが見つかりません",
+				"fr":"Appareil introuvable",
+				"de":"Gerät nicht gefunden",
+				"ko":"장치를 찾을 수 없음",
+				"it":"Dispositivo non trovato",
+				"pt":"Dispositivo não encontrado",
+				"es":"Dispositivo no encontrado",
+				"zh-TW":"搜尋不到設備",
+				"ru":"Устройство не найдено",
+				"vi": "Chưa tìm kiếm được thiết bị",
+				"th": "ไม่ได้ค้นหาอุปกรณ์",
+			}
+		};
+
+		// 获取访问参数中的language字段，如果不存在，则默认使用英语
+		var language = (getParameterByName("language") || defaultLanguage);
+
+		// 答案标题
+		var answerTitle = document.getElementById("answer-title");
+		var answerTitleText = answer.title[language];
+		if (answerTitleText === undefined) {
+			answerTitleText = answer.title[defaultLanguage];
+		}
+		answerTitle.textContent = answerTitleText;
+		
+		// 答案内容
+		var answerContent = document.getElementById("answer-content");
+		var textElemet = document.createElement("p");
+		
+		var answerContentText = answer.content[language];
+		if (answerContentText === undefined) {
+			answerContentText = answer.content[defaultLanguage];
+		}
+		
+		textElemet.innerHTML = answerContentText;
+		answerContent.appendChild(textElemet);
+	</script>
+</body>
+</html>

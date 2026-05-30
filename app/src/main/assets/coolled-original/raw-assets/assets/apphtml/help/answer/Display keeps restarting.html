@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+	<meta name="viewport" content="initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <title>answer-content</title>
+    
+	<!-- 放到head中确保被渲染之前加载 -->
+	<link rel="stylesheet" href="../public-style.css" type="text/css"/>
+	<style>
+	</style>
+</head>
+<body>
+	<div class="answer-list-container">
+		<h3 id="answer-title">			
+		</h3>
+		<div id="divider-div" class="divider">
+		</div>
+		<div id="answer-content">
+		</div>
+	</div>
+
+    <div id="footer"></div>
+
+    <script src="../public-script.js"></script>
+
+    <script>
+        var footer = document.getElementById("footer"); 
+        footer.innerHTML = answerBottomBtnHtml;
+    </script>
+
+	
+	<!-- 放到body中，确保所有 JavaScript 代码在页面渲染之前加载完成 -->
+	<script>
+		// 答案内容
+		var answer = {
+			/// 内容用html语法编写，加粗用<b>，换行用<br>，其他写法请参考html语法
+			content: {
+				"zh-CN": "1. 该问题是由于电源功率不满足要求导致的！<br>2. 请不要使用电脑、电视机和汽车的USB接口给设备供电，这些接口的负载能力很低。请尝试使用功率为5V/2A的接口，比如手机充电器、移动电源等。",
+				"en": "1. This problem is caused by the power supply not meeting the requirements!<br>2. Do not use the USB ports of computers, TVs, and cars to power the device, as these ports have very low load power. Please try to use an interface with a power of 5V/2A, such as a mobile phone charger, power bank, etc.",
+				"ja": "1. この問題は電源が要件を満たさないために発生します！<br>2. コンピュータ、テレビ、車のUSBポートを使用してデバイスに電力を供給しないでください。これらのポートの負荷電力は非常に低いです。携帯電話の充電器、パワーバンクなど、5V/2Aの電源を持つインターフェースを使用してみてください。",
+				"fr": "1. Ce problème est causé par une alimentation qui ne satisfait pas aux exigences !<br>2. N'utilisez pas les ports USB des ordinateurs, des téléviseurs et des voitures pour alimenter l'appareil, car ces ports ont une très faible puissance de charge. Essayez plutôt d'utiliser une interface avec une puissance de 5V/2A, comme un chargeur de téléphone portable, une batterie externe, etc.",
+				"de": "1. Dieses Problem wird durch die nicht den Anforderungen entsprechende Stromversorgung verursacht!<br>2. Verwenden Sie nicht die USB-Anschlüsse von Computern, Fernsehern und Autos, um das Gerät mit Strom zu versorgen, da diese Ports eine sehr geringe Lastleistung haben. Bitte versuchen Sie, eine Schnittstelle mit einer Leistung von 5V/2A zu verwenden, wie z. B. ein Handy-Ladegerät, eine Powerbank usw.",
+				"ko": "1. 이 문제는 전원 공급이 요구 사항을 충족하지 않아 발생합니다!<br>2. 컴퓨터, TV 및 자동차의 USB 포트를 사용하여 장치에 전원을 공급하지 마십시오. 이러한 포트는 전원 부하 능력이 매우 낮습니다. 모바일 전화 충전기, 파워 뱅크 등 5V/2A의 인터페이스를 사용해 보십시오.",
+				"it": "1. Questo problema è causato dall'alimentazione che non soddisfa i requisiti!<br>2. Non utilizzare le porte USB dei computer, delle TV e delle auto per alimentare il dispositivo, poiché queste porte hanno una potenza di carico molto bassa. Prova a utilizzare un'interfaccia con un'alimentazione di 5V/2A, come un caricabatterie per telefono cellulare, una power bank, ecc.",
+				"pt": "1. Este problema é causado pela fonte de alimentação que não atende aos requisitos!<br>2. Não utilize as portas USB de computadores, TVs e carros para alimentar o dispositivo, pois essas portas têm uma carga de energia muito baixa. Tente utilizar uma interface com uma potência de 5V/2A, como um carregador de celular, um power bank, etc.",
+				"es": "1. ¡Este problema se debe a que la fuente de alimentación no cumple con los requisitos!<br>2. No utilices los puertos USB de computadoras, televisores y automóviles para alimentar el dispositivo, ya que estos puertos tienen una carga de energía muy baja. Por favor, intenta utilizar una interfaz con una potencia de 5V/2A, como un cargador de teléfono móvil, una batería externa, etc.",
+				"zh-TW": "1. 這個問題是由電源不符合要求引起的！<br>2. 請不要使用電腦、電視機和汽車的USB接口給設備供電，這些接口的負載能力很低。請嘗試使用功率為5V/2A的接口，如手機充電器、行動電源等。",
+				"ru": "1. Эта проблема вызвана недостаточной мощностью источника питания!<br>2. Не используйте USB-порты компьютеров, телевизоров и автомобилей для питания устройства, так как эти порты имеют очень низкую нагрузочную мощность. Попробуйте использовать интерфейс с мощностью 5V/2A, такой как зарядное устройство для мобильного телефона, портативное зарядное устройство и т.д.",
+				"vi": "1. Vấn đề này là do nguồn điện không đáp ứng yêu cầu!<br>2. Không sử dụng cổng USB của máy tính, TV, ô tô để cấp nguồn cho thiết bị vì các cổng này có công suất tải rất thấp. Vui lòng thử sử dụng giao diện có nguồn điện 5V/2A, chẳng hạn như bộ sạc điện thoại di động, sạc dự phòng, v.v.",
+				"th": "1. ปัญหานี้เกิดจากการจ่ายไฟไม่ตรงตามข้อกำหนด!<br>2. อย่าใช้พอร์ต USB ของคอมพิวเตอร์ ทีวี และรถยนต์เพื่อจ่ายไฟให้กับอุปกรณ์ เนื่องจากพอร์ตเหล่านี้มีพลังงานโหลดต่ำมาก โปรดลองใช้อินเทอร์เฟซที่มีกำลังไฟ 5V/2A เช่น ที่ชาร์จโทรศัพท์มือถือ พาวเวอร์แบงค์ ฯลฯ",
+			},
+			title: {
+				"zh-CN": "显示屏不断重启、显示偏色",
+				"en": "The display keeps restarting and displays a color cast",
+				"ja": "ディスプレイが継続的に再起動し、色のキャストが表示されます",
+				"fr": "L'écran redémarre en continu et affiche une dominante de couleur",
+				"de": "Der Bildschirm startet ständig neu und zeigt eine Farbstich",
+				"ko": "디스플레이가 계속해서 재시작되며 색상이 비틀림을 보입니다",
+				"it": "Il display si riavvia continuamente e mostra una dominante di colore",
+				"pt": "O display continua reiniciando e exibe uma tonalidade de cor",
+				"es": "La pantalla se reinicia continuamente y muestra una dominante de color",
+				"zh-TW": "顯示屏持續重新啟動並顯示色彩偏差",
+				"ru": "Дисплей продолжает перезагружаться и отображает оттенок цвета",
+				"vi": "Màn hình tiếp tục khởi động lại và hiển thị một màu sắc",
+				"th": "จอแสดงผลจะรีสตาร์ทอย่างต่อเนื่องและแสดงสีเพี้ยน",
+			}
+		};
+
+		// 获取访问参数中的language字段，如果不存在，则默认使用英语
+		var language = (getParameterByName("language") || defaultLanguage);
+
+		// 答案标题
+		var answerTitle = document.getElementById("answer-title");
+		var answerTitleText = answer.title[language];
+		if (answerTitleText === undefined) {
+			answerTitleText = answer.title[defaultLanguage];
+		}
+		answerTitle.textContent = answerTitleText;
+		
+		// 答案内容
+		var answerContent = document.getElementById("answer-content");
+		var textElemet = document.createElement("p");
+		
+		var answerContentText = answer.content[language];
+		if (answerContentText === undefined) {
+			answerContentText = answer.content[defaultLanguage];
+		}
+		
+		textElemet.innerHTML = answerContentText;
+		answerContent.appendChild(textElemet);
+	</script>
+</body>
+</html>

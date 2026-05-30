@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+	<meta name="viewport" content="initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <title>answer-content</title>
+    
+	<!-- 放到head中确保被渲染之前加载 -->
+	<link rel="stylesheet" href="../public-style.css" type="text/css"/>
+</head>
+<body>
+	<div class="answer-list-container">
+		<h3 id="answer-title">			
+		</h3>
+		<div id="divider-div" class="divider">
+		</div>
+		<div id="answer-content">
+		</div>
+	</div>
+
+    <div id="footer"></div>
+
+	<script src="../public-script.js"></script>
+	
+	<script>
+        var footer = document.getElementById("footer"); 
+        footer.innerHTML = answerBottomBtnHtml;
+    </script>
+	
+	<!-- 放到body中，确保所有 JavaScript 代码在页面渲染之前加载完成 -->
+	<script>
+		// 答案内容
+		var answer = {
+			/// 内容用html语法编写，加粗用<b>，换行用<br>，其他写法请参考html语法
+			content: {
+				"zh-CN": "1. 请勿在手机蓝牙设置菜单中进行配对，只需直接打开APP即可连接设备。<br>2. 确认电源功率是否满足要求，设备是否正常工作。<br>3. 检查设备信号强度，尝试更近距离，重新连接设备。<br>4. 重新给设备通电，并退出APP，然后再次打开APP，重新连接设备。",
+				"en": "1. Do not pair the device in the phone's Bluetooth settings, simply open the app to connect the device.<br>2. Check if the power supply meets the requirements and if the device is working properly.<br>3. Check the device signal strength, try to get closer, and reconnect the device.<br>4. Reconnect the device to power, exit the app, then open the app again to reconnect the device.",
+				"ja": "1. デバイスを携帯電話のBluetooth設定でペアリングしないでください。アプリを開いてデバイスを接続してください。<br>2. 電源供給が要件を満たしているか、デバイスが正常に動作しているかを確認してください。<br>3. デバイスの信号強度を確認し、より近くに近づいてデバイスを再接続してください。<br>4. デバイスを再度電源に接続し、アプリを終了した後、再びアプリを開いてデバイスを再接続してください。",
+				"fr": "1. Ne pas appairer l'appareil dans les paramètres Bluetooth du téléphone, il suffit d'ouvrir l'application pour connecter l'appareil.<br>2. Vérifier si l'alimentation répond aux exigences et si l'appareil fonctionne correctement.<br>3. Vérifier la force du signal de l'appareil, essayer de se rapprocher et reconnecter l'appareil.<br>4. Rebrancher l'appareil à l'alimentation, quitter l'application, puis rouvrir l'application pour reconnecter l'appareil.",
+				"de": "1. Koppeln Sie das Gerät nicht in den Bluetooth-Einstellungen des Telefons, sondern öffnen Sie einfach die App, um das Gerät zu verbinden.<br>2. Überprüfen Sie, ob die Stromversorgung den Anforderungen entspricht und ob das Gerät ordnungsgemäß funktioniert.<br>3. Überprüfen Sie die Signalstärke des Geräts, versuchen Sie näher heranzugehen und verbinden Sie das Gerät erneut.<br>4. Schließen Sie das Gerät erneut an die Stromversorgung an, beenden Sie die App und öffnen Sie die App erneut, um das Gerät erneut zu verbinden.",
+				"ko": "1. 휴대폰의 Bluetooth 설정에서 기기를 페어링하지 마시고, 앱을 열어서 기기를 연결하십시오.<br>2. 전원 공급이 요구 사항을 충족하는지, 기기가 정상적으로 작동하는지 확인하십시오.<br>3. 기기의 신호 강도를 확인하고, 더 가까이로 접근하여 기기를 다시 연결해보십시오.<br>4. 기기를 다시 전원에 연결하고, 앱을 종료한 다음 앱을 다시 열어 기기를 다시 연결하십시오.",
+				"it": "1. Non accoppiare il dispositivo nelle impostazioni Bluetooth del telefono, basta aprire l'app per connettere il dispositivo.<br>2. Verificare se l'alimentazione soddisfa i requisiti e se il dispositivo funziona correttamente.<br>3. Verificare la potenza del segnale del dispositivo, provare a stare più vicini e ricollegare il dispositivo.<br>4. Ricollegare il dispositivo all'alimentazione, uscire dall'app e quindi riaprire l'app per ricollegare il dispositivo.",
+				"pt": "1. Não parear o dispositivo nas configurações Bluetooth do telefone, basta abrir o aplicativo para conectar o dispositivo.<br>2. Verifique se a fonte de alimentação atende aos requisitos e se o dispositivo está funcionando corretamente.<br>3. Verifique a intensidade do sinal do dispositivo, tente se aproximar mais e reconectar o dispositivo.<br>4. Reconecte o dispositivo à fonte de alimentação, saia do aplicativo e abra-o novamente para reconectar o dispositivo.",
+				"es": "1. No empareje el dispositivo en la configuración de Bluetooth del teléfono, simplemente abra la aplicación para conectar el dispositivo.<br>2. Verifique si la fuente de alimentación cumple con los requisitos y si el dispositivo funciona correctamente.<br>3. Verifique la intensidad de la señal del dispositivo, intente acercarse más y vuelva a conectar el dispositivo.<br>4. Vuelva a conectar el dispositivo a la fuente de alimentación, cierre la aplicación y vuelva a abrirla para volver a conectar el dispositivo.",
+				"zh-TW": "1. 請勿在手機藍牙設定菜單中進行配對，只需直接打開APP即可連接設備。<br>2. 確認電源功率是否符合要求，設備是否正常工作。<br>3. 檢查設備信號強度，嘗試更近距離，重新連接設備。<br>4. 重新給設備通電，並退出APP，然後再次打開APP，重新連接設備。",
+				"ru": "1. Не парьте устройство в настройках Bluetooth телефона, просто откройте приложение для подключения устройства.<br>2. Проверьте, соответствует ли мощность питания требованиям, и работает ли устройство нормально.<br>3. Проверьте уровень сигнала устройства, попробуйте приблизиться ближе и повторно подключить устройство.<br>4. Переподключите устройство к питанию, выйдите из приложения, затем откройте приложение снова и повторно подключите устройство.",
+				"vi": "1. Không ghép nối trong menu cài đặt Bluetooth của điện thoại di động, chỉ cần mở trực tiếp ỨNG DỤNG để kết nối thiết bị.<br>2. Xác nhận xem nguồn điện có đáp ứng yêu cầu hay không và thiết bị có hoạt động tốt hay không.<br>3. Kiểm tra cường độ tín hiệu của thiết bị, thử lại gần hơn và kết nối lại thiết bị.<br>4. Bật lại nguồn thiết bị và thoát khỏi APP, sau đó mở lại APP và kết nối lại thiết bị.",
+				"th": "1. อย่าจับคู่ในเมนูการตั้งค่าบลูทูธของโทรศัพท์มือถือ เพียงเปิดแอปโดยตรงเพื่อเชื่อมต่ออุปกรณ์<br>2. ตรวจสอบว่าแหล่งจ่ายไฟเป็นไปตามข้อกำหนดหรือไม่และอุปกรณ์ทำงานได้ตามปกติหรือไม่<br>3. ตรวจสอบความแรงของสัญญาณของอุปกรณ์ ลองเข้าใกล้ และเชื่อมต่ออุปกรณ์อีกครั้ง<br>4. เปิดอุปกรณ์อีกครั้งและออกจากแอป จากนั้นเปิดแอปอีกครั้งและเชื่อมต่ออุปกรณ์อีกครั้ง",
+			},
+			title: {
+				"zh-CN": "设备连接不上",
+				"en": "Device cannot connect",
+				"ja": "デバイスが接続できません",
+				"fr": "Impossible de connecter l'appareil",
+				"de": "Gerät kann keine Verbindung herstellen",
+				"ko": "장치를 연결할 수 없음",
+				"it": "Impossibile connettere il dispositivo",
+				"pt": "Não é possível conectar o dispositivo",
+				"es": "No se puede conectar el dispositivo",
+				"zh-TW": "設備連接不上",
+				"ru": "Не удалось подключить устройство",
+				"vi": "Thiết bị không thể kết nối",
+				"th": "อุปกรณ์ไม่สามารถเชื่อมต่อได้",
+			}
+		};
+
+		// 获取访问参数中的language字段，如果不存在，则默认使用英语
+		var language = (getParameterByName("language") || defaultLanguage);
+
+		// 答案标题
+		var answerTitle = document.getElementById("answer-title");
+		var answerTitleText = answer.title[language];
+		if (answerTitleText === undefined) {
+			answerTitleText = answer.title[defaultLanguage];
+		}
+		answerTitle.textContent = answerTitleText;
+		
+		// 答案内容
+		var answerContent = document.getElementById("answer-content");
+		var textElemet = document.createElement("p");
+		
+		var answerContentText = answer.content[language];
+		if (answerContentText === undefined) {
+			answerContentText = answer.content[defaultLanguage];
+		}
+		
+		textElemet.innerHTML = answerContentText;
+		answerContent.appendChild(textElemet);
+	</script>
+</body>
+</html>

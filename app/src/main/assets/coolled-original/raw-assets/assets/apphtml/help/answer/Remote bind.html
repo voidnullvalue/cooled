@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+	<meta name="viewport" content="initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <title>answer-content</title>
+    
+	<!-- 放到head中确保被渲染之前加载 -->
+	<link rel="stylesheet" href="../public-style.css" type="text/css"/>
+	<style>
+	</style>
+</head>
+<body>
+	<div class="answer-list-container">
+		<h3 id="answer-title">			
+		</h3>
+		<div id="divider-div" class="divider">
+		</div>
+		<div id="answer-content">
+		</div>
+	</div>
+
+    <div id="footer"></div>
+
+    <script src="../public-script.js"></script>
+
+    <script>
+        var footer = document.getElementById("footer"); 
+        footer.innerHTML = answerBottomBtnHtml;
+    </script>
+
+	
+	<!-- 放到body中，确保所有 JavaScript 代码在页面渲染之前加载完成 -->
+	<script>
+		// 答案内容
+		var answer = {
+			/// 内容用html语法编写，加粗用<b>，换行用<br>，其他写法请参考html语法
+			content: {
+				"zh-CN": "遥控器最大通讯距离为5米，请在有效范围内使用。<br><br>1.确认设备为正常工作状态。<br>2.长按遥控器\"<b>ON</b>\"按键，大约5秒，屏幕控制器会发送\"<b>嘀</b>\"的一声并显示\"绑定图标\"，表示绑定成功。<br>3.长按遥控器\"<b>OFF</b>\"按键，大约5秒，屏幕控制器会发送\"<b>嘀</b>\"的一声并显示\"解绑图标\"，表示解绑成功。<br><br><b>提示</b>：部分系列产品不搭配遥控器。<br>",
+				"en": "The maximum communication distance of the remote control is 5 meters, please use it within the effective range. <br><br>1. Confirm that the equipment is in normal working condition. <br>2. Long press the \"<b>ON</b>\" button on the remote control for about 5 seconds, the screen controller will send a \"<b>beep</b>\" sound and display the \"binding icon\", Indicates that the binding is successful. <br>3. Long press the \"<b>OFF</b>\" button on the remote control for about 5 seconds, the screen controller will send a \"<b>beep</b>\" sound and display the \"unbind icon\", Indicates that the unbinding is successful. <br><br><b>Reminder</b>: Some series of products are not equipped with remote control. <br>",
+				"ja": "リモコンの最大通信距離は5メートルですので、有効範囲内でご使用ください。 <br><br>1. 装置が正常に動作していることを確認します。 <br>2. リモコンの「<b>オン</b>」ボタンを約 5 秒間長押しすると、画面コントローラーから「<b>ビープ音</b>」音 が送信され、「バインディング」が表示されます。 icon\"、バインドが成功したことを示します。 <br>3. リモコンの「<b>オフ</b>」ボタンを約 5 秒間長押しすると、画面コントローラーから「<b>ビープ音</b>」音が送信され、「バインド解除」が表示されます。アイコン」は、バインド解除が成功したことを示します。 <br><br><b>注意</b>: 一部の製品シリーズにはリモコンが付属していません。 <br>",
+				"fr": "La distance de communication maximale de la télécommande est de 5 mètres, veuillez l'utiliser dans la portée effective. <br><br>1. Confirmez que l'équipement est en état de fonctionnement normal. <br> 2. Appuyez longuement sur le bouton \"<b>ON</b>\" de la télécommande pendant environ 5 secondes, le contrôleur d'écran enverra un \"<b>bip</b>\" et affichera le \"binding icône\", indique que la liaison est réussie. <br> 3. Appuyez longuement sur le bouton \"<b>OFF</b>\" de la télécommande pendant environ 5 secondes, le contrôleur d'écran enverra un \"<b>bip</b>\" et affichera le \"délier icon\", indique que la séparation a réussi. <br><br><b>Rappel</b> : Certaines séries de produits ne sont pas équipées de télécommande. <br>",
+				"de": "Die maximale Kommunikationsentfernung der Fernbedienung beträgt 5 Meter. Bitte verwenden Sie sie innerhalb der effektiven Reichweite. <br><br>1. Stellen Sie sicher, dass sich das Gerät in einem normalen Betriebszustand befindet. <br>2. Halten Sie die „<b>ON</b>“-Taste auf der Fernbedienung etwa 5 Sekunden lang gedrückt. Der Bildschirmcontroller sendet einen „<b>Piepton</b>“ und zeigt die „Bindung“ an Symbol\", Zeigt an, dass die Bindung erfolgreich ist. <br>3. Drücken Sie die „<b>OFF</b>“-Taste auf der Fernbedienung etwa 5 Sekunden lang. Der Bildschirmcontroller sendet einen „<b>Piepton</b>“ und zeigt die Meldung „unbind“ an Symbol\", Zeigt an, dass die Entbindung erfolgreich war. <br><br><b>Hinweis</b>: Einige Produktserien sind nicht mit einer Fernbedienung ausgestattet. <br>",
+				"ko": "리모콘의 최대 통신 거리는 5m이며 유효 범위 내에서 사용하십시오. <br><br>1. 장비가 정상적으로 작동하는지 확인합니 다. <br>2. 리모컨의 \"<b>켜기</b>\" 버튼을 약 5초 동안 길게 누르면 화면 컨트롤러에서 \"<b>삐</b>\" 소리가 나고 \"바인딩\"이 표시됩니다. 아이콘\", 바인딩이 성공했음을 나타냅니다. <br>3. 리모컨의 \"<b>OFF</b>\" 버튼을 약 5초간 길게 누르면 화 면 컨트롤러에서 \"<b>삐</b>\" 소리가 나고 \"unbind\" 메시지가 표시됩니다. 아이콘\", 바인딩 해제가 성공했음을 나타냅니다. <br><br><b>알림</b>: 일부 제품 시리즈에는 리모컨이 장착되어 있지 않습니다. <br>",
+				"it": "La distanza massima di comunicazione del telecomando è di 5 metri, si prega di utilizzarlo all'interno della portata effettiva. <br><br>1. Confermare che l'apparecchiatura sia in condizioni di funzionamento normali. <br>2. Premi a lungo il pulsante \"<b>ON</b>\" sul telecomando per circa 5 secondi, il controller dello schermo invierà un \"<b>beep</b>\" e visualizzerà il \"binding\" icon\", indica che l'associazione è andata a buon fine. <br>3. Premi a lungo il pulsante \"<b>OFF</b>\" sul telecomando per circa 5 secondi, il controller dello schermo invierà un \"<b>beep</b>\" e visualizzerà la scritta \"unbind icon\", indica che la separazione è riuscita. <br><br><b>Promemoria</b>: alcune serie di prodotti non sono dotate di telecomando. <br>",
+				"pt": "A distância máxima de comunicação do controle remoto é de 5 metros, use-o dentro do alcance efetivo. <br><br>1. Confirme se o equipamento está em condições normais de funcionamento. <br>2. Pressione e segure o botão \"<b>ON</b>\" no controle remoto por cerca de 5 segundos, o controlador de tela enviará um som \"<b>bipe</b>\" e exibirá o \"binding icon\", indica que a ligação foi bem-sucedida. <br>3. Pressione e segure o botão \"<b>OFF</b>\" no controle remoto por cerca de 5 segundos, o controlador de tela enviará um som \"<b>bipe</b>\" e exibirá a mensagem \"unbind icon\", indica que a desvinculação foi bem-sucedida. <br><br><b>Lembrete</b>: Algumas séries de produtos não são equipadas com controle remoto. <br>",
+				"es": "La distancia máxima de comunicación del control remoto es de 5 metros, utilícelo dentro del rango efectivo. <br><br>1. Confirme que el equipo se encuentra en condiciones normales de funcionamiento. <br>2. Mantenga presionado el botón \"<b>ON</b>\" en el control remoto durante aproximadamente 5 segundos, el controlador de pantalla enviará un sonido \"<b>bip</b>\" y mostrará el \"enlace icon\", indica que el enlace se ha realizado correctamente. <br>3. Mantenga presionado el botón \"<b>APAGADO</b>\" en el control remoto durante aproximadamente 5 segundos, el controlador de pantalla enviará un sonido \"<b>bip</b>\" y mostrará el mensaje \"desvincular\". icon\", indica que la desvinculación se ha realizado correctamente. <br><br><b>Recordatorio</b>: Algunas series de productos no están equipadas con control remoto. <br>",
+				"zh-TW": "遙控器最大通訊距離為5米，請在有效範圍內使用。 <br><br>1.確認設備為正常工作狀態。 <br>2.長按遙控器\"<b>ON</b>\"按鍵，大約5秒，屏幕控制器會發送\"<b>嘀</b>\"的一聲並顯示\"綁定圖標\"，表示綁定成功。 <br>3.長按遙控器\"<b>OFF</b>\"按鍵 ，大約5秒，屏幕控制器會發送\"<b>嘀</b>\"的一聲並顯示\"解綁圖標\"，表示解綁成功。 <br><br><b>提示</b>：部分系列產品不搭配遙控器。 <br>",
+				"ru": "Максимальное расстояние связи пульта дистанционного управления составляет 5 метров, пожалуйста, используйте его в пределах эффективного диапазона. <br><br>1. Убедитесь, что оборудование находится в нормальном рабочем состоянии. <br>2. Нажмите и удерживайте кнопку \"<b>ON</b>\" на пульте дистанционного управления в течение примерно 5 секунд, контроллер экрана отправит звуковой сигнал \"<b>звуковой  сигнал</b>\" и отобразит \"привязку\". icon», Указывает, что привязка прошла успешно. <br>3. Нажмите и удерживайте кнопку \"<b>OFF</b>\" на пульте д истанционного управления в течение примерно 5 секунд, контроллер экрана отправит звуковой сигнал \"<b>звуковой сигнал</b>\" и отобразит сообщение \"отвязать\". icon», Указывает, что отвязка прошла успешно. <br><br><b>Напоминание</b>: некоторые серии продуктов не оснащены пультом дистанционного управления. <br>",
+				"vi": "Khoảng cách liên lạc tối đa của điều khiển từ xa là 5 mét, vui lòng sử dụng nó trong phạm vi hiệu quả. <br><br>1. Xác nhận rằng thiết bị đang ở trạng thái hoạt động bình thường. <br>2. Nhấn và giữ nút \"<b>BẬT</b>\" trên điều khiển từ xa trong khoảng 5 giây, bộ điều khiển màn hình sẽ phát ra âm thanh \"<b>bíp</b>\" và hiển thị \"biểu tượng liên kết\", Cho biết rằng liên kết thành công.<br>3. Nhấn và giữ nút \"<b>TẮT</b>\" trên điều khiển từ xa trong khoảng 5 giây, bộ điều khiển màn hình sẽ phát ra âm thanh \"<b>bíp</b>\" và hiển thị \"biểu tượng hủy liên kết\", Cho biết việc hủy liên kết thành công.<br><br><b>Nhắc nhở</b>: Một số dòng sản phẩm không được trang bị điều khiển từ xa. <br>",
+				"th": "ระยะการสื่อสารสูงสุดของรีโมทคอนโทรลคือ 5 เมตร โปรดใช้ภายในช่วงที่มีประสิทธิภาพ <br><br>1. ตรวจสอบว่าอุปกรณ์อยู่ในสภาพการทำงานปกติ<br>2. กดปุ่ม \"<b>เปิด</b>\" บนรีโมทคอนโทรลค้างไว้ประมาณ 5 วินาที ตัวควบคุมหน้าจอจะส่งเสียง \"<b>บี๊บ</b>\" และแสดง \"ไอคอนการผูกมัด\" แสดงว่าการเชื่อมสำเร็จ<br>3. กดปุ่ม \"<b>ปิด</b>\" บนรีโมทคอนโทรลค้างไว้ประมาณ 5 วินาที ตัวควบคุมหน้าจอจะส่งเสียง \"<b>บี๊บ</b>\" และแสดง \"เลิกผูกไอคอน\" แสดงว่าการคลายการเชื่อมโยงสำเร็จ <br><br><b>เตือนความจำ</b>: ผลิตภัณฑ์บางซีรีส์ไม่มีรีโมทคอนโทรล<br>",
+				
+			},
+			content_iledbike: {
+				"zh-CN": "1.确认设备已开机，遥控器可正常工作。<br>2.长按遥控器\"<b>左转</b>\"按键，大约5秒，屏幕控会显示\"<b>绑定图标</b>\"，表示绑定成功。<br>3.长按遥控器\"<b>右转</b>\"按键，大约5秒，屏幕会显示\"<b>解绑图标</b>\"，表示解绑成功。<br><br><b>提示</b>：<br>1.遥控器最大控制距离为5米，请在有效的范围内使用。<br>2.绑定成功后，只有绑定的遥控器才能控制该设备。<br>",
+				"en": "1. Confirm that the device is turned on and the remote control can work normally. <br>2. Press and hold the \"<b>Turn Left</b>\" button on the remote control for about 5 seconds. The screen control will display \"<b>Binding Icon</b>\", indicating that the binding is successful. <br>3. Press and hold the \"<b>Turn Right</b>\" button on the remote control for about 5 seconds, and the screen will display \"<b>Unbinding Icon</b>\", indicating successful unbinding. <br><br><b>Tips</b>:<br>1. The maximum control distance of the remote control is 5 meters, please use it within the effective range. <br>2. After the binding is successful, only the bound remote control can control the device. <br>",
+				"ja": "1. デバイスの電源が入っており、リモコンが正常に動作することを確認します。 <br>2. リモコンの「<b>左に回す</b>」ボタンを約 5 秒間押し続けます。画面コントロールに「<b>バインディング アイコン</b>」が表示されます。バインディングは成功 しました。 <br>3. リモコンの「<b>右に回す</b>」ボタンを約 5 秒間押し続けると、画面に「<b>バインド解除アイコン</b>」が表示され、バインド解除が成功したことを示します。 。 <br><br><b>ヒント</b>:<br>1. リモコンの最大制御距離は 5 メートルです。有効範囲内で使用してください。 <br>2. バインドが成功すると、バインドされたリモコンのみがデバイスを制御できるようになります。 <br>",
+				"fr": "1. Confirmez que l'appareil est allumé et que la télécommande peut fonctionner normalement. <br>2. Appuyez et maintenez enfoncé le bouton « <b>Tourner à gauche</b> » de la télécommande pendant environ 5 secondes. L'écran de contrôle affichera « <b>Icône de liaison</b> », indiquant que le la liaison est réussie. <br>3. Appuyez et maintenez enfoncé le bouton « <b>Tourner à droite</b> » de la télécommande pendant environ 5 secondes, et l'écran affichera « <b>Icône de dissociation</b> », indiquant une dissociation réussie. . <br><br><b>Conseils</b> :<br>1. La distance de contrôle maximale de la télécommande est de 5 mètres, veuillez l'utiliser dans la plage effective. <br>2. Une fois la liaison réussie, seule la télécommande liée peut contrôler l'appareil. <br>",
+				"de": "1. Vergewissern Sie sich, dass das Gerät eingeschaltet ist und die Fernbedienung normal funktionieren kann. <br>2. Halten Sie die Taste „<b>Links abbiegen</b>“ auf der Fernbedienung etwa 5 Sekunden lang gedrückt. Auf dem Bildschirm wird „<b>Bindungssymbol</b>“ angezeigt Bindung ist erfolgreich. <br>3. Halten Sie die Taste „<b>Nach rechts abbiegen</b>“ auf der Fernbedienung etwa 5 Sekunden lang gedrückt. Auf dem Bildschirm wird „<b>Entbindungssymbol</b>“ angezeigt, was die erfolgreiche Entbindung anzeigt . <br><br><b>Tipps</b>:<br>1. Der maximale Steuerabstand der Fernbedienung beträgt 5 Meter, bitte verwenden Sie sie innerhalb der effektiven Reichweite. <br>2. Nach erfolgreicher Bindung kann nur noch die gebundene Fernbedienung das Gerät steuern. <br>",
+				"ko": "1. 장치가 켜져 있고 리모컨이 정상적으로 작동하는지 확인하십시오. <br>2. 리모콘의 \"<b>좌회전</b>\" 버튼을 약 5초 동안 누르고 있으면 화면 컨트롤에 \"<b>바인딩 아이콘</b>\"이 표시됩니다. 바인딩이 성공했습니다. <br>3. 리모컨의 \"<b> 우회전</b>\" 버튼을 약 5초 동안 누르고 있으면 화면에 바인딩 해제 성공을 나타내는 \"<b>바인딩 해제 아이콘</b>\"이 표시됩니다. . <br><br><b>팁</b>:<br>1. 리모콘의 최대 제어 거리는 5미터입니다. 유효 범위 내에서 사용하십시오. <br>2. 바인딩이 성공한 후에는 바인딩된 리모컨으로만 장치를 제어할 수 있습니다. <br>",
+				"it": "1. Verificare che il dispositivo sia acceso e che il telecomando possa funzionare normalmente. <br>2. Tieni premuto il pulsante \"<b>Gira a sinistra</b>\" sul telecomando per circa 5 secondi. Il controllo dello schermo visualizzerà \"<b>Icona di rilegatura</b>\", a indicare che l'associazione ha esito positivo. <br>3. Tieni premuto il pulsante \"<b>Gira a destra</b>\" sul telecomando per circa 5 secondi e lo schermo visualizzerà \"<b>Icona di svincolo</b>\", che indica l'avvenuto scioglimento. . <br><br><b>Suggerimenti</b>:<br>1. La distanza massima di controllo del telecomando è di 5 metri, si prega di utilizzarlo entro il raggio d'azione effettivo. <br>2. Dopo che l'associazione ha avuto esito positivo, solo il telecomando associato può controllare il dispositivo. <br>",
+				"pt": "1. Confirme se o dispositivo está ligado e o controle remoto pode funcionar normalmente. <br>2. Pressione e segure o botão \"<b>Virar à Esquerda</b>\" no controle remoto por cerca de 5 segundos. O controle da tela exibirá \"<b>Ícone de ligação</b>\", indicando que o ícone está conectado. a ligação foi bem-sucedida. <br>3. Pressione e segure o botão \"<b>Virar à direita</b>\" no controle remoto por cerca de 5 segundos e a tela exibirá \"<b>Ícone de desvinculação</b>\", indicando desvinculação bem-sucedida. . <br><br><b>Dicas</b>:<br>1. A distância máxima de controle do controle remoto é de 5 metros, use-o dentro do alcance efetivo. <br>2. Depois que a ligação for bem-sucedida, apenas o controle remoto vinculado poderá controlar o dispositivo. <br>",
+				"es": "1. Confirme que el dispositivo esté encendido y que el control remoto pueda funcionar normalmente. <br>2. Mantenga presionado el botón \"<b>Girar a la izquierda</b>\" en el control remoto durante aproximadamente 5 segundos. La pantalla de control mostrará \"<b>Icono de enlace</b>\", indicando que el. la vinculación es exitosa. <br>3. Mantenga presionado el botón \"<b>Girar a la derecha</b>\" en el control remoto durante aproximadamente 5 segundos y la pantalla mostrará el \"<b>Icono de desvinculación</b>\", lo que indica que la desvinculación se realizó correctamente. . <br><br><b>Consejos</b>:<br>1. La distancia máxima de control del control remoto es de 5 metros, utilícelo dentro del alcance efectivo. <br>2. Después de que la vinculación sea exitosa, solo el control remoto vinculado puede controlar el dispositivo. <br>",
+				"zh-TW": "1.確認設備已開機，遙控器可正常運作。 <br>2.長按遙控器\"<b>左轉</b>\"按鍵，約5秒，螢幕控制會顯示\"<b>綁定圖示</b>\"，表示綁定成功。 <br>3.長按遙控器\"<b>右轉</b>\"按鍵，約5秒，螢幕會顯示\"<b>解綁圖示</b>\"，表示解綁成功。 <br><br><b>提示</b>：<br>1.遙控器最大控制距離為5米，請在有效的範圍內使用。 <br>2.綁定成功後，只有綁定的遙控器才能控制該裝置。 <br>",
+				"ru": "1. Убедитесь, что устройство включено и пульт дистанционного управления может работать нормально. <br>2. Нажмите и удерживайте кнопку «<b>Повернуть налево</b>» на пульте дистанционного управления в течение примерно 5 секунд. На экране управления отобразится «<b>Значок привязки</b>», указывающий на то, что значок привязки</b>. привязка прошла успешно. <br>3. Нажмите и удерживайте кнопку «<b>Повернуть направо</b>» на пульте дистанционного управления в течение примерно 5 секунд, после чего на экране отобразится «<b>Значок отмены привязки</b>», указывающий на успешную отмену привязки. . <br><br><b>Советы</b>:<br>1. Максимальное расстояние управления с помощью пульта ди станционного управления составляет 5 метров, используйте его в пределах эффективного диапазона. <br>2. После успешной привязки тол ько привязанный пульт дистанционного управления сможет управлять устройством. <br>",
+				"vi": "1. Xác nhận rằng thiết bị đã được bật và điều khiển từ xa có thể hoạt động bình thường. <br>2. Nhấn và giữ nút \"<b>Rẽ trái</b>\" trên điều khiển từ xa trong khoảng 5 giây. Điều khiển màn hình sẽ hiển thị \"<b>Biểu tượng đóng bìa</b>\", cho biết rằng ràng buộc thành công. <br>3 Nhấn và giữ nút \"<b>Rẽ phải</b>\" trên điều khiển từ xa trong khoảng 5 giây, màn hình sẽ hiển thị \"<b>Biểu tượng hủy liên kết</b>\", cho biết việc hủy liên kết thành công. . <br><br><b>Mẹo</b>:<br>1. Khoảng cách điều khiển tối đa của điều khiển từ xa là 5 mét, vui lòng sử dụng trong phạm vi hiệu quả. <br>2. Sau khi liên kết thành công, chỉ có điều khiển từ xa được liên kết mới có thể điều khiển thiết bị. <br>",
+				"th": "1. ตรวจสอบให้แน่ใจว่าอุปกรณ์เปิดอยู่และรีโมทคอนโทรลสามารถทำงานได้ตามปกติ <br>2. กดปุ่ม \"<b>เลี้ยวซ้าย</b>\" บนรีโมทคอนโทรลค้างไว้ประมาณ 5 วินาที ตัวควบคุมหน้าจอจะแสดง \"<b>ไอคอนเข้าเล่ม</b>\" เพื่อระบุว่า การผูกมัดสำเร็จ <br>3. กดปุ่ม \"<b>เลี้ยวขวา</b>\" บนรีโมทคอนโทรลค้างไว้ประมาณ 5 วินาที จากนั้นหน้าจอจะแสดง \"<b>ไอคอนการปลดสาย</b>\" แสดงว่าการปลดสายสำเร็จ . <br><br><b>เคล็ดลับ</b>:<br>1. ระยะการควบคุมสูงสุดของรีโมทคอนโทรลคือ 5 เมตร โปรดใช้ภายในระยะที่มีประสิทธิภาพ <br>2. หลังจากที่การเชื่อมโยงสำเร็จแล้ว มีเพียงรีโมทคอนโทรลที่ถูกผูกไว้เท่านั้นที่สามารถควบคุมอุปกรณ์ได้ <br>",
+			},
+			title: {
+				"zh-CN": "遥控器绑定和解绑",
+				"en": "Remote control pairing and unpairing",
+				"ja": "リモコンのペアリングと解除",
+				"fr": "Appairage et désappairage de la télécommande",
+				"de": "Fernbedienung koppeln und entkoppeln",
+				"ko": "리모컨 연결 및 해제",
+				"it": "Associazione e disassociazione del telecomando",
+				"pt": "Vinculação e desvinculação do controle remoto",
+				"es": "Emparejamiento y desemparejamiento del control remoto",
+				"zh-TW": "遙控器綁定和解綁",
+				"ru": "Привязка и отвязка пульта дистанционного управления",
+				"vi": "Ghép nối và hủy ghép nối điều khiển từ xa",
+				"th": "การจับคู่และการยกเลิกการจับคู่รีโมทคอนโทรล",
+			}
+		};
+
+		// 获取访问参数中的language字段，如果不存在，则默认使用英语
+		var language = (getParameterByName("language") || defaultLanguage);
+		// 获取当前的设备类型，如果不存在，默认为CoolLEDX的类型
+		var devName = (getParameterByName("dev_name") || "CoolLEDX").toLowerCase();
+
+		var answerContentArray;
+		if (devName == "iledbike") {
+			answerContentArray = answer.content_iledbike;
+		} else {
+			answerContentArray = answer.content;
+		}
+
+		// 答案标题
+		var answerTitle = document.getElementById("answer-title");
+		var answerTitleText = answer.title[language];
+		if (answerTitleText === undefined) {
+			answerTitleText = answer.title[defaultLanguage];
+		}
+		answerTitle.textContent = answerTitleText;
+		
+		// 答案内容
+		var answerContent = document.getElementById("answer-content");
+		var textElemet = document.createElement("p");
+		
+		var answerContentText = answerContentArray[language];
+		if (answerContentText === undefined) {
+			answerContentText = answerContentArray[defaultLanguage];
+		}
+		
+		textElemet.innerHTML = answerContentText;
+		answerContent.appendChild(textElemet);
+	</script>
+</body>
+</html>

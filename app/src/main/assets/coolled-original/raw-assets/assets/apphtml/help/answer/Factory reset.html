@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+	<meta name="viewport" content="initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <title>answer-content</title>
+    
+	<!-- 放到head中确保被渲染之前加载 -->
+	<link rel="stylesheet" href="../public-style.css" type="text/css"/>
+	<style>
+		/* 样式 */
+		.image-container {
+		  display: flex;
+		  flex-direction: column;
+		  align-items: center;
+		}
+		.image-container img {
+		  width: 200px;
+		  height: auto;
+		  margin-bottom: 10px;
+		}
+		.image-container span {
+		  font-size: 14px;
+		  font-weight: bold;
+		}
+	</style>
+</head>
+<body>
+	<div class="answer-list-container">
+		<h3 id="answer-title">			
+		</h3>
+		<div id="divider-div" class="divider">
+		</div>
+		<div id="answer-content">
+		</div>
+		
+		<img id="prompt-image" src="" width="100%"></img>
+	</div>
+
+    <div id="footer"></div>
+
+    <script src="../public-script.js"></script>
+
+    <script>
+        var footer = document.getElementById("footer"); 
+        footer.innerHTML = answerBottomBtnHtml;
+    </script>
+
+	
+	<!-- 放到body中，确保所有 JavaScript 代码在页面渲染之前加载完成 -->
+	<script>
+		// 答案内容
+		var answer = {
+			/// 内容用html语法编写，加粗用<b>，换行用<br>，其他写法请参考html语法
+			content: {
+				"zh-CN": "给设备正常供电，然后长按“控制器上的按键”，大约5秒，直到屏幕显示“<b>RESET</b>”，产品恢复到出厂设置。",
+				"en": "Supply power to the device properly, then press and hold the button on the controller for about 5 seconds until the screen displays '<b>RESET</b>'. The product will be restored to factory settings.",
+				"ja": "デバイスに適切に電源を供給し、コントローラーのボタンを長押ししてください。約5秒間、画面に「<b>RESET</b>」と表示されるまで押し続けます。製品は工場出荷時の設定に復元されます。",
+				"fr": "Alimentez correctement l'appareil, puis maintenez le bouton sur la manette enfoncé pendant environ 5 secondes jusqu'à ce que l'écran affiche '<b>RESET</b>'. Le produit sera restauré aux paramètres d'usine.",
+				"de": "Versorgen Sie das Gerät ordnungsgemäß mit Strom und halten Sie dann die Taste auf dem Controller etwa 5 Sekunden lang gedrückt, bis auf dem Bildschirm '<b>RESET</b>' angezeigt wird. Das Produkt wird auf die Werkseinstellungen zurückgesetzt.",
+				"ko": "장치에 적절히 전원을 공급한 다음, 컨트롤러의 버튼을 약 5초 동안 길게 누르십시오. 화면에 '<b>RESET</b>'이 표시될 때까지 계속 누르면 제품이 공장 초기 설정으로 복원됩니다.",
+				"it": "Alimentare correttamente il dispositivo, quindi premere e tenere premuto il pulsante sul controller per circa 5 secondi finché lo schermo mostra '<b>RESET</b>'. Il prodotto sarà ripristinato alle impostazioni di fabbrica.",
+				"pt": "Alimente o dispositivo corretamente e, em seguida, pressione e segure o botão no controle por cerca de 5 segundos até que a tela exiba '<b>RESET</b>'. O produto será restaurado para as configurações de fábrica.",
+				"es": "Suministre energía al dispositivo correctamente, luego mantenga presionado el botón en el controlador durante aproximadamente 5 segundos hasta que la pantalla muestre '<b>RESET</b>'. El producto se restaurará a los ajustes de fábrica.",
+				"zh-TW": "給設備正常供電，然後長按“控制器上的按鍵”，大約5秒，直到屏幕顯示“<b>RESET</b>”，產品恢復到出廠設置。",
+				"ru": "Подайте устройству нормальное питание, затем удерживайте кнопку на контроллере около 5 секунд, пока на экране не появится надпись «<b>RESET</b>». Продукт будет восстановлен до заводских настроек.",
+				"vi": "Cấp nguồn cho thiết bị đúng cách, sau đó nhấn giữ nút trên bộ điều khiển khoảng 5 giây cho đến khi màn hình hiển thị'<b>RESET</b>'. Sản phẩm sẽ được khôi phục về cài đặt gốc.",
+				"th": "จ่ายไฟให้กับอุปกรณ์อย่างถูกต้อง จากนั้นกดปุ่มบนตัวควบคุมค้างไว้ประมาณ 5 วินาทีจนกระทั่งหน้าจอปรากฏขึ้น'<b>RESET</b>'. ผลิตภัณฑ์จะถูกคืนค่ากลับเป็นการตั้งค่าจากโรงงาน",
+			},
+			content_iledbike: {
+				"zh-CN": "长按如下图所示的按键，大约5秒，直到屏幕显示'<b>RESET</b>'，产品恢复到出厂设置。",
+				"en": "Press and hold the button as shown in the picture below for about 5 seconds until the screen displays '<b>RESET</b>', and the product is restored to factory settings.",
+				"ja": "画面に「<b>RESET</b>」と表示されるまで、下の図に示すボタンを約 5 秒間押し続けます。製品は工場出荷時の設定に戻ります。",
+				"fr": "Appuyez et maintenez enfoncé le bouton comme indiqué dans l'image ci-dessous pendant environ 5 secondes jusqu'à ce que l'écran affiche '<b>RESET</b>' et que le produit soit restauré aux paramètres d'usine.",
+				"de": "Halten Sie die Taste wie im Bild unten gezeigt etwa 5 Sekunden lang gedrückt, bis auf dem Bildschirm „<b>RESET</b>“ angezeigt wird und das Produkt auf die Werkseinstellungen zurückgesetzt wird.",
+				"ko": "화면에 '<b>RESET</b>'이 표시될 때까지 아래 그림과 같이 버튼을 약 5초간 길게 누르면 제품이 공장 출하 상태로 복원됩니다.",
+				"it": "Tenere premuto il pulsante come mostrato nell'immagine seguente per circa 5 secondi finché sullo schermo non viene visualizzato '<b>RESET</b>' e il prodotto viene ripristinato alle impostazioni di fabbrica.",
+				"pt": "Pressione e segure o botão conforme mostrado na imagem abaixo por cerca de 5 segundos até que a tela exiba '<b>RESET</b>' e o produto seja restaurado às configurações de fábrica.",
+				"es": "Mantenga presionado el botón como se muestra en la imagen a continuación durante aproximadamente 5 segundos hasta que la pantalla muestre '<b>RESET</b>' y el producto se restablezca a la configuración de fábrica.",
+				"zh-TW": "長按如下圖所示的按鍵，大約5秒，直到螢幕顯示'<b>RESET</b>'，產品恢復到出廠設定。",
+				"ru": "Нажмите и удерживайте кнопку, как показано на рисунке ниже, в течение примерно 5 секунд, пока на экране не отобразится «<b>RESET</b>», и для продукта не будут восстановлены заводские настройки.",
+				"vi": "Nhấn và giữ nút như trong hình bên dưới trong khoảng 5 giây cho đến khi màn hình hiển thị '<b>RESET</b>' và sản phẩm được khôi phục về cài đặt gốc.",
+				"th": "กดปุ่มตามที่แสดงในภาพด้านล่างค้างไว้ประมาณ 5 วินาทีจนกระทั่งหน้าจอแสดง '<b>RESET</b>' และผลิตภัณฑ์กลับคืนสู่การตั้งค่าจากโรงงาน",
+			},
+			title: {
+				"zh-CN": "恢复出厂设置",
+				"en": "Factory Reset",
+				"ja": "工場出荷時のリセット",
+				"fr": "Réinitialisation d'usine",
+				"de": "Werkseinstellungen wiederherstellen",
+				"ko": "공장 초기화",
+				"it": "Ripristino delle impostazioni di fabbrica",
+				"pt": "Redefinir para as configurações de fábrica",
+				"es": "Restablecer a valores de fábrica",
+				"zh-TW": "恢復出廠設置",
+				"ru": "Сброс до заводских настроек",
+				"vi": "Khôi phục cài đặt gốc",
+				"th": "รีเซ็ตเป็นค่าจากโรงงาน",
+			}
+		};
+
+		// 获取访问参数中的language字段，如果不存在，则默认使用英语
+		var language = (getParameterByName("language") || defaultLanguage);
+		// 获取当前的设备类型，如果不存在，默认为CoolLEDX的类型
+		var devName = (getParameterByName("dev_name") || "CoolLEDX").toLowerCase();
+
+		var answerContentArray;
+		var keyImage = document.getElementById("prompt-image");
+		if (devName == "iledbike") {
+			keyImage.src = "./images/iledbike_key.jpg";
+			answerContentArray = answer.content_iledbike;
+		} else {
+			keyImage.src = "./images/key.jpg";
+			answerContentArray = answer.content;
+		}
+
+		// 答案标题
+		var answerTitle = document.getElementById("answer-title");
+		var answerTitleText = answer.title[language];
+		if (answerTitleText === undefined) {
+			answerTitleText = answer.title[defaultLanguage];
+		}
+		answerTitle.textContent = answerTitleText;
+		
+		// 答案内容
+		var answerContent = document.getElementById("answer-content");
+		var textElemet = document.createElement("p");
+
+		var answerContentText = answerContentArray[language];
+		if (answerContentText === undefined) {
+			answerContentText = answerContentArray[defaultLanguage];
+		}
+		
+		textElemet.innerHTML = answerContentText;
+		answerContent.appendChild(textElemet);
+		
+		var imageElement = document.createElement(p);
+	</script>
+</body>
+</html>

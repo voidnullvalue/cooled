@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+	<meta name="viewport" content="initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <title>answer-content</title>
+    
+	<!-- 放到head中确保被渲染之前加载 -->
+	<link rel="stylesheet" href="../public-style.css" type="text/css"/>
+	<style>
+	</style>
+</head>
+<body>
+	<div class="answer-list-container">
+		<h3 id="answer-title">			
+		</h3>
+		<div id="divider-div" class="divider">
+		</div>
+		<div id="answer-content">
+		  <iframe id="pdf-iframe" width="100%"></iframe>
+		</div>
+	</div>
+
+    <div id="footer"></div>
+
+    <script src="../public-script.js"></script>
+
+    <script>
+        var footer = document.getElementById("footer"); 
+        footer.innerHTML = answerBottomBtnHtml;
+    </script>
+
+	
+	<!-- 放到body中，确保所有 JavaScript 代码在页面渲染之前加载完成 -->
+	<script>
+		// 答案内容
+		var answer = {
+			pdfUrl: {
+				/*
+				coolledx1632: {
+					"en": "./pdf/user manual/coolledx1632/coolledx1632UserManual.pdf"
+				},
+				*/
+				// cooledx设备，相同系列说明书一样（16x32除外，该设备有电池款和非电池款）
+				coolledx16: {
+					"en": "./pdf/user manual/coolledx1664/coolledx1664UserManual.pdf",
+					"zh-CN": "./pdf/user manual/coolledx1664/coolledx1664中文说明书.pdf"
+				},
+				// cooledm设备，相同系列说明书一样
+				coolledm16: {
+					"en": "./pdf/user manual/coolledm16/coolledm16UserManual.pdf",
+					"zh-CN": "./pdf/user manual/coolledm16/coolledm16中文说明书.pdf"
+				},
+				// cooledu设备，相同系列说明书一样
+				coolledu32: {
+					"en": "./pdf/user manual/coolledu32/coolledu32UserManual.pdf",
+					"zh-CN": "./pdf/user manual/coolledu32/coolledu32中文说明书.pdf"
+				},
+				iledbike: {
+					"en": "./pdf/user manual/iledbike/iLedBikeUserManual.pdf",
+					"zh-CN": "./pdf/user manual/iledbike/iLedBike使用说明书.pdf"
+				}
+			},
+			title: {
+				"zh-CN": "使用说明书",
+				"en": "User manual",
+				"ja": "ユーザーマニュアル",
+				"fr": "Manuel de l'Utilisateur",
+				"de": "Benutzerhandbuch",
+				"ko": "사용자 매뉴얼",
+				"it": "Manuale d'uso",
+				"pt": "manual do usuário",
+				"es": "manual de usuario",
+				"zh-TW": "使用說明書",
+				"ru": "руководство пользователя",
+				"vi":"Hướng dẫn sử dụng",
+				"th":"คู่มือการใช้",
+			},
+			prompt: {
+				"zh-CN": "该设备在线说明书还未添加，请参考包装盒内的字纸说明书！",
+				"en": "The online manual of this device has not been added yet, please refer to the paper manual in the box!",
+				"ja": "このデバイスのオンラインマニュアルはまだ追加されていません。箱内の紙のマニュアルを参照してください。",
+				"fr": "Le manuel en ligne de cet appareil n'a pas encore été ajouté, veuillez vous référer au manuel papier dans la boîte !",
+				"de": "Das Online-Handbuch dieses Geräts wurde noch nicht hinzugefügt. Bitte beachten Sie das gedruckte Handbuch im Karton!",
+				"ko": "이 장치의 온라인 설명서는 아직 추가되지 않았습니다. 상자에 있는 종이 설명서를 참조하십시오!",
+				"it": "Il manuale online di questo dispositivo non è stato ancora aggiunto, fare riferimento al manuale cartaceo nella confezione!",
+				"pt": "O manual online deste dispositivo ainda não foi adicionado, consulte o manual em papel na caixa!",
+				"es": "El manual en línea de este dispositivo aún no se ha agregado, ¡consulte el manual en papel en la caja!",
+				"zh-TW": "該設備在線說明書還未添加，請參考包裝盒內的字紙說明書！",
+				"ru": "Онлайн-руководство для этого устройства еще не добавлено, пожалуйста, обратитесь к бумажному руководству в коробке!",
+				"vi": "Hướng dẫn sử dụng trực tuyến của thiết bị này chưa được bổ sung, vui lòng tham khảo hướng dẫn sử dụng bằng giấy trong hộp nhé!",
+				"th": "คู่มือออนไลน์ของอุปกรณ์นี้ยังไม่ได้เพิ่ม โปรดดูคู่มือกระดาษในกล่อง!",
+			},
+			pdfDownloadText: {
+				"zh-CN": "点击查看说明书",
+				"en": "Click to view manual",
+				"ja": "クリックしてマニュアルを表示します",
+				"fr": "Cliquez pour voir le manuel",
+				"de": "Klicken Sie hier, um das Handbuch anzuzeigen",
+				"ko": "매뉴얼 보기 클릭",
+				"it": "Fare clic per visualizzare il manuale",
+				"pt": "Clique para ver o manual",
+				"es": "Haga clic para ver el manual",
+				"zh-TW": "點擊查看說明書",
+				"ru": "Нажмите, чтобы просмотреть руководство",
+				"vi": "Click để xem hướng dẫn",
+				"th": "คลิกเพื่อดูคู่มือการใช้งาน",
+			}
+		};
+
+		// 获取访问参数中的language字段，如果不存在，则默认使用英语
+		var language = (getParameterByName("language") || defaultLanguage);
+		// 获取当前的设备类型，如果不存在，默认为CoolLEDX的类型
+		var devName = (getParameterByName("dev_name") || "CoolLEDX").toLowerCase();
+		// 获取当前设备的分辨率，如果不存在，默认为1664
+		var height = getParameterByName("height") || "16";
+		var width = getParameterByName("width") || "64";
+		var pl = getParameterByName("pl") || "android"; // 当前平台
+		
+		// 答案标题
+		var answerTitle = document.getElementById("answer-title");
+		var titleContent = answer.title[language];
+		// 如果获取对应的语言标题失败，显示默认的语言
+		if (titleContent === undefined) {
+			answerTitle.textContent = answer.title[defaultLanguage];
+		} else {
+			answerTitle.textContent = titleContent;
+		}
+
+		// pdf内容
+		var answerFrame = document.getElementById("pdf-iframe");
+		if (devName == "coolledx") {
+			if (width != 32) {
+				var devType = devName+height;
+				showPdfByteDevType(devType);
+			} else {
+				answerFrame.style.display = "none";
+				showPromptInfo();
+			}
+		} else if (devName == "coolledm") {
+			var devType = devName+height;
+			showPdfByteDevType(devType);
+		} else if (devName == "coolledu") {
+			var devType = devName+height;
+			showPdfByteDevType(devType);
+		} else if (devName == "iledbike") {
+			var devType = devName;
+			showPdfByteDevType(devType);
+		} else {
+			answerFrame.style.display = "none";
+			showPromptInfo();
+		}
+		
+		/// 根据设备类型显示对应的pdf，如果存在就显示，不存在显示默认，不支持，显示提示信息
+		function showPdfByteDevType(type) {
+			var urlObj = answer.pdfUrl[type];
+			if (urlObj === undefined) {  // 不支持的设备类型，显示提示信息
+				answerFrame.style.display = "none";
+				showPromptInfo();
+			} else {
+				var url = urlObj[language];
+				if (url === undefined) {
+					url = urlObj[defaultLanguage];
+				}
+				
+				console.log("pdf url: " + url);
+				
+				if (pl == "android" || pl == "ios") {
+					// android平台不支持在浏览器中打开pdf，只能根据url，通过第三方应用打开pdf
+					// ios 平台用iframe去访问pdf宽度不能占满整个屏幕，所以也直接通过跳转页面的方式访问
+					window.location.href = url; 
+				} else {
+					// #view=FitH,top该全屏显示参数，不是所有浏览器都支持
+					answerFrame.setAttribute('src', url+"#view=FitH,top&toolbar=0");
+				}
+			}
+		}
+		
+		/// 不支持的设备类型，显示提示信息
+		function showPromptInfo() {
+			var answerContent = document.getElementById("answer-content");
+				var proInfoElement = document.createElement("span");
+				var c = answer.prompt[language];
+				if (c === undefined) {
+					c = answer.prompt[defaultLanguage];
+				}
+				
+			proInfoElement.textContent = c;
+			answerContent.appendChild(proInfoElement);
+		}
+		
+		// 重新设置frame区域大小
+		function setPdfFrameSize() {
+			var answerTitleRect = answerTitle.getBoundingClientRect();
+
+			var dividerDiv = document.getElementById('divider-div');
+			var dividerDivRect = dividerDiv.getBoundingClientRect();
+
+			var buttonDiv = document.getElementById('navigation-buttons');
+			var buttonDivRect = buttonDiv.getBoundingClientRect();
+
+			//var height = window.innerHeight-;
+			var height = buttonDivRect.top - dividerDivRect.bottom - 40;
+			console.log("height=" + height);
+			answerFrame.style.height = height + 'px';
+		}
+
+		window.addEventListener('resize', setPdfFrameSize);
+		
+		<!-- setPdfFrameSize(); -->
+		window.onload = function() {
+			setPdfFrameSize();
+		};
+	</script>
+</body>
+</html>

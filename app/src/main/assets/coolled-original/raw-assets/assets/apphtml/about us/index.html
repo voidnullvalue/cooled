@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+	<meta name="viewport" content="initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <title>About us</title>
+    <!-- <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css"> -->
+	<!-- 放到head中确保被渲染之前加载 -->
+	<style>
+		.answer-list-container {
+		  padding-bottom: 60px; /* 调整为按钮区域的高度加上一些额外的内边距 防止被底部的按钮区域挡住*/
+		}
+
+		<!-- .divider { -->
+		  <!-- margin: 20px 0; -->
+		  <!-- border-top: 1px solid #ccc; -->
+		<!-- } -->
+
+		#navigation-buttons {
+		  position: fixed;
+		  bottom: 0px;
+		  left: 0;
+		  right: 0;
+		  display: flex;
+		  justify-content: center;
+		  background-color: #f1f1f1; /* 灰色背景色 */
+		  padding: 20px
+		}
+
+		#navigation-buttons button {
+		  margin: 0 30px;
+		  border: none;
+		}
+		
+		/* 样式 */
+		.image-container {
+		  display: flex;
+		  flex-direction: column;
+		  align-items: center;
+		}
+		.image-container img {
+		  width: 200px;
+		  height: auto;
+		  margin-bottom: 10px;
+		}
+		.image-container span {
+		  font-size: 14px;
+		  font-weight: bold;
+		}
+	</style>
+</head>
+<body>
+	<div class="answer-list-container">
+		<div id="answer-content">
+		</div>
+		
+		<img id="prolist-image" width="100%"></img>
+	</div>
+
+	<!-- 放到body中，确保所有 JavaScript 代码在页面渲染之前加载完成 -->
+	<script>
+		// 答案内容
+		var answer = {
+			imageUrl: {
+				"en": "./images/product list en.jpg",
+				"zh-CN": "./images/product list zh.jpg"
+			},
+			/// 内容用html语法编写，加粗用<b>，换行用<br>，其他写法请参考html语法
+			content: {
+				"zh-CN": "我们是一家集研发、生产、销售、服务为一体的科技公司。主营LED柔性屏，我们专注于LED柔性屏领域，主营柔性屏套装、拼接柔性屏和电池款柔性屏等系列产品。拥有强大的研发团队和高效的生产组装产线，并获得多项发明和实用新型专利。<br><br>我们 始终以\"客户为中心\"，致力于为客户提供高品质、高性价比的产品和优质的服务。通过不断的创新，为客户创造价值，提升客户的竞争力！ 主张合作共赢，期待能与君同行，共创未来！<br><br>以下是我们目前正在销售的产品，请在相应的渠道搜索相应产品进行购买：<br>",
+				"en": "We are a technology company integrating R&D, production, sales and service. Mainly engaged in LED flexible screens, we focus on the field of LED flexible screens, mainly engaged in a series of products such as flexible screen sets, spliced ​​flexible screens and battery-type flexible screens. It has a strong R&D team and efficient production and assembly lines, and has obtained a number of invention and utility model patents. <br><br>We always take \"customer as the center\" and are committed to providing customers with high-quality, cost-effective products and excellent services. Through continuous innovation, create value for customers and enhance customer competitiveness! We advocate win-win cooperation and look forward to walking with you to create a better future! <br><br>The following are the products we are currently selling, please search for the corresponding products in the corresponding channels to purchase:<br>",
+				"ja": "私たちは研究開発、生産、販売、サービスを統合したテクノロジー企業です。主にLEDフレキシブルスクリーンに従事し、LEDフレキシブルスクリーンの分野に焦点を当て、主にフレキシブルスクリーンセット、スプライスフレキシブルスクリーン、バッテリータイプのフレキシブルスクリーンなどの一連の製品に従事しています。強力な研究開発チームと効率的な生産・組立ラインを擁し、多数の発明特許と実用新案特許を取得しています。 <br><br>私たちは常に「お客様を中心」に考え、高品質でコスト効率の高い製品と優れたサービスをお客様に提供することに尽力します。継続的なイノベーションを通じて顧客価値を創造し、顧客競争力を強化します!私たちはWin-Winの協力を提唱し、より良い未来を創造するために皆さんと一緒に歩むことを楽しみにしています。 <br><br>現在販売している製品は次のとおりです。対応するチャネルで対応する製品を検索して購入してください。<br>",
+				"fr": "Nous sommes une entreprise technologique intégrant la R&D, la production, les ventes et le service. Principalement engagés dans les écrans flexibles à LED, nous nous concentrons sur le domaine des écrans flexibles à LED, principalement engagés dans une série de produits tels que des ensembles d'écrans flexibles, des écrans flexibles épissés et des écrans flexibles de type batterie. Il dispose d'une solide équipe de R&D et de lignes de production et d'assemblage efficaces, et a obtenu un certain nombre de brevets d'invention et de modèle d'utilité. <br><br>Nous prenons toujours \"le client au centre\" et nous nous engageons à fournir aux clients des produits de haute qualité et rentables et d'excellents services. Par l'innovation continue, créez de la valeur pour les clients et améliorez la compétitivité de vos clients ! Nous préconisons une coopération gagnant-gagnant et nous nous réjouissons de marcher avec vous pour créer un avenir meilleur ! <br><br>Voici les produits que nous vendons actuellement, veuillez rechercher les produits correspondants dans les canaux correspondants pour acheter :<br>",
+				"de": "Wir sind ein Technologieunternehmen, das Forschung und Entwicklung, Produktion, Vertrieb und Service integriert. Wir beschäftigen uns hauptsächlich mit flexiblen LED-Bildschirmen und konzentrieren uns auf den Bereich der flexiblen LED-Bildschirme. Wir beschäftigen uns hauptsächlich mit einer Reihe von Produkten wie flexiblen Bildschirmsätzen, gespleißten flexiblen Bildschirmen und flexiblen Bildschirmen vom Batterietyp. Das Unternehmen verfügt über ein starkes F&E-Team sowie effiziente Produktions- und Montagelinien und hat eine Reihe von Erfindungs- und Gebrauchsmusterpatenten erhalten. <br><br>Wir stellen den „Kunden immer in den Mittelpunkt“ und sind bestrebt, unseren Kunden qualitativ hochwertige, kostengünstige Produkte und exzellenten Service zu bieten. Schaffen Sie durch kontinuierliche Innovation Mehrwert für Ihre Kunden und steigern Sie die Wettbewerbsfähigkeit Ihrer Kunden! Wir befürworten eine Win-Win-Kooperation und freuen uns darauf, gemeinsam mit Ihnen eine bessere Zukunft zu schaffen! <br><br>Die folgenden Produkte verkaufen wir derzeit. Bitte suchen Sie in den entsprechenden Kanälen nach den entsprechenden Produkten, um sie zu kaufen:<br>",
+				"ko": "우리는 R&D, 생산, 판매 및 서비스를 통합하는 기술 회사입니다. 주로 LED 플렉서블 스크린에 종사하는 우리는 주로 플렉서블 스크린 세트, 스플 라이스 플렉서블 스크린 및 배터리 유형 플렉서블 스크린과 같은 일련의 제품에 종사하는 LED 플렉서블 스크린 분야에 중점을 둡니다. 강력한 R&D 팀과 효율적인 생산 및 조립 라인을 보유하고 있으며 다수의 발명 및 실용 신안 특허를 획득했습니다. <br><br>우리는 항상 \"고객을 중심으로\" 고객에게 고품질, 비용 효율적인 제품 및 우수한 서비스를 제 공하기 위해 최선을 다하고 있습니다. 끊임없는 혁신을 통해 고객을 위한 가치를 창출하고 고객 경쟁력을 강화합니다! 우리는 상생 협력을 옹호하고 더 나은 미래를 만들기 위해 함께 걸을 수 있기를 기대합니다! <br><br>현재 판매 중인 제품은 다음과 같습니다. 해당 채널에서 해당 제품을 검색하여 구매하세요.<br>",
+				"it": "Siamo una società tecnologica che integra ricerca e sviluppo, produzione, vendita e assistenza. Principalmente impegnati in schermi flessibili a LED, ci concentriamo sul campo degli schermi flessibili a LED, principalmente impegnati in una serie di prodotti come set di schermi flessibili, schermi flessibili giuntati e schermi flessibili a batteria. Ha un forte team di ricerca e sviluppo e linee di produzione e assemblaggio efficienti e ha ottenuto numerosi brevetti per modelli di invenzione e utilità. <br><br>Prendiamo sempre \"il cliente al centro\" e ci impegniamo a fornire ai clienti prodotti di alta qualità, convenienti e servizi eccellenti. Attraverso l'innovazione continua, crea valore per i clienti e migliora la competitività dei clienti! Sosteniamo una cooperazione vantaggiosa per tutti e non vediamo l'ora di camminare con voi per creare un futuro migliore! <br><br>I seguenti sono i prodotti che vendiamo attualmente, cerca i prodotti corrispondenti nei canali corrispondenti per l'acquisto:<br>",
+				"pt": "Somos uma empresa de tecnologia que integra P&D, produção, vendas e serviços. Principalmente envolvidos em telas flexíveis de LED, nos concentramos no campo de telas flexíveis de LED, principalmente envolvidos em uma série de produtos, como conjuntos de telas flexíveis, telas flexíveis emendadas e telas flexíveis do tipo bateria. Possui uma forte equipe de P&D e linhas de produção e montagem eficientes, e obteve várias patentes de invenção e modelo de utilidade. <br><br>Sempre consideramos \"o cliente como o centro\" e estamos comprometidos em fornecer aos clientes produtos de alta qualidade e econômicos e serviços excelentes. Através da inovação contínua, crie valor para os clientes e aumente a competitividade do cliente! Defendemos a cooperação ganha-ganha e esperamos caminhar com você para criar um futuro melhor! <br><br>A seguir estão os produtos que estamos vendendo atualmente, procure os produtos correspondentes nos canais correspondentes para comprar:<br>",
+				"es": "Somos una empresa de tecnología que integra I+D, producción, ventas y servicio. Dedicados principalmente a las pantallas LED flexibles, nos enfocamos en el campo de las pantallas LED flexibles, principalmente comprometidos en una serie de productos tales como conjuntos de pantallas flexibles, pantallas flexibles empalmadas y pantallas flexibles tipo batería. Cuenta con un sólido equipo de I+D y líneas de producción y ensamblaje eficientes, y ha obtenido varias patentes de invención y modelo de utilidad. <br><br>Siempre consideramos al \"cliente como el centro\" y estamos comprometidos a brindarles a los clientes productos rentables y de alta calidad y excelentes servicios. ¡A través de la innovación continua, cree valor para los clientes y mejore la competitividad del cliente! ¡Defendemos la cooperación beneficiosa para todos y esperamos caminar con usted para crear un futuro mejor! <br><br>Los siguientes son los productos que estamos vendiendo actualmente, busque los productos correspondientes en los canales correspondientes para comprar:<br>",
+				"zh-TW": "我們是一家集研發、生產、銷售、服務為一體的科技公司。主營LED柔性屏，我們專注於LED柔性屏領域，主營柔性屏套裝、拼接柔性屏和電池款柔性屏等系列產品。擁有強大的研發團隊和高效的生產組裝產線，並獲得多項發明和實用新型專利。 <br><br>我們始終以\"客戶為中心\"，致力於為客戶提供高品質、高性價比的產品和優質的服務。通過不斷的創新，為客戶創造價值，提升客戶的競爭力！主張合作共贏，期待能與君同行，共創未來！ <br><br>以下是我們目前正在銷售的產品，請在相應的渠道搜索相應產品進行購買：<br>",
+				"ru": "Мы технологическая компания, объединяющая исследования и разработки, производство, продажи и обслуживание. В основном заним аясь светодиодными гибкими экранами, мы ориентируемся на область светодиодных гибких экранов, в основном занимаясь серией продуктов, таких как комплекты гибких экранов, сращенные гибкие экраны и гибкие экраны аккумуляторного типа. Компания имеет сильную к оманду по исследованиям и разработкам, эффективные производственные и сборочные линии, а также получила ряд патентов на изобрет ения и полезные модели. <br><br>Мы всегда берем «клиента как центр» и стремимся предоставлять клиентам высококачественные, экономически эффективные продукты и отличные услуги. Благодаря непрерывным инновациям создайте ценность для клиентов и повысьте конкуре нтоспособность клиентов! Мы выступаем за взаимовыгодное сотрудничество и надеемся на сотрудничество с вами, чтобы создать лучшее будущее! <br><br>В настоящее время мы продаем следующие продукты. Пожалуйста, найдите соответствующие продукты в соответствующих  каналах для покупки:<br>",
+				"vi": "Chúng tôi là một công ty công nghệ tích hợp R&D, sản xuất, bán hàng và dịch vụ. Chủ yếu tham gia vào màn hình linh hoạt LED, chúng tôi tập trung vào lĩnh vực màn hình linh hoạt LED và chuyên về một loạt sản phẩm như bộ màn hình linh hoạt, màn hình linh hoạt nối và màn hình linh hoạt chạy bằng pin. Nó có một đội ngũ R&D mạnh mẽ, dây chuyền sản xuất và lắp ráp hiệu quả, đồng thời đã nhận được một số bằng sáng chế về phát minh và mô hình tiện ích.<br><br>Chúng tôi luôn \"lấy khách hàng làm trung tâm\" và cam kết cung cấp cho khách hàng những sản phẩm chất lượng cao, tiết kiệm chi phí và dịch vụ hoàn hảo. Thông qua sự đổi mới liên tục, chúng tôi tạo ra giá trị cho khách hàng và nâng cao khả năng cạnh tranh của họ! Chúng tôi ủng hộ sự hợp tác cùng có lợi và mong muốn được hợp tác với bạn để tạo ra một tương lai tốt đẹp hơn!<br><br>Sau đây là những sản phẩm chúng tôi hiện đang bán, vui lòng tìm kiếm sản phẩm tương ứng trên các kênh tương ứng để mua hàng:<br>",
+				"th": "เราเป็นบริษัทเทคโนโลยีที่บูรณาการการวิจัยและพัฒนา การผลิต การขาย และการบริการ ดำเนินธุรกิจหลักในหน้าจอ LED แบบยืดหยุ่น เรามุ่งเน้นไปที่หน้าจอ LED แบบยืดหยุ่น โดยส่วนใหญ่มีส่วนร่วมในชุดผลิตภัณฑ์ เช่น ชุดหน้าจอแบบยืดหยุ่น หน้าจอแบบยืดหยุ่นแบบประกบ และหน้าจอแบบยืดหยุ่นแบบแบตเตอรี่ มีทีมงาน R&D ที่แข็งแกร่ง รวมถึงสายการผลิตและการประกอบที่มีประสิทธิภาพ และได้รับสิทธิบัตรการประดิษฐ์และอรรถประโยชน์หลายรายการ<br><br>เรายึด \"ลูกค้าเป็นศูนย์กลาง\" เสมอ และมุ่งมั่นที่จะมอบผลิตภัณฑ์คุณภาพสูง คุ้มต้นทุน และบริการคุณภาพสูงแก่ลูกค้า ด้วยนวัตกรรมที่ต่อเนื่อง สร้างมูลค่าให้กับลูกค้าและเพิ่มขีดความสามารถในการแข่งขันของลูกค้า! เราสนับสนุนความร่วมมือแบบ win-win และหวังว่าจะได้เดินไปกับคุณเพื่อสร้างอนาคตที่ดีกว่า!<br><br>ต่อไปนี้เป็นผลิตภัณฑ์ที่เราจำหน่ายในปัจจุบัน โปรดค้นหาผลิตภัณฑ์ที่เกี่ยวข้องในช่องทางที่เกี่ยวข้องเพื่อซื้อ:<br>",
+			}
+		};
+		
+		// 则默认使用英语
+		var defaultLanguage = "en";
+
+		// 获取访问参数中的language字段，如果不存在，则默认使用英语
+		var language = (getParameterByName("language") || defaultLanguage);
+		
+		// 答案内容
+		var answerContent = document.getElementById("answer-content");
+		var textElemet = document.createElement("p");
+		
+		var answerContentText = answer.content[language];
+		if (answerContentText === undefined) {
+			answerContentText = answer.content[defaultLanguage];
+		}
+		
+		textElemet.innerHTML = answerContentText;
+		answerContent.appendChild(textElemet);
+		
+		var imageUrl = answer.imageUrl[language];
+		if (imageUrl === undefined) {  // 不支持的设备类型，显示提示信息
+			imageUrl = answer.imageUrl[defaultLanguage];
+		} 
+		
+		var prolistImage = document.getElementById("prolist-image");
+		prolistImage.setAttribute('src', imageUrl);
+		
+		// 获取URL中的参数值
+		function getParameterByName(name) {
+			var url = window.location.href;
+			name = name.replace(/[\[\]]/g, "\\$&");
+			var regex = new RegExp("[?&]" + name + "(=([^&#]*)|&|#|$)"),
+			results = regex.exec(url);
+			if (!results) return null;
+			if (!results[2]) return '';
+			return decodeURIComponent(results[2].replace(/\+/g, " "));
+		}
+	</script>
+</body>
+</html>

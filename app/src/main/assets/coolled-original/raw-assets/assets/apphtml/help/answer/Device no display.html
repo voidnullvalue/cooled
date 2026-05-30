@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+	<meta name="viewport" content="initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <title>answer-content</title>
+    
+	<!-- 放到head中确保被渲染之前加载 -->
+	<link rel="stylesheet" href="../public-style.css" type="text/css"/>
+	<style>
+	</style>
+</head>
+<body>
+	<div class="answer-list-container">
+		<h3 id="answer-title">			
+		</h3>
+		<div id="divider-div" class="divider">
+		</div>
+		<div id="answer-content">
+		</div>
+	</div>
+
+    <div id="footer"></div>
+
+    <script src="../public-script.js"></script>
+
+    <script>
+        var footer = document.getElementById("footer"); 
+        footer.innerHTML = answerBottomBtnHtml;
+    </script>
+
+	
+	<!-- 放到body中，确保所有 JavaScript 代码在页面渲染之前加载完成 -->
+	<script>
+		// 答案内容
+		var answer = {
+			/// 内容用html语法编写，加粗用<b>，换行用<br>，其他写法请参考html语法
+			content: {
+				"zh-CN": "<b>注意</b>：请勿用电脑、电视机和汽车的USB接口给设备供电。<br><br>1.	确认电源功率是否满足要求。（USB款电源功率要求为5V/2A）<br>2.	检查电源是否正常通电。<br>3.	检查电源线上的开关是否打开。<br>4.	检查其它连接口接触是否良好。<br>5.	尝试给设备重新通电。<br><br><b>提示</b>：在正常情况下，设备只要接通电源，屏幕就会亮起并正常工作。<br>",
+
+				"en": "<b>Attention</b>: Do not power the device using the USB ports of computers, televisions, and cars.<br><br>1. Check if the power supply meets the requirements. (The USB power supply should have a rating of 5V/2A)<br>2. Verify if the power supply is receiving power properly.<br>3. Ensure that the switch on the power cable is turned on.<br>4. Verify if all other connections are secure.<br>5. Try reconnecting the device to the power source.<br><br><b>Tips</b>: Normally, when the device is powered on, the screen should light up and function properly.<br>",
+
+				"ja": "<b>注意</b>：コンピュータ、テレビ、車のUSBポートを使用してデバイスに電力供給しないでください。<br><br>1. 電源のパワーが要件を満たしているか確認してください。（USB電源の要件は5V/2Aです）<br>2. 電源が正常に接続されているか確認してください。<br>3. 電源ケーブルのスイッチがオンになっているか確認してください。<br>4. 他の接続部がしっかりと接触しているか確認してください。<br>5. デバイスを再び電源に接続してみてください。<br><br><b>ヒント</b>：通常、デバイスは電源に接続されると、画面が点灯し正常に動作します。<br>",
+
+				"fr": "<b>Attention</b> : Ne pas alimenter l'appareil via les ports USB des ordinateurs, des télévisions et des voitures.<br><br>1. Vérifier si l'alimentation est conforme aux exigences. (L'alimentation USB doit avoir une puissance de 5V/2A)<br>2. Vérifier si l'alimentation est correctement branchée.<br>3. S'assurer que l'interrupteur du câble d'alimentation est allumé.<br>4. Vérifier si toutes les autres connexions sont bien fixées.<br>5. Essayer de rebrancher l'appareil à la source d'alimentation.<br><br><b>Astuces</b> : Normalement, lorsque l'appareil estsous tension, l'écran s'allume et fonctionne correctement.<br>",
+
+				"de": "<b>Achtung</b>: Das Gerät nicht über die USB-Anschlüsse von Computern, Fernsehern und Autos mit Strom versorgen.<br><br>1. Überprüfen Sie, ob das Netzteil den Anforderungen entspricht. (Das USB-Netzteil sollte eine Bewertung von 5V/2A haben)<br>2. Überprüfen Sie, ob das Netzteil ordnungsgemäß mit Strom versorgt wird.<br>3. Stellen Sie sicher, dass der Schalter am Netzkabel eingeschaltet ist.<br>4. Überprüfen Sie, ob alle anderen Verbindungen sicher sind.<br>5. Versuchen Sie, das Gerät erneut an die Stromquelle anzuschließen.<br><br><b>Tipps</b>: Normalerweise sollte der Bildschirm aufleuchten und das Gerät ordnungsgemäß funktionieren, sobald es mit Strom versorgt wird.<br>",
+
+				"ko": "<b>주의</b>: 컴퓨터, 텔레비전, 자동차의 USB 포트를 통해 장치에 전원을 공급하지 마십시오.<br><br>1. 전원 공급이 요구 사항을 충족하는지 확인하십시오. (USB 전원 공급 장치는 5V/2A로 평가되어야 함)<br>2. 전원이 제대로 공급되는지 확인하십시오.<br>3. 전원 케이블 스위치가 켜져 있는지 확인하십시오.<br>4. 다른 연결이 안전하게 연결되어 있는지 확인하십시오.<br>5. 장치를 다시 전원에 연결해 보십시오.<br><br><b>팁</b>: 일반적으로 장치가 전원에 연결되면 화면이 켜지고 정상적으로 작동해야 합니다.<br>",
+
+				"it": "<b>Attenzione</b>: Non alimentare il dispositivo tramite le porte USB di computer, televisori e auto.<br><br>1. Verificare se l'alimentazione soddisfa i requisiti. (L'alimentatore USB dovrebbe avere un rating di 5V/2A)<br>2. Verificare se l'alimentazione è correttamente collegata.<br>3. Assicurarsi che l'interruttore sul cavo di alimentazione sia acceso.<br>4. Verificare se tutte le altre connessioni sono sicure.<br>5. Prova a riconnettere il dispositivo alla fonte di alimentazione.<br><br><b>Suggerimenti</b>: Normalmente, quando il dispositivo è alimentato, lo schermo si illumina e funziona correttamente.<br>",
+
+				"pt": "<b>Atenção</b>: Não alimente o dispositivo através das portas USB de computadores, televisões e carros.<br><br>1. Verifique se a fonte de alimentação atende aos requisitos. (A fonte de alimentação USB deve ter uma classificação de 5V/2A)<br>2. Verifique se a fonte de alimentação está recebendo energia corretamente.<br>3. Certifique-se de que a chave no cabo de alimentação esteja ligada.<br>4. Verifique se todas as outras conexões estão seguras.<br>5. Tente reconectar o dispositivo à fonte de alimentação.<br><br><b>Dicas</b>: Normalmente, quando o dispositivo está alimentado, a tela deve acender e funcionar corretamente.<br>",
+
+				"zh-TW": "<b>注意</b>：請勿使用電腦、電視和汽車的USB接口為設備供電。<br><br>1. 確認電源功率是否符合要求。（USB款電源功率要求為5V/2A）<br>2. 檢查電源是否正常通電。<br>3. 檢查電源線上的開關是否打開。<br>4. 檢查其他連接口接觸是否良好。<br>5. 嘗試給設備重新通電。<br><br><b>提示</b>：在正常情況下，設備只要接通電源，螢幕就會亮起並正常工作。<br>",
+
+				"ru": "<b>Внимание</b>: Не подключайте устройство к компьютеру, телевизору или автомобильному USB-порту для питания.<br><br>1. Проверьте, соответствует ли питание требованиям. (Мощность USB-адаптера должна быть 5V/2A)<br>2. Проверьте, получает ли питание устройство нормально.<br>3. Убедитесь, что переключатель на кабеле питания включен.<br>4. Проверьте, надежно ли установлены все остальные соединения.<br>5. Попробуйте переподключить устройство к источнику питания.<br><br><b>Советы</b>: Обычно при подключении устройства к питанию экран должен зажечься и работать нормально.<br>",
+				"vi": "<b>Để ý</b>: Không sử dụng giao diện USB của máy tính, TV và ô tô để cấp nguồn cho thiết bị.<br><br>1. Xác nhận xem nguồn điện có đáp ứng yêu cầu hay không. (Yêu cầu nguồn điện USB là 5V/2A)<br>2. Kiểm tra xem nguồn điện có được bật bình thường không.<br>3. Kiểm tra xem công tắc trên dây nguồn đã được bật chưa.<br>4. Kiểm tra xem các kết nối khác có tiếp xúc tốt không.<br>5. Cố gắng cấp nguồn cho thiết bị.<br><br><b>gợi ý</b>: Trong trường hợp bình thường, chỉ cần thiết bị được bật nguồn, màn hình sẽ sáng và hoạt động bình thường.<br>",
+				"th": "<b>สังเกต</b>: ห้ามใช้อินเทอร์เฟซ USB ของคอมพิวเตอร์ ทีวี และรถยนต์ในการจ่ายไฟให้กับอุปกรณ์<br><br>1. ตรวจสอบว่ากำลังไฟของแหล่งจ่ายไฟตรงตามข้อกำหนดหรือไม่ (ความต้องการพลังงานสำหรับเวอร์ชัน USB คือ 5V/2A)<br>2. ตรวจสอบว่าแหล่งจ่ายไฟเปิดอยู่ตามปกติหรือไม่<br>3. ตรวจสอบว่าสวิตช์บนสายไฟเปิดอยู่<br>4. ตรวจสอบว่าขั้วต่ออื่น ๆ มีการสัมผัสที่ดีหรือไม่<br>5. ลองเปิดปิดอุปกรณ์<br><br><b>คำแนะนำ</b>: ภายใต้สภาวะปกติ หน้าจอจะสว่างขึ้นและทำงานได้ตามปกติตราบใดที่เสียบปลั๊กอุปกรณ์อยู่<br>",
+			},
+			title: {
+				"zh-CN": "设备不显示",
+				"en": "The device does not display",
+				"ja": "デバイスが表示されません",
+				"fr": "L'appareil ne s'affiche pas",
+				"de": "Gerät wird nicht angezeigt",
+				"ko": "장치가 표시되지 않습니다",
+				"it": "Dispositivo non viene visualizzato",
+				"pt": "Dispositivo não está sendo exibido",
+				"es": "El dispositivo no se muestra",
+				"zh-TW": "設備未顯示",
+				"ru": "Устройство не отображается",
+				"vi": "Thiết bị không hiển thị",
+				"th": "วอุปกรณ์ไม่แสดงผล",
+			}
+		};
+
+		// 获取访问参数中的language字段，如果不存在，则默认使用英语
+		var language = (getParameterByName("language") || defaultLanguage);
+
+		// 答案标题
+		var answerTitle = document.getElementById("answer-title");
+		var answerTitleText = answer.title[language];
+		if (answerTitleText === undefined) {
+			answerTitleText = answer.title[defaultLanguage];
+		}
+		answerTitle.textContent = answerTitleText;
+		
+		// 答案内容
+		var answerContent = document.getElementById("answer-content");
+		var textElemet = document.createElement("p");
+		
+		var answerContentText = answer.content[language];
+		if (answerContentText === undefined) {
+			answerContentText = answer.content[defaultLanguage];
+		}
+		
+		textElemet.innerHTML = answerContentText;
+		answerContent.appendChild(textElemet);
+	</script>
+</body>
+</html>

@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+	<meta name="viewport" content="initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+	<!-- <meta http-equiv="Set-Cookie" content="name=value"> -->
+    <title>answer-content</title>
+    
+	<!-- 放到head中确保被渲染之前加载 -->
+	<link rel="stylesheet" href="../public-style.css" type="text/css"/>
+	<style>
+	</style>
+</head>
+<body>
+	<div class="answer-list-container">
+		<h3 id="answer-title">			
+		</h3>
+		<div id="divider-div" class="divider">
+		</div>
+		<div id="answer-content">
+		  <iframe id="video-iframe" width="100%"></iframe>
+		</div>
+	</div>
+
+    <div id="footer"></div>
+
+    <script src="../public-script.js"></script>
+
+    <script>
+        var footer = document.getElementById("footer"); 
+        footer.innerHTML = answerBottomBtnHtml;
+    </script>
+
+	
+	<!-- 放到body中，确保所有 JavaScript 代码在页面渲染之前加载完成 -->
+	<script>
+		// 答案内容
+		var answer = {
+			videoUrl: {
+				// 全部用小写，防止书写笔误
+				coolledx1632: {
+					"en": "https://www.youtube.com/embed/_9sRU8leMxo",
+					"zh-CN": "https://player.youku.com/embed/XNTgzMDY2NTgzNg=="
+				},
+				// coolledx通用的使用说明视频
+				coolledx16: {
+					"en": "https://www.youtube.com/embed/N7hN-RSu7x0",
+					"zh-CN": "https://player.youku.com/embed/XNTgyNTQxMjIyMA=="
+				}
+			},
+			title: {
+				"zh-CN": "操作演示视频",
+				"en": "Operation demonstration video",
+				"ja": "操作デモ動画",
+				"fr": "Vidéo de démonstration du fonctionnement",
+				"de": "Demonstrationsvideo zur Bedienung",
+				"ko": "작동 데모 비디오",
+				"it": "Video dimostrativo del funzionamento",
+				"pt": "Vídeo de demonstração da operação",
+				"es": "Vídeo de demostración del funcionamiento",
+				"zh-TW": "操作演示視頻",
+				"ru": "Демонстрационное видео работы",
+				"vi": "Video trình diễn thao tác",
+				"th": "วีดีโอสาธิตการใช้งาน",
+
+			},
+			prompt: {
+				"zh-CN": "该设备的操作演示视频还未添加，敬请期待版本更新或者参考使用说明书！",
+				"en": "The operation demonstration video of this device has not been added yet, please look forward to the version update or refer to the instruction manual!",
+				"ja": "本機の操作デモ動画はまだ追加されていませんので、バージョンアップをお待ちいただくか、取扱説明書をご参照ください。",
+				"fr": "La vidéo de démonstration de fonctionnement de cet appareil n'a pas encore été ajoutée, veuillez attendre la mise à jour de la version ou vous référer au manuel d'instructions !",
+				"de": "Das Bedienungsdemonstrationsvideo dieses Geräts wurde noch nicht hinzugefügt. Bitte freuen Sie sich auf das Versionsupdate oder schauen Sie in der Bedienungsanleitung nach!",
+				"ko": "이 장치의 작동 데모 비디오는 아직 추가되지 않았습니다. 버전 업데이트를 기대하거나 사용 설명서를 참조하십시오!",
+				"it": "Il video dimostrativo del funzionamento di questo dispositivo non è stato ancora aggiunto, attendi con ansia l'aggiornamento della versione o fai riferimento al manuale di istruzioni!",
+				"pt": "O vídeo de demonstração da operação deste dispositivo ainda não foi adicionado, aguarde a atualização da versão ou consulte o manual de instruções!",
+				"es": "El video de demostración de funcionamiento de este dispositivo aún no se ha agregado, espere la actualización de la versión o consulte el manual de instrucciones.",
+				"zh-TW": "該設備的操作演示視頻還未添加，敬請期待版本更新或者參考使用說明書！",
+				"ru": "Видео с демонстрацией работы этого устройства еще не добавле но, ждите обновления версии или обратитесь к инструкции по эксплуатации!",
+				"vi": "Video demo hoạt động của thiết bị này vẫn chưa được bổ sung, các bạn vui lòng đón chờ bản cập nhật phiên bản hoặc tham khảo hướng dẫn sử dụng nhé!",
+				"th": "ยังไม่ได้เพิ่มวิดีโอสาธิตการทำงานของอุปกรณ์นี้ โปรดรอการอัปเดตเวอร์ชันหรือดูคู่มือการใช้งาน!",
+			}
+		};
+
+		// 获取访问参数中的language字段，如果不存在，则默认使用英语
+		var language = (getParameterByName("language") || defaultLanguage);
+		
+		// 获取当前的设备类型，如果不存在，默认为CoolLEDX的类型
+		var devName = (getParameterByName("dev_name") || "CoolLEDX").toLowerCase();
+		// 获取当前设备的分辨率，如果不存在，默认为1664
+		var height = getParameterByName("height") || "16";
+		var width = getParameterByName("width") || "64";
+
+		// 答案标题
+		var answerTitle = document.getElementById("answer-title");
+		var answerTitleText = answer.title[language];
+		if (answerTitleText === undefined) {
+			answerTitleText = answer.title[defaultLanguage];
+		}
+		answerTitle.textContent = answerTitleText;
+
+		// 视频播放内容		
+		var answerFrame = document.getElementById("video-iframe");
+		
+		<!-- answerFrame.setAttribute('allowfullscreen', false); -->
+		<!-- answerFrame.setAttribute('frameborder', 0); -->
+		
+		if (devName == "coolledx") {
+			if (width == 32) {
+				var devType = devName+height+width;
+				showVideoByDevType(devType);
+			} else {
+				var devType = devName+height;
+				showVideoByDevType(devType);
+			}
+		} else if (devName == "coolledm") {
+			var devType = devName+height;
+			showVideoByDevType(devType);
+		} else {
+			answerFrame.style.display = "none";
+			showPromptInfo();
+		}
+		
+		/// 根据设备类型显示对应的video，如果存在就显示，不存在显示默认，不支持，显示提示信息
+		function showVideoByDevType(type) {
+			var urlObj = answer.videoUrl[type];
+			if (urlObj === undefined) {  // 不支持的设备类型，显示提示信息
+				answerFrame.style.display = "none";
+				showPromptInfo();
+			} else {
+				var url = urlObj[language];
+				if (url === undefined) {
+					url = urlObj[defaultLanguage];
+				}
+				
+				console.log("video url: " + url);
+				
+				answerFrame.setAttribute('src', url);
+			}
+		}
+		
+		/// 不支持的设备类型，显示提示信息
+		function showPromptInfo() {
+			var answerContent = document.getElementById("answer-content");
+			var proInfoElement = document.createElement("span");
+			var c = answer.prompt[language];
+			if (c === undefined) {
+				c = answer.prompt[defaultLanguage];
+			}
+				
+			proInfoElement.textContent = c;
+			answerContent.appendChild(proInfoElement);
+		}
+
+		function setVideoFrameSize() {
+			var answerTitleRect = answerTitle.getBoundingClientRect();
+
+			var dividerDiv = document.getElementById('divider-div');
+			var dividerDivRect = dividerDiv.getBoundingClientRect();
+
+			var buttonDiv = document.getElementById('navigation-buttons');
+			var buttonDivRect = buttonDiv.getBoundingClientRect();
+
+			//var height = window.innerHeight-;
+			var height = buttonDivRect.top - dividerDivRect.bottom - 40;
+			console.log("height=" + height);
+			answerFrame.style.height = height + 'px';
+		}
+
+		window.addEventListener('resize', setVideoFrameSize);
+		
+		setVideoFrameSize();
+
+		<!-- window.onload = function() { -->
+			<!-- setVideoFrameSize(); -->
+		<!-- }; -->
+	</script>
+</body>
+</html>

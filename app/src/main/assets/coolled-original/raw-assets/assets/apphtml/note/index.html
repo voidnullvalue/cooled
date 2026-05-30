@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+	<meta name="viewport" content="initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <title>Note</title>
+    <!-- <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css"> -->
+	<!-- 放到head中确保被渲染之前加载 -->
+	<style>
+		.answer-list-container {
+		  padding-bottom: 60px; /* 调整为按钮区域的高度加上一些额外的内边距 防止被底部的按钮区域挡住*/
+		}
+
+		.divider {
+		  margin: 20px 0;
+		  border-top: 1px solid #ccc;
+		}
+
+		#navigation-buttons {
+		  position: fixed;
+		  bottom: 0px;
+		  left: 0;
+		  right: 0;
+		  display: flex;
+		  justify-content: center;
+		  background-color: #f1f1f1; /* 灰色背景色 */
+		  padding: 20px
+		}
+
+		#navigation-buttons button {
+		  margin: 0 30px;
+		  border: none;
+		}
+	</style>
+</head>
+<body>
+	<div class="answer-list-container">
+		<div id="answer-content">
+		</div>
+	</div>
+
+	<!-- 放到body中，确保所有 JavaScript 代码在页面渲染之前加载完成 -->
+	<script>
+		// 答案内容
+		var answer = {
+			/// 内容用html语法编写，加粗用<b>，换行用<br>，其他写法请参考html语法
+			content: {
+				"zh-CN": "非常感谢您购买我们的产品！在使用之前，请务必仔细阅读下面的注意事项：<br><br>1.请确认电源功率是否满足要求！USB款电源功率要求为5V/2A，并且请勿用电脑、电视机和汽车的USB接口给设备供电。<br><br>2.请确认电源是否正常通电、电源线上的开关是否打开、其它连接口接触是否良好。<br><br>3.请确认APP请求的权限是否打开、手机蓝牙是否开启。<br><br>4.当您的显示屏正常工作并显示内容后，您可以点击屏幕下发的【下一步】按钮，在APP的设备列表页面下拉刷新搜索，并连接设备，开启您的探索之旅。<br><br>5.如您需 要寻求帮助，请点击屏幕下方的【联系我们】按钮与我们联系，我们非常乐于提供帮助，并将尽快回复您！<br><br>再次感谢您的购买，祝您使用愉快！<br>",
+				"en": "Thank you so much for purchasing our product! Before using, please be sure to read the following precautions carefully:<br><br>1. Please confirm whether the power supply meets the requirements! The power requirement of the USB model is 5V/2A, and please do not use the USB interface of the computer, TV and car to power the device. <br><br>2. Please confirm whether the power supply is normally powered on, whether the switch on the power cord is turned on, and whether other connection ports are in good contact. <br><br>3. Please confirm whether the permission requested by the APP is turned on, and whether the Bluetooth of the mobile phone is turned on. <br><br>4. When your display screen works normally and displays the content, you can click the [Next] button sent on the screen, pull down to refresh the search on the device list page of the APP, and connect the device to start your exploration journey . <br><br>5. If you need help, please click the [Contact Us] button at the bottom of the screen to contact us, we are very happy to help and will reply you as soon as possible! <br><br>Thank you again for your purchase and wish you a happy use! <br>",
+				"ja": "このたびは弊社製品をお買い上げいただき、誠にありがとうございます。ご使用の前に、以下の注意事項をよくお読みください。<br><br>1. 電源が要件を満たしているか確認してください。 USB モデルの電力要件は 5V/2A です。デバイスに電力を供給す るためにコンピューター、テレビ、車の USB インターフェイスを使用しないでください。 <br><br>2. 電源が正常に投入されているか、電源コードのスイッチがオンになっているか、その他の接続ポートが良好に接触しているかどうかを確認してください。 <br><br>3. APPが要求する許可がオンになっているか、携帯電話のBluetoothがオンになっているかを確認してください。 <br><br>4. ディスプレイ画面が正常に動作し、コンテンツが表示されたら、画面に表示される[次へ]ボタンをクリックし、プルダウンしてAPPのデバイスリストページの検索を更新し、デバイスを接続して開始します。あなたの探検の旅。 <br><br>5. サポートが必要な場合は、画面下部の [お問い合わせ] ボタンをクリックしてご連絡ください。喜んでお手伝いし、できるだけ早くご返信いたします。 <br><br>ご購入いただきありがとうございます。今後ともご活用ください。 <br>",
+				"fr": "Merci beaucoup d'avoir acheté notre produit! Avant d'utiliser, assurez-vous de lire attentivement les précautions suivantes :<br><br>1. Veuillez confirmer si l'alimentation électrique répond aux exigences ! La puissance requise du modèle USB est de 5 V/2 A, et veuillez ne pas utiliser l'interface USB de l'ordinateur, du téléviseur et de la voiture pour alimenter l'appareil. <br><br>2. Veuillez confirmer si l'alimentation est normalement sous tension, si l'interrupteur du cordon d'alimentation est allumé et si les autres ports de connexion sont en bon contact. <br><br>3. Veuillez confirmer si l'autorisation demandée par l'APP est activée et si le Bluetooth du téléphone mobile est activé. <br><br>4. Lorsque votre écran d'affichage fonctionne normalement et affiche le contenu, vous pouvez cliquer sur le bouton [Suivant] envoyé à l'écran, dérouler pour actualiser la recherche sur la page de liste des appareils de l'APP et connecter l'appareil pour démarrer votre voyage d'exploration. <br><br>5. Si vous avez besoin d'aide, veuillez cliquer sur le bouton [Contactez-nous] en bas de l'écran pour nous contacter, nous sommes très heureux de vous aider et vous répondrons dès que possible ! <br><br>Merci encore pour votre achat et vous souhaitons une bonne utilisation ! <br>",
+				"de": "Vielen Dank für den Kauf unseres Produkts! Bitte lesen Sie vor der Verwendung die folgenden Vorsichtsmaßnahmen sorgfältig durch:<br><br>1. Bitte überprüfen Sie, ob das Netzteil den Anforderungen entspricht! Der Strombedarf des USB-Modells beträgt 5 V/2 A. Bitte verwenden Sie nicht die USB-Schnittstelle des Computers, Fernsehers oder Autos, um das Gerät mit Strom zu versorgen. <br><br>2. Bitte überprüfen Sie, ob das Netzteil normal eingeschaltet ist, ob der Schalter am Netzkabel eingeschaltet ist und ob andere Anschlussanschlüsse in gutem Kontakt sind. <br><br>3. Bitte bestätigen Sie, ob die von der APP angeforderte Berechtigung aktiviert ist und ob Bluetooth des Mobiltelefons aktiviert ist. <br><br>4. Wenn Ihr Bildschirm normal funktioniert und den Inhalt anzeigt, können Sie auf die auf dem Bildschirm angezeigte Schaltfläche [Weiter] klicken, nach unten ziehen, um die Suche auf der Gerätelistenseite der APP zu aktualisieren, und das Gerät zum Starten anschließen Ihre Entdeckungsreise. <br><br>5. Wenn Sie Hilfe benötigen, klicken Sie bitte unten auf dem Bildschirm auf die Schaltfläche [Kontakt], um mit uns Kontakt aufzunehmen. Wir helfen Ihnen gerne weiter und werden Ihnen so schnell wie möglich antworten! <br><br>Nochmals vielen Dank für Ihren Kauf und wünschen Ihnen viel Spaß bei der Nutzung! <br>",
+				"ko": "저희 제품을 구매해주셔서 대단히 감사합니다! 사용하기 전에 다음 주의 사항을 주의 깊게 읽으십시오.<br><br>1. 전원 공급 장치가 요구 사항을 충족하는지 확인하십시오! USB 모델의 전원 요구 사항은 5V/2A이며 컴퓨터, TV 및 자동차의 USB 인터페이스를 사용하여 장치에 전원을 공급하지 마십시오. <br><br>2. 전원 공급 장치가 정상적으로 켜져 있는지, 전원 코드의 스위치가 켜져 있는지, 다른 연결 포트가 잘 접촉되어 있는지 확인하십시오. <br><br>3. APP에서 요청한 권한이 켜져 있는지, 휴대폰의 블 루투스가 켜져 있는지 확인해주세요. <br><br>4. 디스플레이 화면이 정상적으로 작동하고 콘텐츠가 표시되면 화면에 전송된 [다음] 버튼을 클릭하고 풀다운하여 앱의 장치 목록 페이지에서 검색을 새로 고친 다음 장치를 연결하여 시작할 수 있습니다. 당신의 탐험 여행. <br><br>5. 도움이 필요한 경우 화면 하단의 [문의하기] 버튼을 클릭하여 문의해 주시면 기꺼이 도와드리겠습니다. 가능한 한 빨리 회신해 드리겠습니다! <br><br>구매해주셔서 다시한번 감사드리며, 행복한 사용 되시길 바랍니다! <br>",
+				"it": "Grazie mille per aver acquistato il nostro prodotto! Prima dell'uso, assicurarsi di leggere attentamente le seguenti precauzioni:<br><br>1. Confermare se l'alimentatore soddisfa i requisiti! Il requisito di alimentazione del modello USB è 5 V/2 A e non utilizzare l'interfaccia USB del computer, della TV e dell'auto per alimentare il dispositivo. <br><br>2. Confermare se l'alimentatore è normalmente acceso, se l'interruttore sul cavo di alimentazione è acceso e se le altre porte di connessione sono in buon contatto. <br><br>3. Confermare se l'autorizzazione richiesta dall'APP è attivata e se il Bluetooth del telefono cellulare è attivato. <br><br>4. Quando lo schermo del display funziona normalmente e visualizza il contenuto, è possibile fare clic sul pulsante [Avanti] inviato sullo schermo, scorrere verso il basso per aggiornare la ricerca nella pagina dell'elenco dei dispositivi dell'APP e collegare il dispositivo per iniziare il tuo viaggio di esplorazione <br><br>5. Se hai bisogno di aiuto, fai clic sul pulsante [Contattaci] nella parte inferiore dello schermo per contattarci, saremo molto felici di aiutarti e ti risponderemo il prima possibile! <br><br>Grazie ancora per il tuo acquisto e ti auguriamo un felice utilizzo! <br>",
+				"pt": "Muito obrigado por adquirir nosso produto! Antes de usar, leia atentamente as seguintes precauções:<br><br>1. Confirme se a fonte de alimentação atende aos requisitos! O requisito de energia do modelo USB é de 5V/2A e, por favor, não use a interface USB do computador, TV e carro para alimentar o dispositivo. <br><br>2. Confirme se a fonte de alimentação está normalmente ligada, se o interruptor do cabo de alimentação está ligado e se outras portas de conexão estão em bom contato. <br><br>3. Confirme se a permissão solicitada pelo APP está ativada e se o Bluetooth do celular está ativado. <br><br>4. Quando sua tela de exibição funcionar normalmente e exibir o conteúdo, você pode clicar no botão [Avançar] enviado na tela, puxar para baixo para atualizar a pesquisa na página de lista de dispositivos do APP e conectar o dispositivo para iniciar sua jornada de exploração. <br><br>5. Se precisar de ajuda, clique no botão [Fale Conosco] na parte inferior da tela para entrar em contato conosco, ficaremos muito felizes em ajudar e responderemos o mais breve possível! <br><br>Agradecemos novamente por sua compra e desejamos um bom uso! <br>",
+				"es": "¡Muchas gracias por comprar nuestro producto! Antes de usar, asegúrese de leer atentamente las siguientes precauciones:<br><br>1. ¡Confirme si la fuente de alimentación cumple con los requisitos! El requisito de alimentación del modelo USB es de 5 V/2 A, y no utilice la interfaz USB de la computadora, el televisor y el automóvil para alimentar el dispositivo. <br><br>2. Confirme si la fuente de alimentación está normalmente encendida, si el interruptor del cable de alimentación está encendido y si otros puertos de conexión están en buen contacto. <br><br>3. Confirme si el permiso solicitado por la aplicación está activado y si el Bluetooth del teléfono móvil está activado. <br><br>4. Cuando su pantalla de visualización funciona normalmente y muestra el contenido, puede hacer clic en el botón [Siguiente] enviado en la pantalla, tirar hacia abajo para actualizar la búsqueda en la página de lista de dispositivos de la aplicación y conectar el dispositivo para comenzar su viaje de exploración. <br><br>5. Si necesita ayuda, haga clic en el botón [Contáctenos] en la parte inferior de la pantalla para comunicarse con nosotros, ¡estaremos encantados de ayudarlo y le responderemos lo antes posible! <br><br>¡Gracias nuevamente por su compra y le deseamos un feliz uso! <br>",
+				"zh-TW": "非常感謝您購買我們的產品！在使用之前，請務必仔細閱讀下面的注意事項：<br><br>1.請確認電源功率是否滿足要求！ USB款電源功率要求為5V/2A，並且請勿用電腦、電視機和汽車的USB接口給設備供電。 <br><br>2.請確認電源是否正常通電、電源線上的開關是否打開、其它連接口接觸是否良好。 <br><br>3.請確認APP請求的權限是否打開、手機藍牙是否開啟。 <br><br>4.當您的顯示屏正常工作並顯示內容後，您可以點擊屏幕下發的【下一步】按鈕，在APP的設備列表頁面下拉刷新搜索，並連接設備，開啟您的探索之旅。 <br><br>5.如您需要尋求幫助，請點擊屏幕下方的【聯繫我們】按鈕與我們聯繫，我們非常樂於提供幫助，並將盡快回复您！ <br><br>再次感謝您的購買，祝您使用愉快！ <br>",
+				"ru": "Большое спасибо за покупку нашего продукта! Перед использованием обязательно внимательно прочитайте следующие меры предосторожности:<br><br>1. Убедитесь, что блок питания соответствует требованиям! Требуемая мощность модели USB составляет 5 В / 2 А, и, пожалуйста, не используйте интерфейс USB компьютера, телевизора и автомобиля для питания устройства. <br><br>2. Пожалуйста, убедитесь, что источ ник питания нормально включен, включен ли переключатель на шнуре питания и хорошо ли контактируют другие порты подключения. <br><br>3.  Пожалуйста, подтвердите, включено ли разрешение, запрошенное ПРИЛОЖЕНИЕМ, и включен ли Bluetooth мобильного телефона. <br><br>4. Когда ваш э кран дисплея работает нормально и отображает содержимое, вы можете нажать кнопку [Далее], отправленную на экран, потянуть вниз, чтобы обновить поиск на странице списка устройств в приложении, и подключить устройство, чтобы начать ваше исследовательское путе шествие. <br><br>5. Если вам нужна помощь, нажмите кнопку [Связаться с нами] в нижней части экрана, чтобы связаться с нами, мы очень рады п омочь и ответим вам как можно скорее! <br><br>Еще раз благодарим вас за покупку и желаем счастливого использования! <br>",
+				"vi": "Cảm ơn bạn rất nhiều vì đã mua sản phẩm của chúng tôi! Trước khi sử dụng, vui lòng đọc kỹ các biện pháp phòng ngừa sau:<br><br>1. Vui lòng xác nhận xem nguồn điện có đáp ứng yêu cầu hay không! Yêu cầu nguồn điện của mẫu USB là 5V/2A và vui lòng không sử dụng giao diện USB của máy tính, TV và ô tô để cấp nguồn cho thiết bị.<br><br>2. Vui lòng xác nhận xem nguồn điện có được bật bình thường hay không, công tắc trên dây nguồn có được bật hay không và các kết nối khác có tiếp xúc tốt hay không.<br><br>3. Vui lòng xác nhận xem quyền mà APP yêu cầu đã được bật hay chưa và Bluetooth của điện thoại di động có được bật hay không.<br><br>4. Khi màn hình hiển thị của bạn hoạt động bình thường và hiển thị nội dung, bạn có thể nhấp vào nút [Tiếp theo] được gửi trên màn hình, kéo xuống để làm mới tìm kiếm trên trang danh sách thiết bị của APP và kết nối thiết bị để bắt đầu hành trình khám phá của bạn.<br><br>5. Nếu bạn cần trợ giúp, vui lòng nhấp vào nút [Liên hệ với chúng tôi] ở cuối màn hình để liên hệ với chúng tôi, chúng tôi rất sẵn lòng trợ giúp và sẽ trả lời bạn trong thời gian sớm nhất!<br><br>Một lần nữa cảm ơn bạn đã mua hàng và chúc bạn sử dụng vui vẻ!<br>",
+				"th": "ขอบคุณมากสำหรับการซื้อผลิตภัณฑ์ของเรา! ก่อนใช้งานโปรดอ่านข้อควรระวังต่อไปนี้อย่างละเอียด:<br><br>1.请确认电源功率是否满足要求！USB款电源功率要求为5V/2A，并且请勿用电脑、电视机和汽车的USB接口给设备供电。1. โปรดยืนยันว่าแหล่งจ่ายไฟตรงตามข้อกำหนดหรือไม่! ข้อกำหนดแหล่งจ่ายไฟ USB คือ 5V/2A และโปรดอย่าใช้อินเทอร์เฟซ USB ของคอมพิวเตอร์ ทีวี และรถยนต์เพื่อจ่ายไฟให้กับอุปกรณ์<br><br>2. โปรดตรวจสอบว่าแหล่งจ่ายไฟเปิดอยู่ตามปกติหรือไม่ สวิตช์บนสายไฟเปิดอยู่หรือไม่ และการเชื่อมต่ออื่น ๆ มีการติดต่อกันที่ดีหรือไม่<br><br>3. โปรดยืนยันว่ามีการเปิดการอนุญาตที่ร้องขอโดย APP และบลูทูธของโทรศัพท์มือถือเปิดอยู่หรือไม่<br><br>4. เมื่อหน้าจอแสดงผลของคุณทำงานตามปกติและแสดงเนื้อหา คุณสามารถคลิกปุ่ม [ถัดไป] ที่ส่งไปบนหน้าจอ ดึงลงเพื่อรีเฟรชการค้นหาในหน้ารายการอุปกรณ์ของแอป และเชื่อมต่ออุปกรณ์เพื่อเริ่มการเดินทางสำรวจของคุณ<br><br>5. หากคุณต้องการความช่วยเหลือ โปรดคลิกปุ่ม [ติดต่อเรา] ที่ด้านล่างของหน้าจอเพื่อติดต่อเรา เรายินดีเป็นอย่างยิ่งที่จะช่วยเหลือและจะตอบกลับคุณโดยเร็วที่สุด!<br><br>ขอขอบคุณอีกครั้งสำหรับการซื้อของคุณและขอให้คุณมีความสุขในการใช้งาน!<br>",
+			}
+		};
+		
+		// 则默认使用英语
+		var defaultLanguage = "en";
+
+		// 获取访问参数中的language字段，如果不存在，则默认使用英语
+		var language = (getParameterByName("language") || defaultLanguage);
+		
+		// 答案内容
+		var answerContent = document.getElementById("answer-content");
+		var textElemet = document.createElement("p");
+		
+		var answerContentText = answer.content[language];
+		if (answerContentText === undefined) {
+			answerContentText = answer.content[defaultLanguage];
+		}
+		
+		textElemet.innerHTML = answerContentText;
+		answerContent.appendChild(textElemet);
+		
+		// 获取URL中的参数值
+		function getParameterByName(name) {
+			var url = window.location.href;
+			name = name.replace(/[\[\]]/g, "\\$&");
+			var regex = new RegExp("[?&]" + name + "(=([^&#]*)|&|#|$)"),
+			results = regex.exec(url);
+			if (!results) return null;
+			if (!results[2]) return '';
+			return decodeURIComponent(results[2].replace(/\+/g, " "));
+		}
+	</script>
+</body>
+</html>

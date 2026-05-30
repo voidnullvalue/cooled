@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+	<meta name="viewport" content="initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <title>answer-content</title>
+    
+	<!-- 放到head中确保被渲染之前加载 -->
+	<link rel="stylesheet" href="../public-style.css" type="text/css"/>
+	<style>
+		/* 样式 */
+		.image-container {
+		  display: flex;
+		  flex-direction: column;
+		  align-items: center;
+		}
+		.image-container img {
+		  width: 200px;
+		  height: auto;
+		  margin-bottom: 10px;
+		}
+		.image-container span {
+		  font-size: 14px;
+		  font-weight: bold;
+		}
+	</style>
+</head>
+<body>
+	<div class="answer-list-container">
+		<h3 id="answer-title">			
+		</h3>
+		<div id="divider-div" class="divider">
+		</div>
+		<div id="answer-content">
+		</div>
+	</div>
+
+    <div id="footer"></div>
+
+    <script src="../public-script.js"></script>
+
+    <script>
+        var footer = document.getElementById("footer"); 
+        footer.innerHTML = answerBottomBtnHtml;
+    </script>
+
+	
+	<!-- 放到body中，确保所有 JavaScript 代码在页面渲染之前加载完成 -->
+	<script>
+		// 答案内容
+		var answer = {
+			/// 内容用html语法编写，加粗用<b>，换行用<br>，其他写法请参考html语法
+			content: {
+				"zh-CN": "<b>1. 分享</b><br>点击涂鸦或者动画编辑界面右上角的分享按钮，选择\"第三方社交平台\"或者\"邮件\"，即可把内容分享给其他朋友。<br><br><b>2. 导入</b><br>通过\"第三方社交平台\"或者\"邮件\"接收到涂鸦或者动画内容文件以后，选择对应的文件，点击\"<b>共享</b>\"按钮或者\"<b>其他应用打开</b>\"按钮，在应用列表中选择\"<b>CoolLED1248</b>\"，即可导入分享的内容。<br><br>备注：只能导入当前连接设备对应分辨率和格式的内容，内容文件以\"<b>jt</b>\"结尾。<br>",
+				"en": "<b>1. Share</b><br>Click the share button in the upper right corner of the graffiti or animation editing interface, select \"Third-party social platform\" or \"Email\", and you can share the content with other friends. <br><br><b>2. Import</b><br>After receiving graffiti or animation content files through \"Third-party social platform\" or \"Email\", select the corresponding file, click the \"<b>Share</b>\" button or the \"<b>Other application open</b>\" button, and select \"<b>CoolLED1248</b>\" in the application list to import the shared content. <br><br>Remarks: Only the content with the resolution and format corresponding to the currently connected device can be imported, and the content file ends with \"<b>jt</b>\". <br>",
+				"ja": "<b>1. 共有</b><br>落書きやアニメーションの編集インターフェースの右上隅にある共有ボタンをクリックし、「サードパーティのソ ーシャルプラットフォーム」または「電子メール」を選択すると、コンテンツを他の友達と共有できます。 <br><br><b>2. インポート</b><br>「サードパーティのソーシャル プラットフォーム」または「電子メール」を通じて落書きまたはアニメーション コンテンツ ファ イルを受信した後、対応するファイルを選択し、「<b>共有</b>」ボタンまたは「<b>他のアプリケーションを開く</b>」ボタンをクリックし、アプリケーション リストで「<b>CoolLED1248</b>」を選択して共有コンテンツをインポートします。 <br><br>備考: 現在接続されているデバイスに対応する解像度と形式のコンテンツのみをインポートできます。コンテンツ ファイルの末尾は「<b>jt</b>」です。 <br>",
+				"fr": "<b>1. Partager</b><br>Cliquez sur le bouton de partage dans le coin supérieur droit de l'interface d'édition de graffitis ou d'animations, sélectionnez \"plate-forme sociale tierce\" ou \"Email\", et vous pourrez partager le contenu avec d'autres amis. <br><br><b>2. Importer</b><br>Après avoir reçu des fichiers de contenu de graffiti ou d'animation via une \"plate-forme sociale tierce\" ou \"Email\", sélectionnez le fichier correspondant, cliquez sur le bouton \"<b>Partager</b>\" ou sur le bouton \"<b>Autre application ouverte</b>\", et sélectionnez \"<b>CoolLED1248</b>\" dans la liste des applications pour importer le contenu partagé. <br><br>Remarques : Seul le contenu avec la résolution et le format correspondant à l'appareil actuellement connecté peut être importé, et le fichier de contenu se termine par \"<b>jt</b>\". <br>",
+				"de": "<b>1. Teilen</b><br>Klicken Sie auf die Schaltfläche „Teilen“ in der oberen rechten Ecke der Graffiti- oder Animationsbearbeitungsoberfläche, wählen Sie „Soziale Plattform eines Drittanbieters“ oder „E-Mail“ und Sie können den Inhalt mit anderen Freunden teilen. <br><b>2. Importieren</b><br><br>Anmerkungen: Es können nur Inhalte mit der Auflösung und dem Format importiert werden, die dem aktuell angeschlossenen Gerät entsprechen, und die Inhaltsdatei endet mit „<b>jt</b>“. <br>",
+				"ko": "<b>1. 공유</b><br>그래피티 또는 애니메이션 편집 인터페이스의 오른쪽 상단에 있는 공유 버튼을 클릭하고 \"타사 소셜 플랫폼\" 또는 \"이메일\"을 선택하면 다른 친구들과 콘텐츠를 공유할 수 있습니다. <br><br><b>2. 가져오기</b><br>\"타사 소셜 플랫폼\" 또는 \"이메일\"을 통해 그래피티 또는 애니메이션 콘텐츠 파일을 받은 후 해당 파일을 선택하고 \"<b>공유</b>\" 버튼 또는 \"<b>다른 애플리케이션 열기</b>\" 버튼을 클릭한 다음 애플리케이션 목록에서 \"<b>CoolLED1248</b>\"을 선택하여 공유 콘텐츠를 가져옵니다. <br><br>참고: 현재 연결된 기기에 해당하는 해상도와 포맷의 콘텐츠만 불러올 수 있으며, 콘텐츠 파일은 \"<b>jt</b>\"로 끝납니다. <br>",
+				"it": "<b>1. Condivisione</b><br>Fai clic sul pulsante di condivisione nell'angolo in alto a destra dell'interfaccia di modifica dei graffiti o delle animazioni, seleziona \"piattaforma social di terze parti\" o \"Email\" e puoi condividere il contenuto con altri amici. <br><br><b>2. Importazione</b><br> Dopo aver ricevuto file di contenuti di graffiti o animazioni tramite \"piattaforma social di terze parti\" o \"Email\", selezionare il file corrispondente, fare clic sul pulsante \"<b>Condividi</b>\" o sul pulsante \"<b>Altra applicazione aperta</b>\" e selezionare \"<b>CoolLED1248</b>\" nell'elenco delle applicazioni per importare il contenuto condiviso. <br><br>Note: è possibile importare solo il contenuto con la risoluzione e il formato corrispondenti al dispositivo attualmente connesso e il file di contenuto termina con \"<b>jt</b>\". <br>",
+				"pt": "<b>1. Compartilhar</b><br>Clique no botão de compartilhamento no canto superior direito da interface de edição de graffiti ou animação, selecione \"plataforma social de terceiros\" ou \"Email\" e você poderá compartilhar o conteúdo com outros amigos. <br><br><b>2. Importar</b><br>Depois de receber arquivos de conteúdo de grafite ou animação por meio de \"plataforma social de terceiros\" ou \"Email\", selecione o arquivo correspondente, clique no botão \"<b>Compartilhar</b>\" ou no botão \"<b>Outro aplicativo aberto</b>\" e selecione \"<b>CoolLED1248</b>\" na lista de aplicativos para importar o conteúdo compartilhado. <br><br>Observação: Somente o conteúdo com a resolução e formato correspondente ao dispositivo atualmente conectado pode ser importado, e o arquivo de conteúdo termina com \"<b>jt</b>\". <br>",
+				"es": "<b>1. Compartir</b><br>Haga clic en el botón Compartir en la esquina superior derecha de la interfaz de edición de graffiti o animación, seleccione \"plataforma social de terceros\" o \"correo electrónico\" y podrá compartir el contenido con otros amigos. <br><br><b>2. Importar</b><br>Después de recibir archivos de contenido de graffiti o animación a través de \"plataforma social de terceros\" o \"correo electrónico\", seleccione el archivo correspondiente, haga clic en el botón \"<b>Compartir</b>\" o en el botón \"<b>Abrir otra aplicación</b>\" y seleccione \"<b>CoolLED1248</b>\" en la lista de aplicaciones para importar el contenido compartido. <br><br>Observaciones: solo se puede importar el contenido con la resolución y el formato correspondientes al dispositivo conectado actualmente, y el archivo de contenido termina con \"<b>jt</b>\". <br>",
+				"zh-TW": "<b>1. 分享</b><br>點擊塗鴉或者動畫編輯界面右上角的分享按鈕，選擇\"第三方社交平台\"或者\"郵件\"，即可把內容分享給其他朋友。 <br><br><b>2. 導入</b><br>通過\"第三方社交平台\"或者\"郵件\"接收到塗鴉或者動畫內容文件以後，選擇對應的文件，點擊\"<b>共享</b>\"按鈕或者\"<b>其他應用打開</b>\"按鈕，在應用列表中選擇\"<b>CoolLED1248</b>\"，即可導入分享的內容。 <br><br>備註：只能導入當前連接設備對應分辨率和格式的內容，內容文件以\"<b>jt</b>\"結尾。 <br>",
+				"ru": "<b>1. Поделиться</b><br>Нажмите кнопку «Поделиться» в правом верхнем углу интерфейса редактирования граффити или анимации, выберите «ст оронняя социальная платформа» или «электронная почта», и вы сможете поделиться контентом с другими друзьями. <br><br><b>2. Импорт</b><br>После п олучения файлов с граффити или анимационным контентом через \"стороннюю социальную платформу\" или \"электронную почту\" выберите с оответствующий файл, нажмите кнопку \"<b>Поделиться</b>\" или кнопку \"<b>Открыть другое приложение</b>\" и выберите \"<b>CoolLED1248</b>\" в списке приложений, чтобы импортировать общий контент. <br><br>Примечания. Мо жно импортировать только содержимое с разрешением и форматом, со ответствующим текущему подключенному устройству, а файл содержи мого заканчивается на \"<b>jt</b>\". <br>",
+				"vi": "<b>1. Chia sẻ</b><br>Nhấp vào nút chia sẻ ở góc trên bên phải của giao diện chỉnh sửa graffiti hoặc hoạt hình, chọn \"Nền tảng xã hội của bên thứ ba\" hoặc \"Email\" và bạn có thể chia sẻ nội dung với những người bạn khác. <br><br><b>2. Nhập</b><br>Sau khi nhận được tệp nội dung graffiti hoặc hoạt hình thông qua \"Nền tảng xã hội của bên thứ ba\" hoặc \"Email\", hãy chọn tệp tương ứng, nhấp vào \"<b>Chia sẻ</b >\" hoặc nút \"<b>Mở ứng dụng khác</b>\" và chọn \"<b>CoolLED1248</b>\" trong danh sách ứng dụng để nhập nội dung được chia sẻ. <br><br>Lưu ý: Chỉ có thể nhập nội dung có độ phân giải và định dạng tương ứng với thiết bị hiện được kết nối và tệp nội dung kết thúc bằng \"<b>jt</b>\". <br>",
+				"th": "<b>1. แบ่งปัน</b><br>คลิกปุ่มแชร์ที่มุมขวาบนของอินเทอร์เฟซการแก้ไขกราฟฟิตีหรือภาพเคลื่อนไหว เลือก \"แพลตฟอร์มโซเชียลบุคคลที่สาม\" หรือ \"อีเมล\" และคุณสามารถแบ่งปันเนื้อหาได้ กับเพื่อนคนอื่นๆ <br><br><b>2. นำเข้า</b><br>หลังจากได้รับไฟล์เนื้อหากราฟฟิตีหรือภาพเคลื่อนไหวผ่าน \"แพลตฟอร์มโซเชียลบุคคลที่สาม\" หรือ \"อีเมล\" ให้เลือกไฟล์ที่เกี่ยวข้อง แล้วคลิกปุ่ม \"<b>แชร์</b >\" หรือปุ่ม \"<b>เปิดแอปพลิเคชันอื่น</b>\" และเลือก \"<b>CoolLED1248</b>\" ในรายการแอปพลิเคชันเพื่อนำเข้าเนื้อหาที่แชร์ <br><br>หมายเหตุ: สามารถนำเข้าได้เฉพาะเนื้อหาที่มีความละเอียดและรูปแบบที่สอดคล้องกับอุปกรณ์ที่เชื่อมต่ออยู่ในปัจจุบัน และไฟล์เนื้อหาลงท้ายด้วย \"<b>jt</b>\"<br>",
+			},
+			title: {
+				"zh-CN": "涂鸦和动画内容分享、导入",
+				"en": "Graffiti and animation content sharing and importing",
+				"ja": "落書きやアニメーションのコンテンツの共有とインポート",
+				"fr": "Partage et importation de contenu graffiti et animation",
+				"de": "Teilen und Importieren von Graffiti- und Animationsinhalten",
+				"ko": "그래피티 및 애니메이션 콘텐츠 공유 및 가져오기",
+				"it": "Condivisione e importazione di contenuti di graffiti e animazioni",
+				"pt": "Compartilhamento e importação de conteúdo de graffiti e animação",
+				"es": "Intercambio e importación de contenido de graffiti y animación",
+				"zh-TW": "塗鴉和動畫內容分享、導入",
+				"ru": "Совместное использование и импорт граффити и анимационного контента",
+				"vi": "Chia sẻ và nhập nội dung graffiti và hoạt hình",
+				"th": "การแบ่งปันและการนำเข้าเนื้อหากราฟฟิตีและแอนิเมชั่น",
+			}
+		};
+
+		// 获取访问参数中的language字段，如果不存在，则默认使用英语
+		var language = (getParameterByName("language") || defaultLanguage);
+
+		// 答案标题
+		var answerTitle = document.getElementById("answer-title");
+		var answerTitleText = answer.title[language];
+		if (answerTitleText === undefined) {
+			answerTitleText = answer.title[defaultLanguage];
+		}
+		answerTitle.textContent = answerTitleText;
+		
+		// 答案内容
+		var answerContent = document.getElementById("answer-content");
+		var textElemet = document.createElement("p");
+		
+		var answerContentText = answer.content[language];
+		if (answerContentText === undefined) {
+			answerContentText = answer.content[defaultLanguage];
+		}
+		
+		textElemet.innerHTML = answerContentText;
+		answerContent.appendChild(textElemet);
+		
+		var imageElement = document.createElement(p);
+	</script>
+</body>
+</html>

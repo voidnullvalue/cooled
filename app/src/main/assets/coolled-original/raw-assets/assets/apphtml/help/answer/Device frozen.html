@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+	<meta name="viewport" content="initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <title>answer-content</title>
+    
+	<!-- 放到head中确保被渲染之前加载 -->
+	<link rel="stylesheet" href="../public-style.css" type="text/css"/>
+	<style>
+	</style>
+</head>
+<body>
+	<div class="answer-list-container">
+		<h3 id="answer-title">			
+		</h3>
+		<div id="divider-div" class="divider">
+		</div>
+		<div id="answer-content">
+		</div>
+	</div>
+
+    <div id="footer"></div>
+
+    <script src="../public-script.js"></script>
+
+    <script>
+        var footer = document.getElementById("footer"); 
+        footer.innerHTML = answerBottomBtnHtml;
+    </script>
+
+	
+	<!-- 放到body中，确保所有 JavaScript 代码在页面渲染之前加载完成 -->
+	<script>
+		// 答案内容
+		var answer = {
+			/// 内容用html语法编写，加粗用<b>，换行用<br>，其他写法请参考html语法
+			content: {
+				"zh-CN": "请参照“恢复出厂设置”章节，给设备恢复出厂设置即可。",
+				"en": "Please refer to the 'Factory Reset' section to reset the device to its factory settings.",
+				"ja": "デバイスを工場出荷時の設定にリセットするには、「工場出荷時のリセット」セクションを参照してください。",
+				"fr": "Veuillez vous référer à la section 'Réinitialisation d'usine' pour rétablir les paramètres d'usine de l'appareil.",
+				"de": "Bitte beachten Sie den Abschnitt 'Werkseinstellungen wiederherstellen', um das Gerät auf die Werkseinstellungen zurückzusetzen.",
+				"ko": "기기를 공장 초기화하려면 '공장 초기화' 섹션을 참조하십시오.",
+				"it": "Per ripristinare il dispositivo alle impostazioni di fabbrica, fare riferimento alla sezione 'Ripristino delle impostazioni di fabbrica'.",
+				"pt": "Por favor, consulte a seção 'Redefinir para as configurações de fábrica' para redefinir o dispositivo para as configurações de fábrica.",
+				"es": "Por favor, consulte la sección 'Restablecer a valores de fábrica' para restablecer el dispositivo a sus configuraciones de fábrica.",
+				"zh-TW": "請參照“恢復出廠設置”章節，給設備恢復出廠設置即可。",
+				"ru": "Пожалуйста, обратитесь к разделу «Сброс до заводских настроек», чтобы сбросить устройство до заводских настроек.",
+				"vi": "Vui lòng tham khảo chương \"Khôi phục cài đặt gốc\" để khôi phục cài đặt gốc cho thiết bị.",
+				"th": "ปรดดูบท \"คืนค่าการตั้งค่าจากโรงงาน\" เพื่อคืนค่าอุปกรณ์เป็นการตั้งค่าจากโรงงาน",
+			},
+			title: {
+				"zh-CN": "设备死机或显示异常",
+				"en": "The device is frozen or displaying abnormally",
+				"ja": "デバイスがフリーズするか、異常に表示されています",
+				"fr": "L'appareil est bloqué ou affiche anormalement",
+				"de": "Das Gerät ist eingefroren oder zeigt eine abnormale Anzeige",
+				"ko": "장치가 멈추거나 비정상적으로 표시됩니다",
+				"it": "Il dispositivo si blocca o mostra un comportamento anomalo",
+				"pt": "O dispositivo está travando ou exibindo de forma anormal",
+				"es": "El dispositivo se bloquea o muestra una pantalla anormal",
+				"zh-TW": "設備死機或顯示異常",
+				"ru": "Устройство зависает или отображает ненормальную информацию",
+				"vi": "Máy bị treo hoặc hiển thị bất thường",
+				"th": "อุปกรณ์ค้างหรือแสดงผลผิดปกติ",
+			}
+		};
+
+		// 获取访问参数中的language字段，如果不存在，则默认使用英语
+		var language = (getParameterByName("language") || defaultLanguage);
+
+		// 答案标题
+		var answerTitle = document.getElementById("answer-title");
+		var answerTitleText = answer.title[language];
+		if (answerTitleText === undefined) {
+			answerTitleText = answer.title[defaultLanguage];
+		}
+		answerTitle.textContent = answerTitleText;
+		
+		// 答案内容
+		var answerContent = document.getElementById("answer-content");
+		var textElemet = document.createElement("p");
+		
+		var answerContentText = answer.content[language];
+		if (answerContentText === undefined) {
+			answerContentText = answer.content[defaultLanguage];
+		}
+		
+		textElemet.innerHTML = answerContentText;
+		answerContent.appendChild(textElemet);
+	</script>
+</body>
+</html>
