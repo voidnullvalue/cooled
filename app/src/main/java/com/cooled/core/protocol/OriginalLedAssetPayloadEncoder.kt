@@ -61,13 +61,24 @@ object OriginalLedAssetPayloadEncoder {
             for (y in 0 until bitmap.height) {
                 val px = bitmap.getPixel(x, y)
                 val alpha = (px ushr 24) and 0xFF
-                val r = if (alpha == 0) 0 else (px ushr 20) and 0x0F
-                val g = if (alpha == 0) 0 else (px ushr 12) and 0x0F
-                val b = if (alpha == 0) 0 else (px ushr 4) and 0x0F
-                out[pos++] = ((r shl 4) or g).toByte()
-                out[pos++] = (b shl 4).toByte()
+                val encoded = rgb444TransferColorBytes(px, alpha)
+                out[pos++] = encoded[0]
+                out[pos++] = encoded[1]
             }
         }
         return out
+    }
+
+    internal fun rgb444TransferColorBytes(argb: Int, alpha: Int = (argb ushr 24) and 0xFF): ByteArray {
+        val r = if (alpha == 0) 0 else rgb444Transfer((argb ushr 16) and 0xFF)
+        val g = if (alpha == 0) 0 else rgb444Transfer((argb ushr 8) and 0xFF)
+        val b = if (alpha == 0) 0 else rgb444Transfer(argb and 0xFF)
+        return byteArrayOf(r.toByte(), ((g shl 4) or b).toByte())
+    }
+
+    private fun rgb444Transfer(channel: Int): Int = when {
+        channel >= 238 -> 15
+        channel <= 47 -> 0
+        else -> ((channel - 47) / 14) + 1
     }
 }
