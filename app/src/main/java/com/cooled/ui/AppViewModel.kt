@@ -270,6 +270,7 @@ class AppViewModel(
                         pendingProgram = null
                         pendingChunkIndex = 0
                         pendingStartRetries = 0
+                        activateUploadedProgram(pack)
                     } else {
                         sendPendingChunk(pack)
                     }
@@ -286,6 +287,13 @@ class AppViewModel(
             }
             else -> Unit
         }
+    }
+
+    private fun activateUploadedProgram(pack: ProgramPackage) = viewModelScope.launch {
+        if (pack.metadata.family != DeviceFamily.COOLLEDUX && pack.metadata.family != DeviceFamily.COOLLEDX && pack.metadata.family != DeviceFamily.COOLLEDS) return@launch
+        delay(250L)
+        repo.sendDriveState(1)
+        appendEvent("${ts()} Program activation sent driveState=1")
     }
 
     private fun sendPendingChunk(pack: ProgramPackage) = viewModelScope.launch {
