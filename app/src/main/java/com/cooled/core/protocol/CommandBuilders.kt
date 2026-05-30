@@ -134,7 +134,7 @@ object CommandBuilders {
             request.useAlternateOpcode -> 0x1A
             else -> 0x02
         }
-        val startSource = request.startSource ?: request.compressed
+        val startSource = request.compressed
         val crc = CoolLedCrc.crc32Like(startSource)
         val base = mutableListOf(opcode.toByte())
         base += intToBytes(crc)
