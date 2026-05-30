@@ -4,6 +4,7 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import com.cooled.core.assets.OriginalLedAssetByteSources
 import com.cooled.core.assets.OriginalLedAssetKinds
+import com.cooled.core.assets.OriginalLedAssetUploadRules
 
 data class EncodedOriginalLedAssetPayload(
     val bytes: ByteArray,
@@ -14,6 +15,8 @@ data class EncodedOriginalLedAssetPayload(
 
 object OriginalLedAssetPayloadEncoder {
     fun encode(assetPath: String, kind: String, displayColumns: Int?, displayRows: Int?): EncodedOriginalLedAssetPayload {
+        val check = OriginalLedAssetUploadRules.check(assetPath, kind)
+        require(check.uploadable) { "Original asset is not uploadable: ${check.reason}" }
         val raw = OriginalLedAssetByteSources.active.read(assetPath) ?: ByteArray(0)
         val targetWidth = displayColumns?.coerceIn(8, 512) ?: 128
         val targetHeight = displayRows?.coerceIn(8, 128) ?: 32
@@ -41,7 +44,7 @@ object OriginalLedAssetPayloadEncoder {
 
     private fun shouldRasterize(assetPath: String): Boolean {
         val lowerPath = assetPath.lowercase()
-        if (lowerPath.endsWith(".jt") || lowerPath.endsWith(".bin") || lowerPath.endsWith(".json")) return false
+        if (lowerPath.endsWith(".jt")) return false
         return lowerPath.endsWith(".png") || lowerPath.endsWith(".webp") || lowerPath.endsWith(".jpg") || lowerPath.endsWith(".jpeg") || lowerPath.endsWith(".bmp")
     }
 
