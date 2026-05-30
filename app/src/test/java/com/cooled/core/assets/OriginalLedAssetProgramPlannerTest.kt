@@ -76,5 +76,11 @@ class OriginalLedAssetProgramPlannerTest {
             OriginalLedAsset(OriginalLedAssetKinds.ANIMATION, "raw-assets/assets/gif/sample.gif", 900, "sha-gif"),
             OriginalLedAsset(OriginalLedAssetKinds.FONT, "fonts/32_32_large", 8388608, "sha-font")
         )
+
+        override fun summary(): OriginalLedAssetSummary = OriginalLedAssetSummary(
+            total = listAssets().size,
+            byKind = listAssets().groupingBy { it.kind }.eachCount(),
+            examples = listAssets().take(2)
+        )
     }
 }

@@ -38,21 +38,9 @@ object LedScanRecordParser {
         }
     }
 
-    private fun readRows(data: ByteArray): Int? = firstPlausibleDimension(data, listOf(4, 5, 6, 7, 8, 9, 10))
-    private fun readColumns(data: ByteArray): Int? = firstPlausibleDimension(data, listOf(5, 6, 7, 8, 9, 10, 11))
-    private fun readColorType(data: ByteArray): Int? = firstPlausibleColor(data, listOf(6, 7, 8, 9, 10, 11, 12))
-
-    private fun firstPlausibleDimension(data: ByteArray, offsets: List<Int>): Int? {
-        return offsets.asSequence()
-            .mapNotNull { idx -> data.getOrNull(idx)?.toInt()?.and(0xFF) }
-            .firstOrNull { it in plausibleDimensions }
-    }
-
-    private fun firstPlausibleColor(data: ByteArray, offsets: List<Int>): Int? {
-        return offsets.asSequence()
-            .mapNotNull { idx -> data.getOrNull(idx)?.toInt()?.and(0xFF) }
-            .firstOrNull { it in 1..8 }
-    }
+    private fun readRows(data: ByteArray): Int? = data.getOrNull(4)?.toInt()?.and(0xFF)?.takeIf { it in plausibleDimensions }
+    private fun readColumns(data: ByteArray): Int? = data.getOrNull(5)?.toInt()?.and(0xFF)?.takeIf { it in plausibleDimensions }
+    private fun readColorType(data: ByteArray): Int? = data.getOrNull(6)?.toInt()?.and(0xFF)?.takeIf { it in 1..8 }
 
     private fun u16(data: ByteArray, offset: Int): Int = ((data[offset].toInt() and 0xFF) shl 8) or (data[offset + 1].toInt() and 0xFF)
 

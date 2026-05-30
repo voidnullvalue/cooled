@@ -4,11 +4,11 @@ This tracks the LED/device behavior port, excluding Google Play Services, Fireba
 
 ## Rough completion estimate
 
-Current branch is approximately **65-70% through the LED-facing port**.
+Current branch is approximately **70-75% through the LED-facing port**.
 
-That estimate is intentionally conservative. The core BLE/control command surface is mostly present. The remaining risk is concentrated in exact display-content byte parity: text, emoji/font transforms, icon/image payloads, GIF/animation payloads, original APK template mapping, and exact scan-record metadata offsets.
+The core BLE/control command surface is mostly present. The remaining risk is still concentrated in exact display-content byte parity for non-text assets and templates, plus live-device validation of the final payload bytes.
 
-## Ported or substantially wired
+## Exact / substantially ported
 
 - BLE scan/connect/discover/notify/write path.
 - Permission handling for Android BLE/location behavior.
@@ -39,66 +39,71 @@ That estimate is intentionally conservative. The core BLE/control command surfac
 - Original APK asset program planner.
 - Original APK asset upload route through the ViewModel and UI.
 - Scan-result LED metadata model.
-- Initial scan-record metadata parser shell.
+- Deterministic scan-record metadata parser for the recovered manufacturer-data layout:
+  - device id: bytes 0-1, big-endian
+  - rows: byte 4
+  - columns: byte 5
+  - color type: byte 6
 - Scan-derived matrix dimensions feeding CoolLEDUX text and asset-program generation.
-- 32px font asset reader plumbing for `32_32_large`, `32_32_small`, and `8_small`.
+- Asset-backed CoolLEDUX font readers for:
+  - `fonts/8_small` (8 bytes/glyph)
+  - `fonts/32_32_large` (128 bytes/glyph, bold 32x32)
+  - `fonts/32_32_small` (128 bytes/glyph, regular 32x32)
+  - `raw-assets/assets/UNICODE16` / `UNICODE16_bold` (32 bytes/glyph)
+  - `raw-assets/assets/UNICODE12` / `UNICODE12_BOLD` (24 bytes/glyph)
+  - `raw-assets/assets/flutter_assets/assets/coolledux/font_library/unicode_14_bold` (28 bytes/glyph)
+  - `raw-assets/assets/flutter_assets/assets/coolledux/font_library/unicode_16_bold` fallback (32 bytes/glyph)
+- CoolLEDUX text program byte generation uses asset-backed glyph records for HELLO/digits/punctuation/symbols when the extracted font assets are installed.
+- APK-shaped `getDataWithTextContentProgramContent(...)`, `getDataWithTextCombineProgram(...)`, `getDataForCombineProgram(...)`, `getDataForProgram(...)`, `getDataWithProgram(...)`, and compressed `getDataResult(...)` helpers are present.
 - Main UI surface for most LED-facing command features.
-- Bitmap payload encoder scaffold for original APK LED image/icon/emoji/animation assets.
 
-## Partially ported
+## Partially ported / structurally tested
 
 - CoolLEDUX text program generation.
   - Model/defaults are present.
-  - 32px asset-backed glyph loading is present.
+  - 32px, 16px, 14px-bold, 12px, and 8px asset-backed glyph loading is present.
   - Matrix dimensions can come from scan metadata.
   - Staged APK-style program/combine/layer functions are present.
-  - Exact `CoolledUXUtils` byte layout is still not fully proven.
-- Scan-record parsing.
-  - Metadata shell exists.
-  - Exact original offsets still need to be verified against decompiled APK methods.
+  - Exact text-content framing is covered by tests with verbatim glyph bytes and asset-backed HELLO glyph embedding.
+  - Still needs live-device confirmation for final visual output.
 - Original asset support.
   - Extraction/cataloging/runtime reads are present.
   - Asset upload routing is present.
-  - Bitmap payload encoder scaffold exists.
-  - Exact icon/animation/GIF/template transforms are not yet proven.
+  - Raw `.jt` template assets are preserved as raw payload inputs instead of being rasterized.
+  - Bitmap payload encoder scaffold exists for bitmap extensions.
+  - Exact icon/animation/GIF/template transforms are not yet proven against original APK golden vectors.
+- Template/content generators.
+  - Extracted business-hours `.jt` assets are identified as raw template payload inputs.
+  - Template assets are wired through the content-program system as `OriginalAsset` selections, not random standalone writes.
+  - Dynamic clock/date/weather/scoreboard/time-count template builders still need APK source/golden-vector confirmation before being marked exact.
+- Family/capability detection.
+  - Prefix coverage remains stable for `CoolLEDM`, `CoolLEDU`, `CoolLEDUX`, `CoolLEDX`, `CoolLEDS`, and `iLedClock`.
+  - Deeper APK capability gating by device-info/model/color-type remains pending.
+- Program playlist behavior.
+  - Start-header index/count/showCount handling is implemented and tested as playlist-level metadata.
+  - Multi-program sequencing beyond single package construction still needs live upload validation.
 
-## Remaining major work
+## Still approximate / blocked
 
-### High risk / high value
+1. `FontUtils.getFontByteDataCoolleduxForEmoji(...)` transform details are now asset-backed for glyph table reads, but the exact original high-level transform/rotation/mirroring/color handling remains blocked because the recovered source set still does not include `FontUtils.java`.
+2. Icon/image/GIF encoding is not fully exact. The extracted tree currently contains no `.gif` files, so no GIF golden vector can be produced from local assets yet. Bitmap-extension rasterization remains a scaffold until APK builders and golden vectors are recovered.
+3. Clock/date/weather/temp/humidity/scoreboard/time-count/business-hours template composition still needs exact APK functions or vectors. Raw `.jt` payload handling is covered, but dynamic template assembly is not proven.
+4. Scan-record parsing is deterministic for the recovered manufacturer layout, but additional real raw advertisements should be added if devices advertise other CoolLED layouts.
+5. Live-device validation is still required to claim that text/icon/GIF/template payloads render exactly as the original APK.
 
-1. Replace the current staged CoolLEDUX text-program byte layout with exact recovered APK layouts for:
-   - `getDataWithTextContentProgramContent(...)`
-   - `getDataWithTextCombineProgram(...)`
-   - `getDataForCombineProgram(...)`
-   - `getDataForProgram(...)`
-   - `getDataResult(...)`
+## APK functions ported or represented
 
-2. Port exact `FontUtils.getFontByteDataCoolleduxForEmoji(...)` transform behavior.
-
-3. Finish exact icon/image program generation.
-
-4. Finish exact GIF/animation program generation.
-
-5. Port clock/date/frame/weather/temp/scoreboard/time-count program-content templates if they generate LED display payloads rather than only control commands.
-
-### Medium risk
-
-6. Replace scan-record parser heuristics with exact APK offsets.
-
-7. Replace generic capability detection with APK-style family/feature detection using name, scan record, device info, and color type.
-
-8. Add program-slot/show-count behavior matching original app for multi-program playlists.
-
-9. Add local asset selection/picker models for original APK icon/animation/template categories.
-
-### Lower risk
-
-10. UI organization into tabs/screens similar to original LED feature areas.
-
-11. Better summaries for parsed alarm/reminder/timer state.
-
-12. Golden-vector tests after exact byte layouts are ported.
+- `CoolledUXUtils.getDataWithTextContentProgramContent(...)`
+- `CoolledUXUtils.getDataWithTextCombineProgram(...)` for normal text content
+- `CoolledUXUtils.getDataForCombineProgram(...)` for known LED-facing text content
+- `CoolledUXUtils.getDataForProgram(...)`
+- `CoolledUXUtils.getDataWithProgram(...)`
+- `CoolledUXUtils.getDataResult(...)` as body + LZSS compressed chunks
+- `FontUtils.readUnicode3232(...)` / `readUnicode3232Bold(...)` equivalent table reads
+- `FontUtils.readUnicode16(...)` / `readUnicode16Bold(...)` equivalent table reads
+- `FontUtils.readUnicode12(...)` / `readUnicode12Bold(...)` equivalent table reads
+- Small 8px font table reads from `8_small`
 
 ## Current priority
 
-Continue porting display-content byte parity. Command/control wiring is no longer the bottleneck; exact content generation is.
+Continue porting display-content byte parity. Command/control wiring is no longer the bottleneck; exact content generation and live-device visual validation are.

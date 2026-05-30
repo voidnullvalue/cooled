@@ -2,6 +2,9 @@ package com.cooled.core.protocol
 
 interface CoolleduxFontSource {
     fun readGlyph32(codePoint: Int, bold: Boolean): ByteArray?
+    fun readGlyph16(codePoint: Int, bold: Boolean): ByteArray? = null
+    fun readGlyph14Bold(codePoint: Int): ByteArray? = null
+    fun readGlyph12(codePoint: Int, bold: Boolean): ByteArray? = null
     fun readGlyph8(codePoint: Int): ByteArray?
 }
 
