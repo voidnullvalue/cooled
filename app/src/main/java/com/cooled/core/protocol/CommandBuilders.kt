@@ -134,7 +134,7 @@ object CommandBuilders {
             request.useAlternateOpcode -> 0x1A
             else -> 0x02
         }
-        val startSource = request.compressed
+        val startSource = request.startSource ?: request.compressed
         val crc = CoolLedCrc.crc32Like(startSource)
         val base = mutableListOf(opcode.toByte())
         base += intToBytes(crc)
@@ -143,8 +143,10 @@ object CommandBuilders {
         request.count?.let { base += (it and 0xFF).toByte() }
         request.showCount?.let { base += (it and 0xFF).toByte() }
 
-        val isAdvancedFamily = family == DeviceFamily.COOLLEDUX || family == DeviceFamily.ILEDCLOCK || family == DeviceFamily.COOLLEDS || family == DeviceFamily.COOLLEDX
-        if (isAdvancedFamily && trailer.isNotEmpty()) {
+        // CoolledUXUtils.getStartDataForProgram basic overload is used for normal
+        // CoolLEDUX uploads; advanced fields are only APK-confirmed for the
+        // isILedCar path, so do not append speculative trailers here.
+        if (family != DeviceFamily.COOLLEDUX && trailer.isNotEmpty()) {
             base += 0x00
             repeat(8) { base += 0x00 }
             base += trailer.toList()

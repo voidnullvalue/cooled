@@ -3,7 +3,6 @@ package com.cooled.core.protocol
 import com.cooled.core.model.DeviceFamily
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class CommandBuildersAndFrameCodecTest {
@@ -114,8 +113,9 @@ class CommandBuildersAndFrameCodecTest {
     }
 
     @Test
-    fun coolleduxProgramStartHeaderIncludesAdvancedTrailer() {
+    fun coolleduxProgramStartHeaderUsesBasicApkFieldsAndUncompressedSource() {
         val compressed = byteArrayOf(0x10, 0x20, 0x30, 0x40)
+        val uncompressed = byteArrayOf(0x01, 0x02, 0x03)
         val payload = FrameCodec.decode(
             CommandBuilders.buildProgramStartHeader(
                 family = DeviceFamily.COOLLEDUX,
@@ -123,9 +123,10 @@ class CommandBuildersAndFrameCodecTest {
                     compressed = compressed,
                     index = 2,
                     count = 1,
-                    showCount = 1,
+                    showCount = 3,
                     programType = 14,
-                    extraTypeByte = 1
+                    extraTypeByte = 1,
+                    startSource = uncompressed
                 )
             )
         )
@@ -133,10 +134,16 @@ class CommandBuildersAndFrameCodecTest {
         assertEquals(0x02, payload[0].toInt() and 0xFF)
         assertEquals(2, payload[9].toInt() and 0xFF)
         assertEquals(1, payload[10].toInt() and 0xFF)
-        assertEquals(1, payload[11].toInt() and 0xFF)
-        assertEquals(0x00, payload[12].toInt() and 0xFF)
-        assertTrue(payload.takeLast(2).map { it.toInt() and 0xFF } == listOf(0x05, 0x01))
+        assertEquals(3, payload[11].toInt() and 0xFF)
+        assertEquals(12, payload.size)
+        assertEquals(uncompressed.size, readU32(payload, 5))
     }
+
+    private fun readU32(bytes: ByteArray, offset: Int): Int =
+        ((bytes[offset].toInt() and 0xFF) shl 24) or
+            ((bytes[offset + 1].toInt() and 0xFF) shl 16) or
+            ((bytes[offset + 2].toInt() and 0xFF) shl 8) or
+            (bytes[offset + 3].toInt() and 0xFF)
 
     private fun assertPayload(expected: ByteArray, frame: ByteArray) {
         assertArrayEquals(expected, FrameCodec.decode(frame))

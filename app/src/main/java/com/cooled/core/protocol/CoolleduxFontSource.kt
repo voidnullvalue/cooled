@@ -10,7 +10,12 @@ interface CoolleduxFontSource {
 
 object CoolleduxFontSources {
     @Volatile
-    var active: CoolleduxFontSource = BuiltinCoolleduxFontSource
+    var active: CoolleduxFontSource = MissingCoolleduxFontSource
+}
+
+object MissingCoolleduxFontSource : CoolleduxFontSource {
+    override fun readGlyph32(codePoint: Int, bold: Boolean): ByteArray? = null
+    override fun readGlyph8(codePoint: Int): ByteArray? = null
 }
 
 object BuiltinCoolleduxFontSource : CoolleduxFontSource {

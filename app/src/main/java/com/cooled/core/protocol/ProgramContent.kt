@@ -227,22 +227,25 @@ object ProgramComposer {
     }
 
     /**
-     * Partial port-shaped FontUtils.getFontByteDataCoolleduxForEmoji(...).
+     * Plain-text port of FontUtils.getFontByteDataCoolleduxForEmoji(...).
      *
-     * If recovered APK font bytes are supplied in `glyphBytes`, they are emitted
-     * verbatim. Otherwise this produces a deterministic monochrome column payload
-     * with the same framing fields used by the APK text-content block: text count,
-     * total width, per-glyph widths, and glyph bitmap bytes.
+     * APK font records are read from recovered font-library assets. Emoji/non-BMP
+     * input is deliberately rejected until that APK branch is fully ported; the
+     * production upload path must never synthesize fake glyph bytes.
      */
     fun getFontByteDataCoolleduxForEmoji(content: CoolLedUxTextContentProgramContent): ByteArray {
         content.glyphBytes?.let { return it.copyOf() }
         val codePoints = content.text.codePoints().toArray()
+        require(codePoints.none { it > 0xFFFF }) {
+            "CoolLEDUX emoji/non-BMP text is not yet ported from FontUtils.getFontByteDataCoolleduxForEmoji"
+        }
         val widthPerGlyph = content.fontWidth.coerceAtLeast(1)
         val height = content.fontHeight.coerceAtLeast(1)
         val bytesPerColumn = (height + 7) / 8
         val bytesPerGlyph = widthPerGlyph * bytesPerColumn
         val glyphs = codePoints.map { cp ->
-            readFontGlyph(cp, widthPerGlyph, height, bytesPerGlyph) ?: fallbackGlyph(cp, widthPerGlyph, bytesPerColumn)
+            readFontGlyph(cp, widthPerGlyph, height, bytesPerGlyph)
+                ?: error("Missing CoolLEDUX APK font glyph U+${cp.toString(16).uppercase()} size=${widthPerGlyph}x$height")
         }
         val out = mutableListOf<Byte>()
         out += two(codePoints.size)
@@ -269,14 +272,6 @@ object ProgramComposer {
         this.size > size -> copyOf(size)
         else -> copyOf(size)
     }
-
-    private fun fallbackGlyph(codePoint: Int, width: Int, bytesPerColumn: Int): ByteArray =
-        ByteArray(width * bytesPerColumn) { i ->
-            val x = i / bytesPerColumn
-            val yByte = i % bytesPerColumn
-            val mix = codePoint xor (x * 0x45) xor (yByte * 0x9D)
-            (mix and 0xFF).toByte()
-        }
 
     private fun one(value: Int): Byte = (value and 0xFF).toByte()
 
@@ -473,19 +468,12 @@ private object CoolleduxFontByteBuilder {
         codePoints.forEachIndexed { idx, cp ->
             val glyph = when {
                 content.textSize >= 32 -> CoolleduxFontSources.active.readGlyph32(cp, content.isTextBold)
-                    ?: BuiltinCoolleduxFontSource.readGlyph32(cp, content.isTextBold)
                 content.textSize >= 16 -> CoolleduxFontSources.active.readGlyph16(cp, content.isTextBold)
-                    ?: BuiltinCoolleduxFontSource.readGlyph16(cp, content.isTextBold)
-                    ?: BuiltinCoolleduxFontSource.readGlyph8(cp)
                 content.textSize >= 14 && content.isTextBold -> CoolleduxFontSources.active.readGlyph14Bold(cp)
-                    ?: BuiltinCoolleduxFontSource.readGlyph14Bold(cp)
-                    ?: BuiltinCoolleduxFontSource.readGlyph8(cp)
                 content.textSize >= 12 -> CoolleduxFontSources.active.readGlyph12(cp, content.isTextBold)
-                    ?: BuiltinCoolleduxFontSource.readGlyph12(cp, content.isTextBold)
-                    ?: BuiltinCoolleduxFontSource.readGlyph8(cp)
-                else -> CoolleduxFontSources.active.readGlyph8(cp) ?: BuiltinCoolleduxFontSource.readGlyph8(cp)
+                else -> CoolleduxFontSources.active.readGlyph8(cp)
             }
-            out += glyph.toList()
+            out += (glyph ?: error("Missing CoolLEDUX APK font glyph U+${cp.toString(16).uppercase()} textSize=${content.textSize}")).toList()
             if (idx != codePoints.lastIndex && content.textSpacing > 0) {
                 repeat(content.textSpacing) {
                     repeat(bytesPerColumn(content.textSize)) { out += 0x00.toByte() }

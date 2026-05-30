@@ -10,16 +10,11 @@ data class ProgramUploadFollowUpCommand(
 
 object ProgramUploadFollowUp {
     /**
-     * The recovered APK does not set driveState=1 after a CoolLEDUX program upload.
-     * After the final package ACK it clears transfer state and refreshes device info.
+     * APK DeviceManager.checkCoolLEDUXMessages posts ResponseEvent(3) after the
+     * final CoolLEDUX chunk ACK and sends no follow-up BLE frame.
      */
     fun afterSuccessfulUpload(family: DeviceFamily): ProgramUploadFollowUpCommand? = when (family) {
-        DeviceFamily.COOLLEDUX,
-        DeviceFamily.COOLLEDX,
-        DeviceFamily.COOLLEDS -> ProgramUploadFollowUpCommand(
-            frame = CommandBuilders.queryDeviceInfo(),
-            logLabel = "Post-upload device-info query"
-        )
+        DeviceFamily.COOLLEDUX -> null
         else -> null
     }
 }
