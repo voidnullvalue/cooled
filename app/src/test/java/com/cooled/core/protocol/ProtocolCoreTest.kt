@@ -38,8 +38,7 @@ class ProtocolCoreTest {
         val frame = CommandBuilders.buildDataChunk(0x03, 2000, 1, byteArrayOf(1, 2, 3))
         val payload = FrameCodec.decode(frame)
         assertEquals(0x03, payload[0].toInt() and 0xFF)
-        var xor = 0
-        for (i in 0 until payload.lastIndex) xor = xor xor (payload[i].toInt() and 0xFF)
+        val xor = payload.sliceArray(1 until payload.lastIndex).fold(0) { acc, byte -> acc xor (byte.toInt() and 0xFF) }
         assertEquals(xor and 0xFF, payload.last().toInt() and 0xFF)
     }
 

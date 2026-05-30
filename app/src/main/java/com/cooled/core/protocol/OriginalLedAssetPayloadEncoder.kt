@@ -41,8 +41,8 @@ object OriginalLedAssetPayloadEncoder {
 
     private fun shouldRasterize(assetPath: String, kind: String): Boolean {
         val lowerPath = assetPath.lowercase()
-        val lowerKind = kind.lowercase()
-        return lowerKind in rasterKinds || lowerPath.endsWith(".png") || lowerPath.endsWith(".webp") || lowerPath.endsWith(".jpg") || lowerPath.endsWith(".jpeg") || lowerPath.endsWith(".bmp") || lowerPath.endsWith(".gif")
+        if (lowerPath.endsWith(".jt") || lowerPath.endsWith(".bin") || lowerPath.endsWith(".json")) return false
+        return lowerPath.endsWith(".png") || lowerPath.endsWith(".webp") || lowerPath.endsWith(".jpg") || lowerPath.endsWith(".jpeg") || lowerPath.endsWith(".bmp") || lowerPath.endsWith(".gif")
     }
 
     private fun decodeBitmap(bytes: ByteArray): Bitmap? {
@@ -88,13 +88,4 @@ object OriginalLedAssetPayloadEncoder {
         }
         return mask + rgb
     }
-
-    private val rasterKinds = setOf(
-        OriginalLedAssetKinds.IMAGE,
-        OriginalLedAssetKinds.ICON,
-        OriginalLedAssetKinds.EMOJI,
-        OriginalLedAssetKinds.ANIMATION,
-        OriginalLedAssetKinds.CLOCK_TEMPLATE,
-        OriginalLedAssetKinds.SENSOR_TEMPLATE
-    )
 }

@@ -22,6 +22,10 @@ sealed class ProgramContent {
         val displayRows: Int? = null
     ) : ProgramContent()
 
+    data class CoolLedUxText(
+        val content: CoolLedUxTextContentProgramContent
+    ) : ProgramContent()
+
     data class Drawing(val width: Int, val height: Int, val rgbBytes: ByteArray) : ProgramContent()
     data class PresetMode(val mode: Int, val intensity: Int) : ProgramContent()
 }
@@ -75,6 +79,12 @@ data class ProgramMetadata(
     val usedCompression: Boolean
 )
 
+data class CoolLedUxDataResult(
+    val body: ByteArray,
+    val compressed: ByteArray,
+    val chunks: List<ByteArray>
+)
+
 object ProgramComposer {
     fun compose(
         family: DeviceFamily,
@@ -118,6 +128,8 @@ object ProgramComposer {
         )
     }
 
+    internal fun encodeContentForTest(family: DeviceFamily, content: ProgramContent): ByteArray = encodeContent(family, content)
+
     private fun encodeContent(family: DeviceFamily, content: ProgramContent): ByteArray = when (content) {
         is ProgramContent.Text -> if (family == DeviceFamily.COOLLEDUX) {
             CoolleduxProgramBytecode.text(
@@ -130,6 +142,11 @@ object ProgramComposer {
         } else {
             val textBytes = content.text.encodeToByteArray()
             byteArrayOf(0x54, content.speed.toByte(), content.effect.toByte(), textBytes.size.toByte()) + textBytes
+        }
+
+        is ProgramContent.CoolLedUxText -> {
+            require(family == DeviceFamily.COOLLEDUX) { "CoolLedUxText content is only valid for CoolLEDUX" }
+            getDataWithProgram(getDataForProgram(content.content))
         }
 
         is ProgramContent.OriginalAsset -> if (family == DeviceFamily.COOLLEDUX) {
@@ -183,6 +200,10 @@ object ProgramComposer {
     fun getDataForCombineProgram(program: CoolLedUxCombineProgram): ByteArray = when (program) {
         is CoolLedUxCombineProgram.TextCombine -> getDataWithTextCombineProgram(program)
     }
+
+    /** Convenience wrapper for a single APK text combine program. */
+    fun getDataForProgram(content: CoolLedUxTextContentProgramContent): CoolLedUxProgram =
+        CoolLedUxProgram(listOf(CoolLedUxCombineProgram.TextCombine(content)))
 
     /** Port of CoolledUXUtils.getDataForProgram(...). */
     fun getDataForProgram(program: CoolLedUxProgram): ByteArray =
@@ -464,10 +485,19 @@ private object CoolleduxFontByteBuilder {
         val out = mutableListOf<Byte>()
         val codePoints = content.text.codePoints().toArray()
         codePoints.forEachIndexed { idx, cp ->
-            val glyph = if (content.textSize >= 32) {
-                CoolleduxFontSources.active.readGlyph32(cp, content.isTextBold) ?: BuiltinCoolleduxFontSource.readGlyph32(cp, content.isTextBold)!!
-            } else {
-                CoolleduxFontSources.active.readGlyph8(cp) ?: BuiltinCoolleduxFontSource.readGlyph8(cp)!!
+            val glyph = when {
+                content.textSize >= 32 -> CoolleduxFontSources.active.readGlyph32(cp, content.isTextBold)
+                    ?: BuiltinCoolleduxFontSource.readGlyph32(cp, content.isTextBold)
+                content.textSize >= 16 -> CoolleduxFontSources.active.readGlyph16(cp, content.isTextBold)
+                    ?: BuiltinCoolleduxFontSource.readGlyph16(cp, content.isTextBold)
+                    ?: BuiltinCoolleduxFontSource.readGlyph8(cp)
+                content.textSize >= 14 && content.isTextBold -> CoolleduxFontSources.active.readGlyph14Bold(cp)
+                    ?: BuiltinCoolleduxFontSource.readGlyph14Bold(cp)
+                    ?: BuiltinCoolleduxFontSource.readGlyph8(cp)
+                content.textSize >= 12 -> CoolleduxFontSources.active.readGlyph12(cp, content.isTextBold)
+                    ?: BuiltinCoolleduxFontSource.readGlyph12(cp, content.isTextBold)
+                    ?: BuiltinCoolleduxFontSource.readGlyph8(cp)
+                else -> CoolleduxFontSources.active.readGlyph8(cp) ?: BuiltinCoolleduxFontSource.readGlyph8(cp)
             }
             out += glyph.toList()
             if (idx != codePoints.lastIndex && content.textSpacing > 0) {

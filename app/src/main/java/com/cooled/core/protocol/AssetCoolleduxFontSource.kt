@@ -11,6 +11,20 @@ class AssetCoolleduxFontSource(
         return readRecord("$root/$file", codePoint, 128)
     }
 
+    override fun readGlyph16(codePoint: Int, bold: Boolean): ByteArray? {
+        val primary = if (bold) "coolled-original/raw-assets/assets/UNICODE16_bold" else "coolled-original/raw-assets/assets/UNICODE16"
+        val flutterBold = "coolled-original/raw-assets/assets/flutter_assets/assets/coolledux/font_library/unicode_16_bold"
+        return readRecord(primary, codePoint, 32) ?: if (bold) readRecord(flutterBold, codePoint, 32) else null
+    }
+
+    override fun readGlyph14Bold(codePoint: Int): ByteArray? =
+        readRecord("coolled-original/raw-assets/assets/flutter_assets/assets/coolledux/font_library/unicode_14_bold", codePoint, 28)
+
+    override fun readGlyph12(codePoint: Int, bold: Boolean): ByteArray? {
+        val file = if (bold) "UNICODE12_BOLD" else "UNICODE12"
+        return readRecord("coolled-original/raw-assets/assets/$file", codePoint, 24)
+    }
+
     override fun readGlyph8(codePoint: Int): ByteArray? = readRecord("$root/8_small", codePoint, 8)
 
     private fun readRecord(path: String, index: Int, size: Int): ByteArray? {
