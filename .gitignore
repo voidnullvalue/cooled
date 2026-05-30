@@ -1,0 +1,3 @@
+# Local APK reverse-engineering artifacts can be large and should not be committed.
+/reverse/*
+!/reverse/README.md
