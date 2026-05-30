@@ -21,6 +21,7 @@ import com.cooled.core.protocol.ParsedPayload
 import com.cooled.core.protocol.ProgramContent
 import com.cooled.core.protocol.ProgramPackage
 import com.cooled.core.protocol.ProgramStartRequest
+import com.cooled.core.protocol.ProgramUploadFollowUp
 import com.cooled.core.protocol.TimerSwitchCommand
 import com.cooled.core.protocol.TransferState
 import com.cooled.core.protocol.TransferStateMachine
@@ -45,7 +46,6 @@ class AppViewModel(
     private var pendingProgram: ProgramPackage? = null
     private var pendingChunkIndex: Int = 0
     private var pendingStartRetries: Int = 0
-    private var nextProgramIndex: Int = 0
     private var connectedMetadata: LedScanMetadata = LedScanMetadata()
 
     private val _events = MutableStateFlow<List<String>>(emptyList())
@@ -189,6 +189,10 @@ class AppViewModel(
             appendEvent("${ts()} Original asset upload skipped: blank asset path")
             return@launch
         }
+        if (!selection.uploadCheck.uploadable) {
+            appendEvent("${ts()} Original asset upload blocked: ${selection.uploadCheck.reason} (${selection.asset.path})")
+            return@launch
+        }
         queueOriginalAssetSelection(selection.toProgramContent(), selection.debugSummary(), selection.programType, selection.extraTypeByte)
     }
 
@@ -207,6 +211,10 @@ class AppViewModel(
             appendEvent("${ts()} Preferred original asset upload skipped: no asset found for kind=$cleanKind")
             return@launch
         }
+        if (!selection.uploadCheck.uploadable) {
+            appendEvent("${ts()} Preferred original asset upload blocked: ${selection.uploadCheck.reason} (${selection.asset.path})")
+            return@launch
+        }
         queueOriginalAssetSelection(selection.toProgramContent(), selection.debugSummary(), selection.programType, selection.extraTypeByte)
     }
 
@@ -218,8 +226,9 @@ class AppViewModel(
     }
 
     private fun buildProgramPackage(content: ProgramContent, programType: Int?, extraTypeByte: Int?): ProgramPackage {
-        val programIndex = nextProgramIndex
-        nextProgramIndex = (nextProgramIndex + 1) % 4
+        // Official APK starts a one-program CoolLEDUX upload with index=0,count=1.
+        // Rotating index while still declaring count=1 stores data in a non-displayed slot.
+        val programIndex = 0
         return repo.composeProgram(
             family = family.value,
             content = content,
@@ -237,6 +246,7 @@ class AppViewModel(
         pendingStartRetries = 3
         transferMachine.startSession(pack.metadata.chunkCount)
         appendEvent("${ts()} Program start queued $description compressed=${pack.metadata.compressedSize} chunks=${pack.metadata.chunkCount}")
+        appendEvent("${ts()} Program start sent index=0 count=1 showCount=1")
         viewModelScope.launch { repo.sendRawFrame(pack.startHeaderFrame) }
     }
 
@@ -245,12 +255,13 @@ class AppViewModel(
         when (payload) {
             is ParsedPayload.TransferStartResponse -> {
                 if (payload.status == 0) {
+                    appendEvent("${ts()} Program start ACK status=0")
                     pendingStartRetries = 0
                     pendingChunkIndex = 0
                     sendPendingChunk(pack)
                 } else if (payload.status == 1 && pendingStartRetries > 0) {
                     pendingStartRetries--
-                    appendEvent("${ts()} Program start NACK; retrying start (${pendingStartRetries} left)")
+                    appendEvent("${ts()} Program start ACK status=${payload.status}; retrying start (${pendingStartRetries} left)")
                     viewModelScope.launch {
                         delay(300L)
                         if (pendingProgram === pack) repo.sendRawFrame(pack.startHeaderFrame)
@@ -264,13 +275,14 @@ class AppViewModel(
             }
             is ParsedPayload.TransferChunkResponse -> {
                 if (payload.status == 0) {
+                    appendEvent("${ts()} Program chunk ${payload.chunkIndex} ACK status=0")
                     pendingChunkIndex = payload.chunkIndex + 1
                     if (pendingChunkIndex >= pack.chunkFrames.size) {
                         appendEvent("${ts()} Program upload completed chunks=${pack.chunkFrames.size}")
                         pendingProgram = null
                         pendingChunkIndex = 0
                         pendingStartRetries = 0
-                        activateUploadedProgram(pack)
+                        runPostUploadFollowUp(pack)
                     } else {
                         sendPendingChunk(pack)
                     }
@@ -289,16 +301,16 @@ class AppViewModel(
         }
     }
 
-    private fun activateUploadedProgram(pack: ProgramPackage) = viewModelScope.launch {
-        if (pack.metadata.family != DeviceFamily.COOLLEDUX && pack.metadata.family != DeviceFamily.COOLLEDX && pack.metadata.family != DeviceFamily.COOLLEDS) return@launch
-        delay(250L)
-        repo.sendDriveState(1)
-        appendEvent("${ts()} Program activation sent driveState=1")
+    private fun runPostUploadFollowUp(pack: ProgramPackage) = viewModelScope.launch {
+        val followUp = ProgramUploadFollowUp.afterSuccessfulUpload(pack.metadata.family) ?: return@launch
+        delay(followUp.delayMs)
+        appendEvent("${ts()} ${followUp.logLabel} sent")
+        repo.sendRawFrame(followUp.frame)
     }
 
     private fun sendPendingChunk(pack: ProgramPackage) = viewModelScope.launch {
         val chunk = pack.chunkFrames.getOrNull(pendingChunkIndex) ?: return@launch
-        appendEvent("${ts()} Program sending chunk ${pendingChunkIndex + 1}/${pack.chunkFrames.size}")
+        appendEvent("${ts()} Program chunk $pendingChunkIndex sent (${pendingChunkIndex + 1}/${pack.chunkFrames.size})")
         repo.sendRawFrame(chunk)
     }
 

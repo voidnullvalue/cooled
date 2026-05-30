@@ -2,6 +2,7 @@ package com.cooled.core.assets
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Test
 
@@ -66,6 +67,25 @@ class OriginalLedAssetProgramPlannerTest {
             listOf(OriginalLedAssetKinds.ANIMATION, OriginalLedAssetKinds.ICON, OriginalLedAssetKinds.IMAGE),
             OriginalLedAssetProgramPlanner.availableKinds(fakeCatalog())
         )
+    }
+
+    @Test
+    fun nonDisplaySupportAssetsAreNotUploadable() {
+        listOf(
+            "raw-assets/assets/flutter_assets/packages/cupertino_icons/assets/CupertinoIcons.ttf" to OriginalLedAssetKinds.ICON,
+            "raw-assets/assets/flutter_assets/fonts/MaterialIcons-Regular.otf" to OriginalLedAssetKinds.ICON,
+            "raw-assets/assets/emoji_3232.json" to OriginalLedAssetKinds.EMOJI,
+            "raw-assets/assets/flutter_assets/NativeAssetsManifest.json" to OriginalLedAssetKinds.PAYLOAD_ASSET
+        ).forEach { (path, kind) ->
+            val selection = OriginalLedAssetProgramPlanner.selectByPath(
+                assetPath = path,
+                kind = kind,
+                displayColumns = 64,
+                displayRows = 32,
+                catalog = fakeCatalog()
+            )
+            assertFalse("$path should be classified as a support resource", selection!!.uploadCheck.uploadable)
+        }
     }
 
     private fun fakeCatalog(): OriginalLedAssetCatalog = object : OriginalLedAssetCatalog {

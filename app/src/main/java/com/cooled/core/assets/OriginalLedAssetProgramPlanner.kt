@@ -9,7 +9,8 @@ data class OriginalLedAssetProgramSelection(
     val speed: Int,
     val effect: Int,
     val programType: Int?,
-    val extraTypeByte: Int?
+    val extraTypeByte: Int?,
+    val uploadCheck: OriginalLedAssetUploadCheck = OriginalLedAssetUploadRules.check(asset)
 ) {
     fun toProgramContent(): ProgramContent.OriginalAsset = ProgramContent.OriginalAsset(
         assetPath = asset.path,
@@ -20,7 +21,7 @@ data class OriginalLedAssetProgramSelection(
         displayRows = displayRows
     )
 
-    fun debugSummary(): String = "asset='${asset.path}' kind=${asset.kind} matrix=${displayColumns ?: "?"}x${displayRows ?: "?"} speed=${speed.coerceIn(0, 255)} effect=${effect.coerceIn(0, 255)} programType=${programType ?: "none"} extra=${extraTypeByte ?: "none"}"
+    fun debugSummary(): String = "asset='${asset.path}' kind=${asset.kind} matrix=${displayColumns ?: "?"}x${displayRows ?: "?"} speed=${speed.coerceIn(0, 255)} effect=${effect.coerceIn(0, 255)} programType=${programType ?: "none"} extra=${extraTypeByte ?: "none"} uploadable=${uploadCheck.uploadable} reason=${uploadCheck.reason}"
 }
 
 object OriginalLedAssetProgramPlanner {
@@ -92,6 +93,7 @@ object OriginalLedAssetProgramPlanner {
         speed = speed.coerceIn(0, 255),
         effect = effect.coerceIn(0, 255),
         programType = programType,
-        extraTypeByte = extraTypeByte
+        extraTypeByte = extraTypeByte,
+        uploadCheck = OriginalLedAssetUploadRules.check(asset)
     )
 }

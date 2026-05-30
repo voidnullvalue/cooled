@@ -45,14 +45,60 @@ object OriginalLedAssetKinds {
     )
 }
 
+data class OriginalLedAssetUploadCheck(
+    val uploadable: Boolean,
+    val reason: String
+)
+
+object OriginalLedAssetUploadRules {
+    private val blockedExtensions = setOf(
+        "ttf", "otf", "json", "xml", "html", "htm", "pdf", "frag", "z"
+    )
+    private val rasterExtensions = setOf("png", "webp", "jpg", "jpeg", "bmp")
+
+    fun check(asset: OriginalLedAsset): OriginalLedAssetUploadCheck = check(asset.path, asset.kind)
+
+    fun check(path: String, kind: String): OriginalLedAssetUploadCheck {
+        val normalized = path.trim().trimStart('/').lowercase()
+        if (normalized.isBlank()) return OriginalLedAssetUploadCheck(false, "blank asset path")
+        val ext = normalized.substringAfterLast('.', missingDelimiterValue = "")
+        if (normalized.contains("/flutter_assets/packages/") || normalized.contains("/flutter_assets/fonts/")) {
+            return OriginalLedAssetUploadCheck(false, "Flutter package/font assets are support resources, not LED payloads")
+        }
+        if (ext in blockedExtensions) {
+            return OriginalLedAssetUploadCheck(false, ".$ext assets are support resources, not displayable LED payloads")
+        }
+        if (normalized.contains("font_library") || normalized.contains("/fonts/") || normalized.contains("fontmanifest") || normalized.contains("nativeassetsmanifest")) {
+            return OriginalLedAssetUploadCheck(false, "font and manifest resources are not displayable LED payloads")
+        }
+        val cleanKind = kind.ifBlank { OriginalLedAssetKinds.PAYLOAD_ASSET }
+        if (cleanKind == OriginalLedAssetKinds.FONT) {
+            return OriginalLedAssetUploadCheck(false, "font resources are not directly uploadable LED programs")
+        }
+        val allowed = when (cleanKind) {
+            OriginalLedAssetKinds.ANIMATION -> ext == "gif"
+            OriginalLedAssetKinds.IMAGE, OriginalLedAssetKinds.ICON -> ext in rasterExtensions || ext == "gif" || ext == "jt"
+            OriginalLedAssetKinds.EMOJI -> ext in rasterExtensions || ext == "gif" || ext == "jt"
+            OriginalLedAssetKinds.CLOCK_TEMPLATE, OriginalLedAssetKinds.SENSOR_TEMPLATE -> ext == "jt"
+            OriginalLedAssetKinds.PAYLOAD_ASSET -> ext == "jt"
+            else -> false
+        }
+        return if (allowed) {
+            OriginalLedAssetUploadCheck(true, "displayable LED payload")
+        } else {
+            OriginalLedAssetUploadCheck(false, "asset kind=$cleanKind path=$path is not an APK display payload format")
+        }
+    }
+}
+
 interface OriginalLedAssetCatalog {
     fun listAssets(): List<OriginalLedAsset>
     fun summary(): OriginalLedAssetSummary
     fun byKind(kind: String): List<OriginalLedAsset> = listAssets().filter { it.kind == kind }
-    fun uploadableAssets(): List<OriginalLedAsset> = listAssets().filter { it.kind in OriginalLedAssetKinds.uploadPriority }
+    fun uploadableAssets(): List<OriginalLedAsset> = listAssets().filter { it.kind in OriginalLedAssetKinds.uploadPriority && OriginalLedAssetUploadRules.check(it).uploadable }
     fun uploadableKinds(): List<String> = uploadableAssets().map { it.kind }.distinct().sortedBy { OriginalLedAssetKinds.uploadPriority.indexOf(it).let { idx -> if (idx < 0) Int.MAX_VALUE else idx } }
     fun preferredByKind(kind: String, limit: Int = 12): List<OriginalLedAsset> = byKind(kind)
-        .filter { it.sizeBytes > 0L }
+        .filter { it.sizeBytes > 0L && OriginalLedAssetUploadRules.check(it).uploadable }
         .sortedWith(compareBy<OriginalLedAsset> { uploadPathRank(it.path) }.thenBy { it.sizeBytes }.thenBy { it.path })
         .take(limit.coerceAtLeast(0))
 

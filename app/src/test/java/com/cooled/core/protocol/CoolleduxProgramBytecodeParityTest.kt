@@ -104,7 +104,7 @@ class CoolleduxProgramBytecodeParityTest {
 
             val body = ProgramComposer.encodeContentForTest(
                 DeviceFamily.COOLLEDUX,
-                ProgramContent.OriginalAsset("icon-payload.bin", OriginalLedAssetKinds.ICON, speed = 9, effect = 2, displayColumns = 2, displayRows = 1)
+                ProgramContent.OriginalAsset("icon-payload.jt", OriginalLedAssetKinds.ICON, speed = 9, effect = 2, displayColumns = 2, displayRows = 1)
             )
 
             assertEquals(0x02, body[14].toInt() and 0xFF)
