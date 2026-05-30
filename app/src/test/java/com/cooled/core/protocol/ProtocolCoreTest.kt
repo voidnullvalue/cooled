@@ -108,15 +108,15 @@ class ProtocolCoreTest {
 
 
     @Test
-    fun coolLedUxProgramHeaderUsesCompressedLengthAndCrc() {
+    fun coolLedUxProgramHeaderUsesUncompressedLengthAndCrcFromApk() {
         val body = ByteArray(64) { (it * 3).toByte() }
         val compressed = com.cooled.core.compression.LzssCodec.compress(body)
         val request = ProgramStartRequest(compressed = compressed, index = 0, count = 1, showCount = 1, startSource = body)
         val payload = FrameCodec.decode(CommandBuilders.buildProgramStartHeader(DeviceFamily.COOLLEDUX, request))
 
         assertEquals(0x02, payload[0].toInt() and 0xFF)
-        assertEquals(com.cooled.core.crc.CoolLedCrc.crc32Like(compressed), readBe32(payload, 1))
-        assertEquals(compressed.size, readBe32(payload, 5))
+        assertEquals(com.cooled.core.crc.CoolLedCrc.crc32Like(body), readBe32(payload, 1))
+        assertEquals(body.size, readBe32(payload, 5))
         assertEquals(0, payload[9].toInt() and 0xFF)
         assertEquals(1, payload[10].toInt() and 0xFF)
         assertEquals(1, payload[11].toInt() and 0xFF)

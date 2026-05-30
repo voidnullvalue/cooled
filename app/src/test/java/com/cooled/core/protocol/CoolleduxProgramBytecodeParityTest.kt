@@ -6,6 +6,7 @@ import com.cooled.core.assets.OriginalLedAssetKinds
 import com.cooled.core.model.DeviceFamily
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertThrows
 import org.junit.Test
 
 class CoolleduxProgramBytecodeParityTest {
@@ -62,6 +63,28 @@ class CoolleduxProgramBytecodeParityTest {
             assertEquals(160, readU16(encoded, 2))
             repeat(5) { assertEquals(32, readU16(encoded, 4 + it * 2)) }
             assertEquals(4 + 5 * 2 + 5 * 128, encoded.size)
+        } finally {
+            CoolleduxFontSources.active = previous
+        }
+    }
+
+
+    @Test
+    fun fontUtilsRejectsMissingFontsAndEmojiInsteadOfGeneratingFallbackBytes() {
+        val previous = CoolleduxFontSources.active
+        try {
+            CoolleduxFontSources.active = MissingCoolleduxFontSource
+
+            assertThrows(IllegalStateException::class.java) {
+                ProgramComposer.getFontByteDataCoolleduxForEmoji(
+                    CoolLedUxTextContentProgramContent(text = "A", fontWidth = 32, fontHeight = 32)
+                )
+            }
+            assertThrows(IllegalArgumentException::class.java) {
+                ProgramComposer.getFontByteDataCoolleduxForEmoji(
+                    CoolLedUxTextContentProgramContent(text = "😀", fontWidth = 32, fontHeight = 32)
+                )
+            }
         } finally {
             CoolleduxFontSources.active = previous
         }
