@@ -4,7 +4,7 @@ This tracks the LED/device behavior port, excluding Google Play Services, Fireba
 
 ## Rough completion estimate
 
-Current branch is approximately **70-75% through the LED-facing port**.
+Current branch is approximately **75-80% through the LED-facing port**.
 
 The core BLE/control command surface is mostly present. The remaining risk is still concentrated in exact display-content byte parity for non-text assets and templates, plus live-device validation of the final payload bytes.
 
@@ -53,8 +53,11 @@ The core BLE/control command surface is mostly present. The remaining risk is st
   - `raw-assets/assets/UNICODE12` / `UNICODE12_BOLD` (24 bytes/glyph)
   - `raw-assets/assets/flutter_assets/assets/coolledux/font_library/unicode_14_bold` (28 bytes/glyph)
   - `raw-assets/assets/flutter_assets/assets/coolledux/font_library/unicode_16_bold` fallback (32 bytes/glyph)
-- CoolLEDUX text program byte generation uses asset-backed glyph records for HELLO/digits/punctuation/symbols when the extracted font assets are installed.
+- CoolLEDUX text program byte generation uses `FontUtils.getFontByteDataCoolleduxForEmoji(...)`-shaped framing (glyph count, total width, per-glyph widths, glyph bytes) and asset-backed glyph records for HELLO/digits/punctuation/symbols when the extracted font assets are installed.
 - APK-shaped `getDataWithTextContentProgramContent(...)`, `getDataWithTextCombineProgram(...)`, `getDataForCombineProgram(...)`, `getDataForProgram(...)`, `getDataWithProgram(...)`, and compressed `getDataResult(...)` helpers are present.
+- CoolLEDUX high-level text and original-asset program generation now uses the recovered APK program layout directly: 8 reserved program bytes, content count, reserved byte, then one or more length-prefixed content blocks.
+- Raw GIF/animation payload wrapping now mirrors the recovered `CoolledUXUtils.getDataWithAnimationCombineProgram(...)`/`CoolleduxGifAnimationProgramContent` shape: content type `0x0c`, seven reserved bytes, layer type, reserved byte, start column/row, show width/height, 4-byte payload length, then raw file bytes.
+- Static icon/image/emoji bitmap payload wrapping now mirrors the recovered `CoolledUXUtils.getDataWithGraffitiCombineProgram(...)` block shape (`0x02` plus coordinates, mode/speed/stayTime, 4-byte payload length). Bitmap pixels are encoded column-major as RGB444 transfer pairs to match `getDrawListDataFColor(...)` / `TextEmojiManagerCoolLEDUX.getColorDataWithColorWithRGB444Transfer(...)` structure.
 - Main UI surface for most LED-facing command features.
 
 ## Partially ported / structurally tested
@@ -64,14 +67,16 @@ The core BLE/control command surface is mostly present. The remaining risk is st
   - 32px, 16px, 14px-bold, 12px, and 8px asset-backed glyph loading is present.
   - Matrix dimensions can come from scan metadata.
   - Staged APK-style program/combine/layer functions are present.
-  - Exact text-content framing is covered by tests with verbatim glyph bytes and asset-backed HELLO glyph embedding.
+  - Exact text-content framing is covered by tests with verbatim glyph bytes, asset-backed HELLO glyph embedding, digits, punctuation, and a symbol.
+  - High-level `ProgramContent.Text` now uses the same recovered `getDataWithProgram(...)` + text-content-block path instead of an extra synthetic combine-length wrapper.
   - Still needs live-device confirmation for final visual output.
 - Original asset support.
   - Extraction/cataloging/runtime reads are present.
   - Asset upload routing is present.
   - Raw `.jt` template assets are preserved as raw payload inputs instead of being rasterized.
-  - Bitmap payload encoder scaffold exists for bitmap extensions.
-  - Exact icon/animation/GIF/template transforms are not yet proven against original APK golden vectors.
+  - Raw `.gif`/animation bytes are now preserved and wrapped in the recovered APK `0x0c` raw animation block instead of being generically rasterized.
+  - Bitmap extensions are rasterized into recovered graffiti block structure with column-major RGB444 transfer payloads.
+  - Exact icon/animation/GIF/template transforms are structurally tested, but still need original APK golden vectors and live-device validation.
 - Template/content generators.
   - Extracted business-hours `.jt` assets are identified as raw template payload inputs.
   - Template assets are wired through the content-program system as `OriginalAsset` selections, not random standalone writes.
@@ -85,14 +90,16 @@ The core BLE/control command surface is mostly present. The remaining risk is st
 
 ## Still approximate / blocked
 
-1. `FontUtils.getFontByteDataCoolleduxForEmoji(...)` transform details are now asset-backed for glyph table reads, but the exact original high-level transform/rotation/mirroring/color handling remains blocked because the recovered source set still does not include `FontUtils.java`.
-2. Icon/image/GIF encoding is not fully exact. The extracted tree currently contains no `.gif` files, so no GIF golden vector can be produced from local assets yet. Bitmap-extension rasterization remains a scaffold until APK builders and golden vectors are recovered.
+1. `FontUtils.getFontByteDataCoolleduxForEmoji(...)` transform details are now asset-backed and structurally framed, but the exact original high-level emoji/color/rotation/mirroring edge cases remain blocked because the recovered source set still does not include `FontUtils.java`.
+2. Icon/image/GIF encoding is closer to the recovered APK builders (`0x02` graffiti and `0x0c` raw GIF/animation wrappers), but not fully proven exact. The extracted tree currently contains no `.gif` files, so no GIF golden vector can be produced from local assets yet; bitmap RGB444 byte order still needs comparison against `TextEmojiManagerCoolLEDUX` vectors.
 3. Clock/date/weather/temp/humidity/scoreboard/time-count/business-hours template composition still needs exact APK functions or vectors. Raw `.jt` payload handling is covered, but dynamic template assembly is not proven.
 4. Scan-record parsing is deterministic for the recovered manufacturer layout, but additional real raw advertisements should be added if devices advertise other CoolLED layouts.
 5. Live-device validation is still required to claim that text/icon/GIF/template payloads render exactly as the original APK.
 
 ## APK functions ported or represented
 
+- `CoolledUXUtils.getDataWithAnimationCombineProgram(...)` for raw image-id/file GIF payloads
+- `CoolledUXUtils.getDataWithGraffitiCombineProgram(...)` block wrapping and column-major RGB444 payload ordering
 - `CoolledUXUtils.getDataWithTextContentProgramContent(...)`
 - `CoolledUXUtils.getDataWithTextCombineProgram(...)` for normal text content
 - `CoolledUXUtils.getDataForCombineProgram(...)` for known LED-facing text content

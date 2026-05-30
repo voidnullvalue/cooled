@@ -55,7 +55,7 @@ class CoolleduxFontSourceTest {
             val eOffset = body.indexOfSubArray(e)
 
             assertTrue("HELLO body should include the exact H glyph record", hOffset >= 0)
-            assertEquals("default text spacing inserts one empty 32px column", hOffset + 128 + 4, eOffset)
+            assertEquals("APK-shaped FontUtils payload stores adjacent fixed-width glyph records after its width table", hOffset + 128, eOffset)
         } finally {
             CoolleduxFontSources.active = previous
         }
