@@ -205,29 +205,53 @@ class AndroidBleTransport(private val context: Context) : BleTransport {
         val g = gatt ?: return@withLock
         val service = g.getService(BleProtocolConstants.serviceUuid) ?: return@withLock
         val ch = service.getCharacteristic(BleProtocolConstants.commandCharacteristicUuid) ?: return@withLock
-        ch.writeType = BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
+        val writeMode = chooseWriteMode(ch)
+        if (writeMode == null) {
+            _io.value = BleIoEvent(System.currentTimeMillis(), BleIoDirection.RX, byteArrayOf(), "write skipped: characteristic is not writable properties=0x${ch.properties.toString(16)}")
+            return@withLock
+        }
+
+        ch.writeType = writeMode
+        val expectsAck = writeMode == BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
         val splitSize = if (_mtu.value > 23) (_mtu.value - 3).coerceAtMost(180) else 20
         val chunks = bytes.toList().chunked(splitSize).map { it.toByteArray() }
         chunks.forEachIndexed { index, chunk ->
-            val ack = CompletableDeferred<Int>()
+            val ack = if (expectsAck) CompletableDeferred<Int>() else null
             pendingWriteAck = ack
             ch.value = chunk
-            val note = if (chunks.size == 1) "write" else "write split ${index + 1}/${chunks.size}"
+            val modeLabel = if (expectsAck) "write" else "write-no-response"
+            val note = if (chunks.size == 1) modeLabel else "$modeLabel split ${index + 1}/${chunks.size}"
             _io.value = BleIoEvent(System.currentTimeMillis(), BleIoDirection.TX, chunk, note)
             val accepted = g.writeCharacteristic(ch)
             if (!accepted) {
                 pendingWriteAck = null
-                _io.value = BleIoEvent(System.currentTimeMillis(), BleIoDirection.RX, byteArrayOf(), "write failed to enqueue split ${index + 1}/${chunks.size}")
+                _io.value = BleIoEvent(System.currentTimeMillis(), BleIoDirection.RX, byteArrayOf(), "write failed to enqueue split ${index + 1}/${chunks.size} mode=$modeLabel properties=0x${ch.properties.toString(16)}")
                 return@withLock
             }
-            val status = withTimeoutOrNull(2500L) { ack.await() }
-            pendingWriteAck = null
-            if (status != BluetoothGatt.GATT_SUCCESS) {
-                val detail = status?.toString() ?: "timeout"
-                _io.value = BleIoEvent(System.currentTimeMillis(), BleIoDirection.RX, byteArrayOf(), "write failed split ${index + 1}/${chunks.size}: $detail")
-                return@withLock
+
+            if (expectsAck) {
+                val status = withTimeoutOrNull(2500L) { ack?.await() }
+                pendingWriteAck = null
+                if (status != BluetoothGatt.GATT_SUCCESS) {
+                    val detail = status?.toString() ?: "timeout"
+                    _io.value = BleIoEvent(System.currentTimeMillis(), BleIoDirection.RX, byteArrayOf(), "write failed split ${index + 1}/${chunks.size}: $detail")
+                    return@withLock
+                }
+                if (index != chunks.lastIndex) delay(25L)
+            } else {
+                pendingWriteAck = null
+                if (index != chunks.lastIndex) delay(60L)
             }
-            if (index != chunks.lastIndex) delay(25L)
+        }
+    }
+
+    private fun chooseWriteMode(ch: BluetoothGattCharacteristic): Int? {
+        val supportsWrite = (ch.properties and BluetoothGattCharacteristic.PROPERTY_WRITE) != 0
+        val supportsWriteNoResponse = (ch.properties and BluetoothGattCharacteristic.PROPERTY_WRITE_NO_RESPONSE) != 0
+        return when {
+            supportsWrite -> BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
+            supportsWriteNoResponse -> BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE
+            else -> null
         }
     }
 
