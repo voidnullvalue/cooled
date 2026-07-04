@@ -52,6 +52,11 @@ dependencies {
     implementation("com.google.android.material:material:1.12.0")
     implementation("androidx.navigation:navigation-compose:2.8.8")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
+    // Matches the APK's bundled ICU data version (icudt72b) exactly, so
+    // ArabicShaping/Bidi behavior in ScriptVisualText.kt is byte-identical
+    // to the original app rather than a re-implementation of the Unicode
+    // BiDi algorithm. IBM/Unicode-licensed, not a Google/cloud dependency.
+    implementation("com.ibm.icu:icu4j:72.1")
 
     debugImplementation("androidx.compose.ui:ui-tooling:1.7.8")
     testImplementation("junit:junit:4.13.2")
