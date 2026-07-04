@@ -30,9 +30,29 @@ class OriginalLedAssetPayloadEncoderTest {
     }
 
     @Test
-    fun missingGifAnimationAssetIsDocumentedAsApproximateUntilApkMappingExists() {
-        val gifCount = root.walkTopDown().count { it.isFile && it.extension.equals("gif", ignoreCase = true) }
-        assertEquals("extracted LED asset tree currently contains no GIF files to build a golden vector from", 0, gifCount)
+    fun realGifAssetGoldenVectorForRawAnimationWrapping() {
+        // tools/apk-re/extract-coolled-apk-assets.sh now pulls in
+        // res/drawable-xxhdpi-v4 (see docs/APK_REVERSE_ENGINEERING_NOTES.md),
+        // which includes ~3,770 real .gif emoji/icon assets - this used to
+        // be blocked ("extracted LED asset tree currently contains no GIF
+        // files"), now fixed with a real golden vector instead of a
+        // placeholder assertion.
+        val previous = OriginalLedAssetByteSources.active
+        try {
+            OriginalLedAssetByteSources.active = FileOriginalLedAssetBytes(root)
+            val path = "raw-assets/res/drawable-xxhdpi-v4/emoji_fc_16x16_60.gif"
+            val raw = root.resolve(path).readBytes()
+            assertArrayEquals("GIF8".toByteArray(), raw.copyOfRange(0, 4))
+
+            val encoded = OriginalLedAssetPayloadEncoder.encode(path, OriginalLedAssetKinds.ANIMATION, 64, 32)
+
+            assertEquals("raw-gif", encoded.format)
+            assertEquals(null, encoded.width)
+            assertEquals(null, encoded.height)
+            assertArrayEquals(raw, encoded.bytes)
+        } finally {
+            OriginalLedAssetByteSources.active = previous
+        }
     }
 
     private fun findAssetRoot(): File {

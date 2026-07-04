@@ -23,9 +23,11 @@ import com.cooled.core.assets.AssetManifestOriginalLedAssetCatalog
 import com.cooled.core.assets.AssetOriginalLedAssetBytes
 import com.cooled.core.assets.OriginalLedAssetByteSources
 import com.cooled.core.assets.OriginalLedAssetCatalogs
+import com.cooled.core.protocol.AndroidPixelGridDecoder
 import com.cooled.core.protocol.AssetCoolleduxFontSource
 import com.cooled.core.protocol.BleProtocolConstants
 import com.cooled.core.protocol.CoolleduxFontSources
+import com.cooled.core.protocol.PixelGridDecoders
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -67,6 +69,7 @@ class AndroidBleTransport(private val context: Context) : BleTransport {
         CoolleduxFontSources.active = AssetCoolleduxFontSource(context.assets)
         OriginalLedAssetCatalogs.active = AssetManifestOriginalLedAssetCatalog(context.assets)
         OriginalLedAssetByteSources.active = AssetOriginalLedAssetBytes(context.assets)
+        PixelGridDecoders.active = AndroidPixelGridDecoder
     }
 
     private val callback = object : BluetoothGattCallback() {
