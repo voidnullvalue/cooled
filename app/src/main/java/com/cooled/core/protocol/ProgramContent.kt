@@ -43,6 +43,12 @@ data class CoolLedUxTextContentProgramContent(
     val moveSpace: Int = 0,
     val fontWidth: Int = 8,
     val fontHeight: Int = 16,
+    /** Font point size the glyph is read/rescaled at - FontUtils.CoolleduxTextContentProgramContent.textSize. */
+    val textSize: Int = fontHeight,
+    val textSpacing: Int = 1,
+    val isTextBold: Boolean = false,
+    val textRotate: Int = 0,
+    val languageCode: String = "",
     val glyphBytes: ByteArray? = null
 )
 
@@ -174,6 +180,9 @@ object ProgramComposer {
     private fun DeviceFamily.usesCoolLedUxProgramLayout(): Boolean =
         this == DeviceFamily.COOLLEDUX || this == DeviceFamily.COOLLEDX || this == DeviceFamily.COOLLEDS || this == DeviceFamily.ILEDCLOCK
 
+    /** FontUtils.getFontByteDataCoolleduxForEmoji(...) modes that use the shared word-wrapped canvas, not the per-glyph stream. Not yet ported. */
+    private val combineCanvasModes = setOf(1, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13)
+
     /** Port of CoolledUXUtils.getDataWithTextContentProgramContent(...). */
     fun getDataWithTextContentProgramContent(content: CoolLedUxTextContentProgramContent): ByteArray {
         val inner = mutableListOf<Byte>()
@@ -188,7 +197,12 @@ object ProgramComposer {
         inner += one(content.speed)
         inner += one(content.stayTime)
         inner += two(content.moveSpace)
-        inner += getFontByteDataCoolleduxForEmoji(content).toList()
+        val textBytes = when {
+            content.glyphBytes != null -> getFontByteDataCoolleduxForEmoji(content)
+            content.mode in combineCanvasModes -> getFontByteDataCoolleduxForEmoji(content) // combine-canvas mode not yet ported exactly
+            else -> CoolleduxStreamText.encode(content)
+        }
+        inner += textBytes.toList()
         return (four(inner.size + 4) + inner).toByteArray()
     }
 

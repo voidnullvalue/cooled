@@ -43,31 +43,58 @@ class CoolleduxFontSourceTest {
     }
 
     @Test
-    fun coolleduxTextBodyEmbedsAssetBackedHelloGlyphsAndSpacing() {
+    fun coolleduxTextBodyFramesFiveHelloGlyphsThroughTheRealStreamModeEncoder() {
+        // CoolleduxProgramBytecode.text(..., effect = 2) now routes through
+        // CoolleduxStreamText (mode 2 is not a combine-canvas mode), which
+        // trims and inter-glyph-spaces real font-table bytes instead of
+        // embedding them verbatim - so this asserts the real
+        // [tokenCount][runningTotal][per-glyph (colCount, type, bytes)]
+        // framing round-trips cleanly against real bundled assets, rather
+        // than asserting raw glyph bytes appear untouched (which was only
+        // ever true of the old placeholder encoder).
         val previous = CoolleduxFontSources.active
         try {
-            val source = FileCoolleduxFontSource(root)
-            CoolleduxFontSources.active = source
+            CoolleduxFontSources.active = FileCoolleduxFontSource(root)
             val body = CoolleduxProgramBytecode.text("HELLO", speed = 9, effect = 2, displayColumns = 128, displayRows = 32)
-            val h = source.readGlyph32('H'.code, bold = true)!!
-            val e = source.readGlyph32('E'.code, bold = true)!!
-            val hOffset = body.indexOfSubArray(h)
-            val eOffset = body.indexOfSubArray(e)
 
-            assertTrue("HELLO body should include the exact H glyph record", hOffset >= 0)
-            assertEquals("APK-shaped FontUtils payload stores adjacent fixed-width glyph records after its width table", hOffset + 128, eOffset)
+            // Text bytes start after getDataWithProgram's 10-byte outer
+            // header plus getDataWithTextContentProgramContent's 26-byte
+            // content-block header (4-byte length + 22 fixed fields) - see
+            // coolLedUxTextProgram_matchesRecoveredApkBlockLayout in
+            // ProtocolCoreTest.kt for the same 26-byte inner offset.
+            val textStart = 10 + 26
+            val tokenCount = readBe16(body, textStart)
+            assertEquals(5, tokenCount)
+            val runningTotal = readBe32(body, textStart + 2)
+
+            var pos = textStart + 6
+            var columnsSeen = 0
+            var glyphsSeen = 0
+            val bytesPerColumn = 4
+            while (pos < body.size) {
+                val colCount = body[pos].toInt() and 0xFF
+                val type = body[pos + 1].toInt() and 0xFF
+                assertEquals("HELLO has no emoji/image tokens", 0, type)
+                pos += 2 + colCount * bytesPerColumn
+                columnsSeen += colCount
+                glyphsSeen++
+            }
+            assertEquals("chunk framing must consume the buffer exactly", body.size, pos)
+            assertEquals(5, glyphsSeen)
+            assertEquals(runningTotal, columnsSeen)
         } finally {
             CoolleduxFontSources.active = previous
         }
     }
 
-    private fun ByteArray.indexOfSubArray(needle: ByteArray): Int {
-        outer@ for (i in 0..(size - needle.size)) {
-            for (j in needle.indices) if (this[i + j] != needle[j]) continue@outer
-            return i
-        }
-        return -1
-    }
+    private fun readBe16(bytes: ByteArray, offset: Int): Int =
+        ((bytes[offset].toInt() and 0xFF) shl 8) or (bytes[offset + 1].toInt() and 0xFF)
+
+    private fun readBe32(bytes: ByteArray, offset: Int): Int =
+        ((bytes[offset].toInt() and 0xFF) shl 24) or
+            ((bytes[offset + 1].toInt() and 0xFF) shl 16) or
+            ((bytes[offset + 2].toInt() and 0xFF) shl 8) or
+            (bytes[offset + 3].toInt() and 0xFF)
 
     private fun findAssetRoot(): File {
         val candidates = listOf(
