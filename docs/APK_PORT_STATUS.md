@@ -127,7 +127,7 @@ Both mode branches are now ported and wired into the real upload path (`ProgramC
 
 ## Current priority
 
-Plain-text and emoji/image CoolLEDUX text generation (both mode branches) is now exact and wired end-to-end. Remaining highest-value gaps: the actual on-device glyph *rasterization* for RTL/CJK scripts (`ArabicCharDotMatrixGenerator`'s Canvas/Typeface path - genuinely not JVM-portable), the per-language tokenizer dispatch (`MultiLangTextEmojiParser.getTextEmojiItemsByLanguage`), and icon/GIF/template byte-exactness for the *original-asset* upload path (as opposed to inline emoji-in-text, which is done) - then live-device visual validation across all of it. Command/control wiring and content generation are no longer the bottleneck; on-device-only behavior and template composition are.
+Plain-text and emoji/image CoolLEDUX text generation (both mode branches) is now exact and wired end-to-end for every language *except* Arabic/Hebrew/Hindi/Thai specifically (confirmed: `MultiLangTextEmojiParser` only special-cases those four - zh-CN, vi, and everything else already use the tokenizer this repo ports). Remaining highest-value gaps: the actual on-device glyph *rasterization* for those four scripts (`ArabicCharDotMatrixGenerator`'s Canvas/Typeface path - genuinely not JVM-portable, and their tokenizer dispatch is tied to this same work, not independently useful yet), and icon/GIF/template byte-exactness for the *original-asset* upload path (as opposed to inline emoji-in-text, which is done) - then live-device visual validation across all of it. Command/control wiring and content generation are no longer the bottleneck; on-device-only behavior and template composition are.
 
 ## Build/test environment (2026-07-04)
 
