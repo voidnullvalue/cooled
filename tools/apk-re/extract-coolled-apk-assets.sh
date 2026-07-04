@@ -70,6 +70,10 @@ done < <(cd "$tmp_dir" && find assets -type f | sort)
 # Android framework packaging.
 copy_tree_if_present "res/drawable"
 copy_tree_if_present "res/drawable-nodpi"
+copy_tree_if_present "res/drawable-hdpi-v4"
+copy_tree_if_present "res/drawable-xxhdpi-v4"
+copy_tree_if_present "res/drawable-v21"
+copy_tree_if_present "res/drawable-v23"
 copy_tree_if_present "res/raw"
 
 cat > "$out_dir/README.md" <<'EOF'
