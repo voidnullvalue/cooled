@@ -244,8 +244,10 @@ object ProgramComposer {
         val bytesPerColumn = (height + 7) / 8
         val bytesPerGlyph = widthPerGlyph * bytesPerColumn
         val glyphs = codePoints.map { cp ->
-            readFontGlyph(cp, widthPerGlyph, height, bytesPerGlyph)
-                ?: error("Missing CoolLEDUX APK font glyph U+${cp.toString(16).uppercase()} size=${widthPerGlyph}x$height")
+            // Matches FontUtils.readFontData(...): the APK returns a zero-filled
+            // glyph (not an error) whenever the font table can't produce one -
+            // see docs/APK_REVERSE_ENGINEERING_NOTES.md, "readFontData ... blank-glyph fallback".
+            readFontGlyph(cp, widthPerGlyph, height, bytesPerGlyph) ?: ByteArray(bytesPerGlyph)
         }
         val out = mutableListOf<Byte>()
         out += two(codePoints.size)
@@ -473,7 +475,10 @@ private object CoolleduxFontByteBuilder {
                 content.textSize >= 12 -> CoolleduxFontSources.active.readGlyph12(cp, content.isTextBold)
                 else -> CoolleduxFontSources.active.readGlyph8(cp)
             }
-            out += (glyph ?: error("Missing CoolLEDUX APK font glyph U+${cp.toString(16).uppercase()} textSize=${content.textSize}")).toList()
+            // Matches FontUtils.readFontData(...): the APK returns a zero-filled
+            // glyph (not an error) whenever the font table can't produce one -
+            // see docs/APK_REVERSE_ENGINEERING_NOTES.md, "readFontData ... blank-glyph fallback".
+            out += (glyph ?: ByteArray(bytesPerColumn(content.textSize) * content.textSize)).toList()
             if (idx != codePoints.lastIndex && content.textSpacing > 0) {
                 repeat(content.textSpacing) {
                     repeat(bytesPerColumn(content.textSize)) { out += 0x00.toByte() }

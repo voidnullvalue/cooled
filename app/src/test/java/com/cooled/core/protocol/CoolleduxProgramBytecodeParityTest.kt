@@ -70,16 +70,23 @@ class CoolleduxProgramBytecodeParityTest {
 
 
     @Test
-    fun fontUtilsRejectsMissingFontsAndEmojiInsteadOfGeneratingFallbackBytes() {
+    fun fontUtilsReturnsZeroFilledGlyphForMissingFontsLikeTheApkDoesButStillRejectsEmoji() {
+        // FontUtils.readFontData(...) in the APK returns a zero-filled glyph
+        // (not an error) whenever its font table can't produce one - see
+        // docs/APK_REVERSE_ENGINEERING_NOTES.md, "readFontData ... blank-glyph
+        // fallback". Non-BMP/emoji text is a genuinely unimplemented feature
+        // (the APK's own emoji subsystem draws bitmap images, not font
+        // glyphs), not a missing-data case, so that still throws.
         val previous = CoolleduxFontSources.active
         try {
             CoolleduxFontSources.active = MissingCoolleduxFontSource
 
-            assertThrows(IllegalStateException::class.java) {
-                ProgramComposer.getFontByteDataCoolleduxForEmoji(
-                    CoolLedUxTextContentProgramContent(text = "A", fontWidth = 32, fontHeight = 32)
-                )
-            }
+            val encoded = ProgramComposer.getFontByteDataCoolleduxForEmoji(
+                CoolLedUxTextContentProgramContent(text = "A", fontWidth = 32, fontHeight = 32)
+            )
+            assertEquals(4 + 2 + 128, encoded.size)
+            assertArrayEquals(ByteArray(128), encoded.copyOfRange(encoded.size - 128, encoded.size))
+
             assertThrows(IllegalArgumentException::class.java) {
                 ProgramComposer.getFontByteDataCoolleduxForEmoji(
                     CoolLedUxTextContentProgramContent(text = "😀", fontWidth = 32, fontHeight = 32)
