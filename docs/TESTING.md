@@ -41,16 +41,22 @@ aarch64 proot/Termux container, not a normal Linux desktop):
    (`com.android.tools.build:aapt2:8.7.3-12006047:linux`, a zip containing the binary) into
    `toolchain/aapt2-bin/aapt2-x86_64`, and run it under `qemu-x86_64-static` via a wrapper script
    named exactly `aapt2` (AGP's `android.aapt2FromMavenOverride` validates the override path
-   literally ends in the filename `aapt2`). Wired in via `gradle.properties`:
-   `android.aapt2FromMavenOverride=/root/cooled/toolchain/aapt2-bin/aapt2`. `qemu-x86_64-static`
-   and the amd64 glibc it needs (`/usr/lib/x86_64-linux-gnu`) were already installed on this
-   machine.
+   literally ends in the filename `aapt2`). `qemu-x86_64-static` and the amd64 glibc it needs
+   (`/usr/lib/x86_64-linux-gnu`) were already installed on this machine.
+
+   **This override must not go in the project's own `gradle.properties`** - real CI runners and
+   most contributors' machines are plain x86_64/arm64-with-native-aapt2 and would be broken by an
+   absolute path into this specific container's `toolchain/` directory. It's set instead in this
+   machine's `$GRADLE_USER_HOME/gradle.properties` (`~/.gradle/gradle.properties`, not committed
+   anywhere), which Gradle reads as a machine-local default that the project's own
+   `gradle.properties` would override if it ever needed to (it doesn't). On a normal x86_64
+   Linux/macOS/Windows dev machine or in CI, no override is needed at all - the stock
+   Maven-distributed aapt2 just works.
 
 Neither `local.properties` nor the extracted `aapt2-x86_64` binary is committed (machine-local /
-large binary respectively - see `.gitignore`); the wrapper script and `gradle.properties` entry
-are committed since they're portable across any aarch64-without-native-aapt2 environment. On a
-normal x86_64 Linux/macOS/Windows dev machine, delete/ignore the `android.aapt2FromMavenOverride`
-line and things work with the stock Maven-distributed aapt2.
+large binary respectively - see `.gitignore`); the wrapper script at `toolchain/aapt2-bin/aapt2`
+is committed since it's portable across any aarch64-without-native-aapt2 environment that chooses
+to point their own `~/.gradle/gradle.properties` at it.
 
 ## Expected toolchain
 - JDK `17` (this container has `17.0.19`, not `25.0.1` as an earlier pass recorded - the JDK
@@ -79,3 +85,17 @@ beyond the SDK/aapt2 ones above:
 
 ## Hardware validation
 Unit tests do not replace on-device parity checks. Use `docs/REAL_DEVICE_VALIDATION.md` for hardware coverage.
+
+## CI (2026-07-04)
+
+`.github/workflows/ci.yml` runs `testDebugUnitTest` then `assembleDebug` on every push/PR to
+`main`, on GitHub's stock `ubuntu-latest` runners - no aapt2 override needed there (see above),
+just `LANG`/`LC_ALL=C.UTF-8` for the same CJK-filename reason as local `assembleDebug` runs. Debug
+APK and test reports are uploaded as workflow artifacts.
+
+`.github/workflows/release.yml` runs on pushing a `v*` tag (or manual dispatch with an existing
+tag): same build, then publishes a GitHub Release with the debug-signed APK attached via
+`softprops/action-gh-release`, using the workflow's built-in `GITHUB_TOKEN` - no personal access
+token needed. The APK is the debug build (Android's auto-generated debug keystore), not a
+release-signed one; there's no release signing config/keystore secret set up yet, so this is what
+"grab an installable APK from a release" means for now.
