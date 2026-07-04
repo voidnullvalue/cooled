@@ -5,32 +5,41 @@ package com.cooled.core.protocol
  * (`mode` in {1,4,5,6,7,8,9,10,11,12,13} - a shared word-wrapped, row-centered
  * canvas rather than a plain glyph stream; see `CoolleduxStreamText` for the
  * other branch and docs/APK_REVERSE_ENGINEERING_NOTES.md for how the two were
- * told apart). Plain (non-emoji, script-supported-by-the-font-table) text only.
+ * told apart).
  *
- * Per-glyph shaping (read/rescale/rotate/trim) is shared with stream mode -
- * see `CoolleduxGlyphPipeline`. What's specific to combine mode, hand-traced
- * against reverse/apktool/smali_classes3/.../FontUtils.smali:
+ * Per-token shaping (read/rescale/rotate/trim for text; decode/center/rotate/
+ * trim for images) is shared with stream mode - see `TokenGlyphShaper`. What's
+ * specific to combine mode, hand-traced against
+ * reverse/apktool/smali_classes3/.../FontUtils.smali:
  *
  *  1. Every shaped glyph (space tokens included) is laid onto one shared
  *     column-major canvas via `FontCanvasWordWrap.checkSegment(...)`, which
- *     word-wraps at `showWidth` columns.
+ *     word-wraps at `showWidth` columns. The canvas only ever holds the
+ *     *monochrome* representation - confirmed by tracing the smali, the
+ *     combine-mode search/realignment below operates on monochrome bytes
+ *     for both text and image tokens alike, which is exactly why
+ *     `ShapedGlyph` keeps a `monochrome` field even for images.
  *  2. Once every token has been laid down, the whole canvas is split into
  *     `showWidth`-column rows and each row is independently centered via
  *     `FontCentering.getCenteredDataBytes(...)`.
  *  3. The APK then re-derives per-glyph *output* chunks from that finished
  *     canvas by literally searching for each glyph's original (pre-checkSegment)
- *     byte content within it, walking a single cursor forward across the whole
- *     canvas in original token order: search for the next `bytesPerColumn`-
- *     aligned position where the glyph's bytes match exactly; anything between
- *     the cursor and that match becomes left-padding on the output chunk
- *     (checkSegment's word-wrap gap or getCenteredDataBytes's row-centering
- *     margin); anything zero-valued immediately after the match becomes
- *     right-padding. Space/empty tokens (never added to the canvas-glyph
- *     list in the first place) contribute canvas width but no output chunk.
- *     A failed search (which should never happen for a well-formed canvas -
- *     it would mean this port's canvas construction diverged from the APK's)
- *     silently skips the item with the cursor left unmoved, matching the
- *     APK's own defensive fallback exactly rather than throwing.
+ *     monochrome bytes within it, walking a single cursor forward across the
+ *     whole canvas in original token order: search for the next
+ *     `bytesPerColumn`-aligned position where the glyph's bytes match
+ *     exactly; anything between the cursor and that match becomes
+ *     left-padding on the output chunk (checkSegment's word-wrap gap or
+ *     getCenteredDataBytes's row-centering margin); anything zero-valued
+ *     immediately after the match becomes right-padding. The same padding
+ *     column counts are then applied to the *payload* representation too
+ *     (monochrome bytes for text, RGB444 bytes for images - see
+ *     `ShapedGlyph.withPadding`). Space/empty tokens (never added to the
+ *     canvas-glyph list in the first place) contribute canvas width but no
+ *     output chunk. A failed search (which should never happen for a
+ *     well-formed canvas - it would mean this port's canvas construction
+ *     diverged from the APK's) silently skips the item with the cursor left
+ *     unmoved, matching the APK's own defensive fallback exactly rather than
+ *     throwing.
  *
  * Final framing is the same shape as stream mode
  * (`[2-byte count][4-byte running column total][chunks]`); combine mode's
@@ -44,22 +53,16 @@ object CoolleduxCombineText {
         val bytesPerColumn = CoolleduxGlyphPipeline.bytesPerColumnFor(showHeight)
 
         val tokens = TextEmojiTokenizer.tokenize(content.text)
-        require(tokens.all { it.isText }) {
-            "CoolLEDUX emoji tokens are not yet ported for the combine-canvas text path"
-        }
-        tokens.forEach {
-            require(it.text.length == 1) { "CoolLEDUX multi-character tokens (RTL/CJK draw path) are not yet ported" }
-        }
 
         var canvas: ByteArray? = null
-        val placedGlyphs = mutableListOf<ByteArray>() // shaped glyph bytes, pre-checkSegment padding; space/empty tokens excluded
+        val placedGlyphs = mutableListOf<ShapedGlyph>() // space/empty text tokens excluded
 
         for (token in tokens) {
-            val glyph = CoolleduxGlyphPipeline.readAndShapeGlyph(token.text.codePointAt(0), content)
+            val shaped = TokenGlyphShaper.shape(token, content)
             if (token.text != " " && token.text.isNotEmpty()) {
-                placedGlyphs += glyph
+                placedGlyphs += shaped
             }
-            canvas = FontCanvasWordWrap.checkSegment(canvas, glyph, content.showWidth, content.textSpacing, bytesPerColumn)
+            canvas = FontCanvasWordWrap.checkSegment(canvas, shaped.monochrome, content.showWidth, content.textSpacing, bytesPerColumn)
         }
 
         val centeredCanvas = FontCentering.getCenteredDataBytes(canvas ?: ByteArray(0), showHeight, content.showWidth)
@@ -68,32 +71,26 @@ object CoolleduxCombineText {
         val chunks = mutableListOf<Byte>()
         var cursor = 0
 
-        for (glyph in placedGlyphs) {
-            val matchStart = findAlignedMatch(centeredCanvas, glyph, cursor, bytesPerColumn) ?: continue
+        for (shaped in placedGlyphs) {
+            val matchStart = findAlignedMatch(centeredCanvas, shaped.monochrome, cursor, bytesPerColumn) ?: continue
 
             val leadingPadColumns = (matchStart - cursor) / bytesPerColumn
-            var output = if (leadingPadColumns > 0) {
-                FontCanvasWordWrap.addEmptyColumnsToTheLeft(glyph, leadingPadColumns, bytesPerColumn)
-            } else {
-                glyph
-            }
+            var output = shaped.withPadding(leadingPadColumns, toLeft = true, monochromeBytesPerColumn = bytesPerColumn)
 
-            var trailingScan = matchStart + glyph.size
+            var trailingScan = matchStart + shaped.monochrome.size
             var trailingPadColumns = 0
             while (trailingScan <= centeredCanvas.size - bytesPerColumn && isBlankColumn(centeredCanvas, trailingScan, bytesPerColumn)) {
                 trailingPadColumns++
                 trailingScan += bytesPerColumn
             }
-            if (trailingPadColumns > 0) {
-                output = FontCanvasWordWrap.addEmptyColumns(output, trailingPadColumns, bytesPerColumn)
-            }
+            output = output.withPadding(trailingPadColumns, toLeft = false, monochromeBytesPerColumn = bytesPerColumn)
             cursor = trailingScan
 
-            val columnCount = output.size / bytesPerColumn
+            val columnCount = output.monochrome.size / bytesPerColumn
             runningTotalColumns += columnCount
             chunks += oneByteHex(columnCount)
-            chunks += oneByteHex(0) // item type 0 = text
-            chunks += output.toList()
+            chunks += oneByteHex(output.itemType)
+            chunks += output.payload.toList()
         }
 
         val out = mutableListOf<Byte>()

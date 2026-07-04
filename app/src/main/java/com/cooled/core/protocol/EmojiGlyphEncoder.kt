@@ -84,4 +84,74 @@ object EmojiGlyphEncoder {
         }
         return out
     }
+
+    /**
+     * Port of FontUtils.rotate90Degree(List&lt;DrawView.DrawItem&gt;, int) - the
+     * List/color-based rotation image tokens use, as opposed to the
+     * bit-packed byte-array rotation FontBitmapRotation implements for text
+     * glyphs. Hand-traced from
+     * reverse/jadx/sources/.../FontUtils.java (decompiled cleanly, unlike the
+     * byte-array overload of the same name): rebuilding the index algebra
+     * (`dest[row][col] = source[size-1-col][row]`) shows it's the exact same
+     * clockwise-90-degree transpose as the byte-array version, just applied
+     * to whole ARGB pixels instead of packed bits - so there's one shared
+     * rotation formula for both representations in this port, even though
+     * the APK implements them as two unrelated-looking functions.
+     */
+    fun rotate90Clockwise(grid: PixelGrid): PixelGrid {
+        val size = grid.width
+        require(grid.height == size) { "rotate90Clockwise requires a square grid, got ${grid.width}x${grid.height}" }
+        // PixelGrid.get(x, y) uses x=column, y=row. The proven formula
+        // (matching FontBitmapRotation.rotate90Clockwise) is
+        // dest[row][col] = source[size-1-col][row]; substituting x=col,y=row
+        // throughout gives dest.get(x,y) = source.get(x=y, y=size-1-x).
+        return PixelGrid(size, size) { x, y -> grid[y, size - 1 - x] }
+    }
+
+    /** Port of FontUtils.rotate(int, List&lt;DrawView.DrawItem&gt;, int) - repeated rotate90Clockwise for 90/180/270. */
+    fun rotateImage(angleDegrees: Int, grid: PixelGrid): PixelGrid = when (angleDegrees) {
+        0, 360 -> grid
+        90 -> rotate90Clockwise(grid)
+        180 -> rotate90Clockwise(rotate90Clockwise(grid))
+        270 -> rotate90Clockwise(rotate90Clockwise(rotate90Clockwise(grid)))
+        else -> error("Unsupported CoolLEDUX image rotation angle: $angleDegrees")
+    }
+
+    /**
+     * Port of CoolledUXUtils.getDrawListDataColorAndDeleteEmptyColumn(items, width, height):
+     * trims leading/trailing all-blank columns and RGB444-encodes only the
+     * surviving columns, column-major. A pixel is "blank" here if its ARGB
+     * int is *exactly* opaque-black (0xFF000000) or exactly zero - a
+     * different (narrower) check than [toMonochromeColumns]'s "RGB is
+     * non-zero regardless of alpha": a pixel with, say, 50%-alpha black
+     * would count as blank for [toMonochromeColumns] but not here. This is a
+     * genuine APK inconsistency between the two functions, not a bug in this
+     * port - see docs/APK_REVERSE_ENGINEERING_NOTES.md. In practice GIF
+     * assets only have 1-bit transparency (fully opaque or fully
+     * transparent), so this rarely matters for the bundled emoji/icon assets.
+     *
+     * Unlike font-glyph trimming, there is no "entirely blank" fallback
+     * width here - an all-blank grid yields an empty result, matching the
+     * APK (whose loop simply never executes when firstNonBlank > lastNonBlank).
+     */
+    fun toTrimmedRgb444Columns(grid: PixelGrid): ByteArray {
+        fun isBlank(argb: Int) = argb == 0xFF000000.toInt() || argb == 0
+        fun columnIsBlank(x: Int) = (0 until grid.height).all { y -> isBlank(grid[x, y]) }
+
+        var first = 0
+        while (first < grid.width && columnIsBlank(first)) first++
+        if (first >= grid.width) return ByteArray(0)
+        var last = grid.width - 1
+        while (last > first && columnIsBlank(last)) last--
+
+        val out = mutableListOf<Byte>()
+        for (x in first..last) {
+            for (y in 0 until grid.height) {
+                val argb = grid[x, y]
+                val alpha = (argb ushr 24) and 0xFF
+                out += OriginalLedAssetPayloadEncoder.rgb444TransferColorBytes(argb, alpha).toList()
+            }
+        }
+        return out.toByteArray()
+    }
 }

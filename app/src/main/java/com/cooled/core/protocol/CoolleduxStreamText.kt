@@ -3,17 +3,17 @@ package com.cooled.core.protocol
 /**
  * Port of the "stream" branch of FontUtils.getFontByteDataCoolleduxForEmoji(...)
  * (the case used when `mode` is NOT in {1,4,5,6,7,8,9,10,11,12,13} - chiefly
- * scrolling text, modes 2/3). Plain (non-emoji, script-supported-by-the-font-
- * table) text only; see docs/APK_REVERSE_ENGINEERING_NOTES.md for the
- * "combine canvas" mode (`CoolleduxCombineText`) and for the emoji/Arabic/CJK
- * branches this does not cover yet.
+ * scrolling text, modes 2/3). See docs/APK_REVERSE_ENGINEERING_NOTES.md for
+ * the "combine canvas" mode (`CoolleduxCombineText`) and for the still-unported
+ * RTL/CJK draw path and per-language tokenizer branches.
  *
- * Per-glyph shaping (read/rescale/rotate/trim) is shared with combine mode -
- * see `CoolleduxGlyphPipeline`. This file only covers what's specific to
- * streaming: every glyph except the last gets `textSpacing` blank columns
- * appended on the right (inter-glyph spacing - no trailing gap after the
- * final glyph), then each is emitted as
- * `[1-byte column count][1-byte item type = 0][glyph bytes]`.
+ * Per-token shaping (read/rescale/rotate/trim for text; decode/center/rotate/
+ * trim for images) is shared with combine mode - see `TokenGlyphShaper`. This
+ * file only covers what's specific to streaming: every glyph except the last
+ * gets `textSpacing` blank columns appended on the right (inter-glyph spacing
+ * - no trailing gap after the final glyph), then each is emitted as
+ * `[1-byte column count][1-byte item type][payload bytes]` (payload is the
+ * monochrome bytes for text, RGB444 bytes for images - see `ShapedGlyph`).
  *
  * Final framing (verified against smali - an earlier draft of the reverse-
  * engineering notes, based on jadx pseudocode with a dropped-loop-closing-edge
@@ -28,28 +28,22 @@ object CoolleduxStreamText {
         val bytesPerColumn = CoolleduxGlyphPipeline.bytesPerColumnFor(showHeight)
 
         val tokens = TextEmojiTokenizer.tokenize(content.text)
-        require(tokens.all { it.isText }) {
-            "CoolLEDUX emoji tokens are not yet ported for the stream-mode text path"
-        }
 
         var runningTotalColumns = 0
         val chunks = mutableListOf<Byte>()
 
         tokens.forEachIndexed { index, token ->
-            require(token.text.length == 1) {
-                "CoolLEDUX multi-character tokens (RTL/CJK draw path) are not yet ported"
-            }
-            var glyph = CoolleduxGlyphPipeline.readAndShapeGlyph(token.text.codePointAt(0), content)
+            var shaped = TokenGlyphShaper.shape(token, content)
 
             if (index != tokens.lastIndex) {
-                glyph = FontCanvasWordWrap.addEmptyColumns(glyph, content.textSpacing, bytesPerColumn)
+                shaped = shaped.withPadding(content.textSpacing, toLeft = false, monochromeBytesPerColumn = bytesPerColumn)
             }
 
-            val columnCount = glyph.size / bytesPerColumn
+            val columnCount = shaped.monochrome.size / bytesPerColumn
             runningTotalColumns += columnCount
             chunks += oneByteHex(columnCount)
-            chunks += oneByteHex(0) // item type 0 = text
-            chunks += glyph.toList()
+            chunks += oneByteHex(shaped.itemType)
+            chunks += shaped.payload.toList()
         }
 
         val out = mutableListOf<Byte>()
