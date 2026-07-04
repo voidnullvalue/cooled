@@ -69,7 +69,7 @@ The core BLE/control command surface is mostly present. The remaining risk is st
   - Staged APK-style program/combine/layer functions are present.
   - Exact text-content framing is covered by tests with verbatim glyph bytes, asset-backed HELLO glyph embedding, digits, punctuation, and a symbol.
   - High-level `ProgramContent.Text` now uses the same recovered `getDataWithProgram(...)` + text-content-block path instead of an extra synthetic combine-length wrapper.
-  - Non-combine-mode text (scrolling, modes 2/3) now goes through the exact `FontUtils.getFontByteDataCoolleduxForEmoji` stream-mode port (`CoolleduxStreamText.kt`) - real per-glyph read/rescale/rotate/trim/spacing and exact final framing, not a placeholder. Combine-canvas modes (1, 4-13) still use the old placeholder.
+  - All text modes now go through an exact `FontUtils.getFontByteDataCoolleduxForEmoji` port for plain text: scrolling (modes 2/3) via `CoolleduxStreamText.kt`, combine-canvas (modes 1, 4-13) via `CoolleduxCombineText.kt` (word-wrapped, row-centered canvas plus the APK's own byte-pattern-matching realignment pass, verified via a reconstruction-invariant test as well as a hand-traced golden vector). Only a verbatim `glyphBytes` override still uses the old placeholder shape.
   - Still needs live-device confirmation for final visual output.
 - Original asset support.
   - Extraction/cataloging/runtime reads are present.
@@ -90,16 +90,23 @@ The core BLE/control command surface is mostly present. The remaining risk is st
   - Start-header index/count/showCount handling is implemented and tested as playlist-level metadata.
   - Multi-program sequencing beyond single package construction still needs live upload validation.
 
+## `FontUtils.getFontByteDataCoolleduxForEmoji(...)` - now exactly ported for plain text (2026-07-04)
+
+The "source unavailable" blocker recorded in earlier passes is resolved: `FontUtils.java` was always present in the extracted APK tree, but jadx's default decompile silently failed on this method (and ~20 other LED-relevant files) and emitted an `UnsupportedOperationException("Method not decompiled")` stub instead of real code. Forcing `jadx -m simple` fixed the decompile, though its rendered *control flow* (not its instruction-level expressions) turned out to have multiple bugs of its own for this specific method and had to be cross-checked against raw smali at every branch point - see `docs/APK_REVERSE_ENGINEERING_NOTES.md` for the confirmed jadx control-flow bugs found this way.
+
+Both mode branches are now ported and wired into the real upload path (`ProgramComposer.getDataWithTextContentProgramContent` dispatches by `mode`, falling back to a verbatim placeholder only when `glyphBytes` is explicitly supplied):
+
+- **Stream mode** (`mode` not in {1,4,5,6,7,8,9,10,11,12,13} - chiefly scrolling text, modes 2/3): `CoolleduxStreamText.kt`. Per-glyph read/rescale/rotate/trim (including the verified double-trim-pass for 90/270 rotation), inter-glyph spacing, and the exact `[2-byte token count][4-byte running column total][per-glyph (colCount, type, bytes) chunks]` final framing.
+- **Combine-canvas mode** (modes 1, 4-13): `CoolleduxCombineText.kt`. Word-wraps every glyph onto a shared canvas (`checkSegmentN`), row-centers the finished canvas (`getCenteredDataBytes`), then re-derives each output chunk by literally searching for that glyph's original bytes within the finished canvas and turning the gaps around the match into left/right padding - exactly replicating the APK's own byte-pattern-matching realignment pass rather than approximating it. Verified with both a hand-traced golden vector and a reconstruction-invariant test (concatenating every emitted chunk must reproduce the centered canvas exactly).
+- Shared per-glyph shaping pipeline: `CoolleduxGlyphPipeline.kt`.
+- Still out of scope for either mode: `ArabicCharDotMatrixGenerator` (RTL/CJK runtime-drawn glyphs) and emoji/image tokens from `TextEmojiManagerCoolLEDUX` - both currently throw a clear error rather than silently producing wrong output. Live-device visual confirmation is also still outstanding.
+
 ## Still approximate / blocked
 
-1. `FontUtils.getFontByteDataCoolleduxForEmoji(...)`: **the "source unavailable" blocker is resolved** - `FontUtils.java` was always present in the extracted APK tree, but jadx's default decompile silently failed on this method (and ~20 other LED-relevant files) and emitted an `UnsupportedOperationException("Method not decompiled")` stub instead of real code. Forcing `jadx -m simple` fixed the decompile, though its rendered *control flow* (not its instruction-level expressions) turned out to have multiple bugs of its own for this specific method and had to be cross-checked against raw smali at every branch point - see `docs/APK_REVERSE_ENGINEERING_NOTES.md` for the three confirmed jadx control-flow bugs found this way.
-   - **The stream-mode branch (mode NOT in {1,4,5,6,7,8,9,10,11,12,13} - chiefly scrolling text, modes 2/3) is now ported and wired into the real upload path** for plain (non-emoji, font-table-supported-script) text: `app/src/main/java/com/cooled/core/protocol/CoolleduxStreamText.kt`, dispatched from `ProgramComposer.getDataWithTextContentProgramContent` whenever `mode` isn't a combine-canvas mode and no verbatim `glyphBytes` override is supplied. Covers per-glyph read/rescale/rotate/trim (including the verified double-trim-pass for 90/270 rotation), inter-glyph spacing, and the exact `[2-byte token count][4-byte running column total][per-glyph (colCount, type, bytes) chunks]` final framing.
-   - **The combine-canvas branch (modes 1, 4-13) is still the old placeholder** - it needs the word-wrapped canvas assembly plus a byte-pattern-matching re-alignment pass against the original per-glyph bytes (to work out how much padding checkSegment/getCenteredDataBytes inserted around each glyph) that the stream branch doesn't need. `checkSegmentN`/`addEmptyColumnForData*ToThe*` (word-wrap), `deleteEmptyColumnFor*` (trim), `getCenteredDataBytes`/`processBytesCenteredN` (centering), and `transfer<N>FontTo<M>` (rescale) are all already ported and available for this; what's missing is the assembly logic itself.
-   - Still out of scope for either mode: `ArabicCharDotMatrixGenerator` (RTL/CJK runtime-drawn glyphs) and emoji/image tokens from `TextEmojiManagerCoolLEDUX` - both currently throw a clear error rather than silently producing wrong output.
-2. Icon/image/GIF encoding is closer to the recovered APK builders (`0x02` graffiti and `0x0c` raw GIF/animation wrappers), but not fully proven exact. The extracted tree currently contains no `.gif` files, so no GIF golden vector can be produced from local assets yet; bitmap RGB444 byte order still needs comparison against `TextEmojiManagerCoolLEDUX` vectors.
-3. Clock/date/weather/temp/humidity/scoreboard/time-count/business-hours template composition still needs exact APK functions or vectors. Raw `.jt` payload handling is covered, but dynamic template assembly is not proven.
-4. Scan-record parsing is deterministic for the recovered manufacturer layout, but additional real raw advertisements should be added if devices advertise other CoolLED layouts.
-5. Live-device validation is still required to claim that text/icon/GIF/template payloads render exactly as the original APK.
+1. Icon/image/GIF encoding is closer to the recovered APK builders (`0x02` graffiti and `0x0c` raw GIF/animation wrappers), but not fully proven exact. The extracted tree currently contains no `.gif` files, so no GIF golden vector can be produced from local assets yet.
+2. Clock/date/weather/temp/humidity/scoreboard/time-count/business-hours template composition still needs exact APK functions or vectors. Raw `.jt` payload handling is covered, but dynamic template assembly is not proven.
+3. Scan-record parsing is deterministic for the recovered manufacturer layout, but additional real raw advertisements should be added if devices advertise other CoolLED layouts.
+4. Live-device validation is still required to claim that text/icon/GIF/template payloads render exactly as the original APK.
 
 ## APK functions ported or represented
 
@@ -118,7 +125,7 @@ The core BLE/control command surface is mostly present. The remaining risk is st
 
 ## Current priority
 
-Continue porting display-content byte parity. Command/control wiring is no longer the bottleneck; exact content generation and live-device visual validation are. Concretely: replace `ProgramComposer.getFontByteDataCoolleduxForEmoji` in `app/src/main/java/com/cooled/core/protocol/ProgramContent.kt` with the mode-dependent combine/stream layout described in `docs/APK_REVERSE_ENGINEERING_NOTES.md`, porting the canvas-dedup helper functions (`checkSegmentN`/`addEmptyColumn*`/`deleteEmptyColumn*`/`processBytesCenteredN`/`transfer<N>FontTo<M>`/`getCenteredDataBytes`) alongside it.
+Plain-text CoolLEDUX text generation (both mode branches) is now exact. Remaining highest-value gaps: `ArabicCharDotMatrixGenerator`/CJK-Vietnamese-Arabic tokenization branches, emoji/image tokens in the text path, and icon/GIF/template byte-exactness - then live-device visual validation across all of it. Command/control wiring and now plain-text content generation are no longer the bottleneck.
 
 ## Build/test environment (2026-07-04)
 

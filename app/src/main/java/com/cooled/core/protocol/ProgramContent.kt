@@ -180,7 +180,7 @@ object ProgramComposer {
     private fun DeviceFamily.usesCoolLedUxProgramLayout(): Boolean =
         this == DeviceFamily.COOLLEDUX || this == DeviceFamily.COOLLEDX || this == DeviceFamily.COOLLEDS || this == DeviceFamily.ILEDCLOCK
 
-    /** FontUtils.getFontByteDataCoolleduxForEmoji(...) modes that use the shared word-wrapped canvas, not the per-glyph stream. Not yet ported. */
+    /** FontUtils.getFontByteDataCoolleduxForEmoji(...) modes that use the shared word-wrapped, row-centered canvas (CoolleduxCombineText) instead of the per-glyph stream (CoolleduxStreamText). */
     private val combineCanvasModes = setOf(1, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13)
 
     /** Port of CoolledUXUtils.getDataWithTextContentProgramContent(...). */
@@ -199,7 +199,7 @@ object ProgramComposer {
         inner += two(content.moveSpace)
         val textBytes = when {
             content.glyphBytes != null -> getFontByteDataCoolleduxForEmoji(content)
-            content.mode in combineCanvasModes -> getFontByteDataCoolleduxForEmoji(content) // combine-canvas mode not yet ported exactly
+            content.mode in combineCanvasModes -> CoolleduxCombineText.encode(content)
             else -> CoolleduxStreamText.encode(content)
         }
         inner += textBytes.toList()
