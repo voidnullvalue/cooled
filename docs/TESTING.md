@@ -23,17 +23,59 @@ java -version
 ./gradlew testDebugUnitTest
 ```
 
-## Current container result (April 11, 2026)
-- Installed Java is `25.0.1`.
-- `./gradlew testDebugUnitTest` fails before task execution with Kotlin/Gradle script error:
-  `java.lang.IllegalArgumentException: 25.0.1`
-- This is a toolchain/runtime mismatch in this environment, not a proven unit-test assertion failure.
+## Current container result (2026-07-04)
+`./gradlew testDebugUnitTest` now runs end-to-end and **passes: 69 tests, 0 failures**, including
+the new `FontBitmapRotationTest`. Two environment blockers were fixed to get here (this is an
+aarch64 proot/Termux container, not a normal Linux desktop):
+
+1. **Android SDK not configured.** A working SDK checkout already existed on this machine at
+   `/termux-home/lib/android-sdk-9123335` (platforms 24/28/35/36, build-tools, licenses all
+   present) but nothing pointed Gradle at it. Fixed with a local (gitignored) `local.properties`:
+   `sdk.dir=/termux-home/lib/android-sdk-9123335`.
+2. **aapt2 can't run natively.** Google only publishes `aapt2` for `linux-x86_64`, `osx`, and
+   `windows` - there is no `linux-aarch64` build, and this device is aarch64. The Termux-packaged
+   native aarch64 `aapt2` exists but is too old to parse the `android-35`/`android-36` resource
+   table format. Fix (same approach already used by a sibling project on this machine, see
+   `/root/icsee-local-camera/BUILDING_IN_PROOT.md`): extract the **exact AGP-version-matched**
+   x86_64 `aapt2` binary from the cached Maven artifact
+   (`com.android.tools.build:aapt2:8.7.3-12006047:linux`, a zip containing the binary) into
+   `toolchain/aapt2-bin/aapt2-x86_64`, and run it under `qemu-x86_64-static` via a wrapper script
+   named exactly `aapt2` (AGP's `android.aapt2FromMavenOverride` validates the override path
+   literally ends in the filename `aapt2`). Wired in via `gradle.properties`:
+   `android.aapt2FromMavenOverride=/root/cooled/toolchain/aapt2-bin/aapt2`. `qemu-x86_64-static`
+   and the amd64 glibc it needs (`/usr/lib/x86_64-linux-gnu`) were already installed on this
+   machine.
+
+Neither `local.properties` nor the extracted `aapt2-x86_64` binary is committed (machine-local /
+large binary respectively - see `.gitignore`); the wrapper script and `gradle.properties` entry
+are committed since they're portable across any aarch64-without-native-aapt2 environment. On a
+normal x86_64 Linux/macOS/Windows dev machine, delete/ignore the `android.aapt2FromMavenOverride`
+line and things work with the stock Maven-distributed aapt2.
 
 ## Expected toolchain
-- JDK `17` or `21`
+- JDK `17` (this container has `17.0.19`, not `25.0.1` as an earlier pass recorded - the JDK
+  itself was never actually the blocker once SDK/aapt2 were fixed)
 - AGP `8.7.3`
 - Gradle wrapper `8.9` (wrapper files are present)
-- Android SDK/API 35 installed and discoverable
+- Android SDK/API 35+36 installed and discoverable via `local.properties`
+
+## `assembleDebug` also verified (2026-07-04)
+
+`./gradlew assembleDebug` succeeds end-to-end and produces a real, installable
+`app/build/outputs/apk/debug/app-debug.apk` (~108MB, dominated by the extracted original-APK
+asset tree under `app/src/main/assets/coolled-original/`). One more environment fix was needed
+beyond the SDK/aapt2 ones above:
+
+- **No UTF-8 locale configured** (`locale` reports `LC_CTYPE=POSIX`, only `C.utf8` is installed,
+  `LANG`/`LC_ALL` are unset). Some extracted original-APK assets have CJK filenames (e.g.
+  `.../pdf/user manual/iledbike/iLedBike使用说明书.pdf`). Under the `POSIX` locale, the JVM's
+  default platform charset mangles these into `?`-filled paths when Gradle's `mergeDebugAssets`
+  task walks the asset tree, so it computes a hash for a path that then doesn't exist on disk and
+  fails with `Failed to create MD5 hash for file '...iLedBike???????????????.pdf' as it does not
+  exist`. Fix: run Gradle with `LANG=C.utf8 LC_ALL=C.utf8` set, e.g.
+  `LANG=C.utf8 LC_ALL=C.utf8 ./gradlew assembleDebug`. `testDebugUnitTest` does not touch the
+  asset merge task so it doesn't need this, but any assemble/bundle/lint task that packages
+  assets does.
 
 ## Hardware validation
 Unit tests do not replace on-device parity checks. Use `docs/REAL_DEVICE_VALIDATION.md` for hardware coverage.

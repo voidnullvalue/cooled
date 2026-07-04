@@ -90,7 +90,8 @@ The core BLE/control command surface is mostly present. The remaining risk is st
 
 ## Still approximate / blocked
 
-1. `FontUtils.getFontByteDataCoolleduxForEmoji(...)` transform details are now asset-backed and structurally framed, but the exact original high-level emoji/color/rotation/mirroring edge cases remain blocked because the recovered source set still does not include `FontUtils.java`.
+1. `FontUtils.getFontByteDataCoolleduxForEmoji(...)`: **the "source unavailable" blocker is resolved** - `FontUtils.java` was always present in the extracted APK tree, but jadx's default decompile silently failed on this method (and ~20 other LED-relevant files) and emitted an `UnsupportedOperationException("Method not decompiled")` stub instead of real code. Forcing `jadx -m simple` fixed the decompile (see `docs/APK_REVERSE_ENGINEERING_NOTES.md`, "jadx decompile gap and fix"), and the method's structure has now been traced from smali: it branches on `mode` between a shared-canvas "combine" layout (modes 1, 4-13) with cross-glyph dedup, and a per-glyph "stream" layout (modes 2/3, i.e. scrolling text) with no dedup. The Kotlin port in `ProgramContent.kt` still uses an old placeholder byte layout that does **not** match either APK shape and must be replaced - this is the single highest-value remaining item (see task list / reverse-engineering notes for the exact byte layout and the list of un-ported helper functions: `checkSegmentN`, `addEmptyColumn*`, `deleteEmptyColumn*`, `processBytesCenteredN`, `transfer<N>FontTo<M>`, `getCenteredDataBytes`, plus `ArabicCharDotMatrixGenerator` and `TextEmojiManagerCoolLEDUX` tokenization).
+   - The `rotate`/`rotate90Degree` bitmap-rotation helpers it depends on **are** now exactly ported and unit-tested: `app/src/main/java/com/cooled/core/protocol/FontBitmapRotation.kt`.
 2. Icon/image/GIF encoding is closer to the recovered APK builders (`0x02` graffiti and `0x0c` raw GIF/animation wrappers), but not fully proven exact. The extracted tree currently contains no `.gif` files, so no GIF golden vector can be produced from local assets yet; bitmap RGB444 byte order still needs comparison against `TextEmojiManagerCoolLEDUX` vectors.
 3. Clock/date/weather/temp/humidity/scoreboard/time-count/business-hours template composition still needs exact APK functions or vectors. Raw `.jt` payload handling is covered, but dynamic template assembly is not proven.
 4. Scan-record parsing is deterministic for the recovered manufacturer layout, but additional real raw advertisements should be added if devices advertise other CoolLED layouts.
@@ -113,4 +114,8 @@ The core BLE/control command surface is mostly present. The remaining risk is st
 
 ## Current priority
 
-Continue porting display-content byte parity. Command/control wiring is no longer the bottleneck; exact content generation and live-device visual validation are.
+Continue porting display-content byte parity. Command/control wiring is no longer the bottleneck; exact content generation and live-device visual validation are. Concretely: replace `ProgramComposer.getFontByteDataCoolleduxForEmoji` in `app/src/main/java/com/cooled/core/protocol/ProgramContent.kt` with the mode-dependent combine/stream layout described in `docs/APK_REVERSE_ENGINEERING_NOTES.md`, porting the canvas-dedup helper functions (`checkSegmentN`/`addEmptyColumn*`/`deleteEmptyColumn*`/`processBytesCenteredN`/`transfer<N>FontTo<M>`/`getCenteredDataBytes`) alongside it.
+
+## Build/test environment (2026-07-04)
+
+`./gradlew testDebugUnitTest` now builds and passes (69/69) in this container. It required a local (gitignored) `local.properties` pointing at a pre-existing Android SDK checkout, and an `aapt2` fix for aarch64 (no native `linux-aarch64` aapt2 exists upstream) - see `docs/TESTING.md` for the exact fix. This does not change LED protocol behavior; it just means CI-equivalent checks are actually runnable here now instead of failing before any test code executes.

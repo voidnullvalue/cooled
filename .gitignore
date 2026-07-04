@@ -1,3 +1,14 @@
 # Local APK reverse-engineering artifacts can be large and should not be committed.
 /reverse/*
 !/reverse/README.md
+
+# Machine-local Android SDK path.
+/local.properties
+
+# Downloaded source APK used for reverse engineering (large binary, not source).
+/coolled.apk
+
+# Extracted x86_64 aapt2 binary (large, redistributable-license-unclear, and
+# machine-specific: re-extract from the cached AGP Maven artifact instead).
+# The wrapper script (toolchain/aapt2-bin/aapt2) that qemu-runs it IS committed.
+/toolchain/aapt2-bin/aapt2-x86_64
