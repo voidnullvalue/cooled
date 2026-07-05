@@ -66,6 +66,7 @@ fun ClockScreen(
     onQueryAlarms: () -> Unit,
     onSetNightMode: () -> Unit,
     onDisableNightMode: () -> Unit,
+    onQueryNightMode: () -> Unit,
     onQueryReminderList: () -> Unit,
     onQueryReminderDetail: () -> Unit,
     onDeleteReminder: () -> Unit
@@ -164,6 +165,7 @@ fun ClockScreen(
                         NumberField(state.nightEndMinute, { state.nightEndMinute = it }, "End m")
                     }
                     TwoButtonRow("Enable", onSetNightMode, "Disable", onDisableNightMode)
+                    OutlinedButton(onClick = onQueryNightMode, modifier = Modifier.fillMaxWidth()) { Text("Query") }
                 }
             }
         }

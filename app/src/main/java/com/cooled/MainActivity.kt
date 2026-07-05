@@ -294,6 +294,7 @@ private fun AppScreenContent(vm: AppViewModel, missingPermissions: List<String>)
                         onQueryAlarms = { vm.queryAlarms() },
                         onSetNightMode = { vm.setNightMode(true, clockState.nightStartHour.toIntOrNull() ?: 22, clockState.nightStartMinute.toIntOrNull() ?: 0, clockState.nightEndHour.toIntOrNull() ?: 6, clockState.nightEndMinute.toIntOrNull() ?: 0) },
                         onDisableNightMode = { vm.setNightMode(false, clockState.nightStartHour.toIntOrNull() ?: 22, clockState.nightStartMinute.toIntOrNull() ?: 0, clockState.nightEndHour.toIntOrNull() ?: 6, clockState.nightEndMinute.toIntOrNull() ?: 0) },
+                        onQueryNightMode = { vm.queryNightMode() },
                         onQueryReminderList = { vm.queryReminderList() },
                         onQueryReminderDetail = { vm.queryReminderDetail(clockState.reminderId.toIntOrNull() ?: 0) },
                         onDeleteReminder = { vm.deleteReminder(clockState.reminderId.toIntOrNull() ?: 0) }

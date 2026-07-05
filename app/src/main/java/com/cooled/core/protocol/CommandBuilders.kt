@@ -125,13 +125,37 @@ object CommandBuilders {
     fun queryReminderDetail(id: Int): ByteArray = FrameCodec.encode(byteArrayOf(0x1A.toByte(), 0x02, id.coerceIn(0, 255).toByte()))
     fun deleteReminder(id: Int): ByteArray = FrameCodec.encode(byteArrayOf(0x1A.toByte(), 0x03, id.coerceIn(0, 255).toByte()))
 
-    fun setNightMode(enabled: Boolean, startHour: Int, startMinute: Int, endHour: Int, endMinute: Int): ByteArray =
+    fun queryNightMode(): ByteArray = FrameCodec.encode(byteArrayOf(0x14.toByte(), 0x02))
+
+    // ILedClockUtils.getSetNightMode(nightModeEnabled, startTimeHour,
+    // startTimeMinute, endTimeHour, endTimeMinute, deviceStateEnabled,
+    // brightness, voiceControlEnabled, wakeUpDuration, voiceSensitivity) -
+    // 10 single-byte fields, confirmed by the caller in DeviceManager.java.
+    // An earlier version of this port only exposed the first 5 and zero-
+    // padded the rest, silently zeroing brightness/wake-duration/voice-
+    // sensitivity on every call; those 5 aren't wired into the UI yet
+    // either, so they take conservative defaults here rather than being
+    // guessed at both layers.
+    fun setNightMode(
+        enabled: Boolean,
+        startHour: Int,
+        startMinute: Int,
+        endHour: Int,
+        endMinute: Int,
+        deviceStateEnabled: Boolean = false,
+        brightness: Int = 50,
+        voiceControlEnabled: Boolean = false,
+        wakeUpDuration: Int = 0,
+        voiceSensitivity: Int = 0
+    ): ByteArray =
         FrameCodec.encode(
             byteArrayOf(
                 0x14.toByte(), 0x01, (if (enabled) 1 else 0).toByte(),
                 startHour.coerceIn(0, 23).toByte(), startMinute.coerceIn(0, 59).toByte(),
                 endHour.coerceIn(0, 23).toByte(), endMinute.coerceIn(0, 59).toByte(),
-                0x00, 0x00, 0x00, 0x00, 0x00
+                (if (deviceStateEnabled) 1 else 0).toByte(), brightness.coerceIn(0, 100).toByte(),
+                (if (voiceControlEnabled) 1 else 0).toByte(), wakeUpDuration.coerceIn(0, 255).toByte(),
+                voiceSensitivity.coerceIn(0, 255).toByte()
             )
         )
 

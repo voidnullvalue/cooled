@@ -329,4 +329,47 @@ class ProtocolCoreTest {
         assertEquals(0x15, FrameCodec.decode(CommandBuilders.queryTomato())[0].toInt() and 0xFF)
         assertEquals(0x19, FrameCodec.decode(CommandBuilders.queryTemperatureHumidity())[0].toInt() and 0xFF)
     }
+
+    @Test
+    fun setNightModeEncodesAllTenFieldsFromIledClockUtilsGetSetNightMode() {
+        // ILedClockUtils.getSetNightMode(nightModeEnabled, startTimeHour,
+        // startTimeMinute, endTimeHour, endTimeMinute, deviceStateEnabled,
+        // brightness, voiceControlEnabled, wakeUpDuration, voiceSensitivity):
+        // 10 single-byte fields. An earlier version of this builder only
+        // exposed the first 5 and hardcoded the rest to 0.
+        val payload = FrameCodec.decode(
+            CommandBuilders.setNightMode(
+                enabled = true, startHour = 22, startMinute = 15, endHour = 6, endMinute = 45,
+                deviceStateEnabled = true, brightness = 80, voiceControlEnabled = true, wakeUpDuration = 30, voiceSensitivity = 5
+            )
+        )
+        assertArrayEquals(byteArrayOf(0x14, 0x01, 1, 22, 15, 6, 45, 1, 80, 1, 30, 5), payload)
+    }
+
+    @Test
+    fun queryNightModeMatchesIledClockUtilsGetNightMode() {
+        assertArrayEquals(byteArrayOf(0x14, 0x02), FrameCodec.decode(CommandBuilders.queryNightMode()))
+    }
+
+    @Test
+    fun parseNightModeOnlyExtractsAllTenFieldsForTheGetSubcommand() {
+        // subcommand 2 (GET response) carries the full 10-field record from
+        // offset 2; subcommand 1 (SET ack) is just a status byte and must
+        // not be misread as a data record.
+        val getResponse = ProtocolParsers.parseFrame(
+            FrameCodec.encode(byteArrayOf(0x14, 0x02, 1, 22, 15, 6, 45, 1, 80, 1, 30, 5))
+        )
+        assertTrue(getResponse is ParsedPayload.NightModeState)
+        val state = getResponse as ParsedPayload.NightModeState
+        assertEquals(true, state.enabled)
+        assertEquals(22, state.startHour)
+        assertEquals(80, state.brightness)
+        assertEquals(true, state.voiceControlEnabled)
+        assertEquals(30, state.wakeUpDuration)
+        assertEquals(5, state.voiceSensitivity)
+
+        val setAck = ProtocolParsers.parseFrame(FrameCodec.encode(byteArrayOf(0x14, 0x01, 0)))
+        assertTrue(setAck is ParsedPayload.NightModeState)
+        assertEquals(null, (setAck as ParsedPayload.NightModeState).enabled)
+    }
 }

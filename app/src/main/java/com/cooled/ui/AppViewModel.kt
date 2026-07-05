@@ -162,6 +162,7 @@ class AppViewModel(
     fun setSampleAlarm() = setAlarm(true, 7, 30, 0b0111110, 600, 5)
 
     fun setNightMode(enabled: Boolean, sh: Int, sm: Int, eh: Int, em: Int) = viewModelScope.launch { repo.sendNightMode(enabled, sh.coerceIn(0, 23), sm.coerceIn(0, 59), eh.coerceIn(0, 23), em.coerceIn(0, 59)) }
+    fun queryNightMode() = viewModelScope.launch { repo.sendQueryNightMode() }
     fun queryReminderList() = viewModelScope.launch { repo.sendQueryReminderList() }
     fun queryReminderDetail(id: Int) = viewModelScope.launch { repo.sendQueryReminderDetail(id.coerceIn(0, 255)) }
     fun deleteReminder(id: Int) = viewModelScope.launch { repo.sendDeleteReminder(id.coerceIn(0, 255)) }
@@ -405,7 +406,7 @@ class AppViewModel(
         is ParsedPayload.CountdownState -> "Countdown sub=$subcommand time=${minute ?: "?"}:${second ?: "?"} running=${running ?: "?"}"
         is ParsedPayload.StopwatchState -> "Stopwatch sub=$subcommand time=${minute ?: "?"}:${second ?: "?"} running=${running ?: "?"}"
         is ParsedPayload.ScoreboardState -> "Scoreboard left=${left ?: "?"} right=${right ?: "?"} mode=${mode ?: "?"} running=${running ?: "?"}"
-        is ParsedPayload.NightModeState -> "Night mode enabled=${enabled ?: "?"} ${startHour ?: "?"}:${startMinute ?: "?"}-${endHour ?: "?"}:${endMinute ?: "?"}"
+        is ParsedPayload.NightModeState -> "Night mode enabled=${enabled ?: "?"} ${startHour ?: "?"}:${startMinute ?: "?"}-${endHour ?: "?"}:${endMinute ?: "?"} deviceState=${deviceStateEnabled ?: "?"} brightness=${brightness ?: "?"} voiceControl=${voiceControlEnabled ?: "?"} wakeUp=${wakeUpDuration ?: "?"} voiceSensitivity=${voiceSensitivity ?: "?"}"
         is ParsedPayload.TomatoClockState -> "Tomato items=${items.map { it.value }.joinToString()}"
         is ParsedPayload.AlarmList -> "Alarms count=${alarms.size}"
         is ParsedPayload.ReminderList -> "Reminder IDs=${ids.joinToString()}"

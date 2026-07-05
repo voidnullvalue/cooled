@@ -75,6 +75,7 @@ class DeviceRepository(
     suspend fun sendDeleteReminder(id: Int) = transport.write(CommandBuilders.deleteReminder(id))
     suspend fun sendNightMode(enabled: Boolean, sh: Int, sm: Int, eh: Int, em: Int) =
         transport.write(CommandBuilders.setNightMode(enabled, sh, sm, eh, em))
+    suspend fun sendQueryNightMode() = transport.write(CommandBuilders.queryNightMode())
 
     suspend fun sendProgramStart(family: DeviceFamily, request: ProgramStartRequest) =
         transport.write(CommandBuilders.buildProgramStartHeader(family, request))

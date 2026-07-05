@@ -53,7 +53,12 @@ sealed class ParsedPayload {
         val startHour: Int?,
         val startMinute: Int?,
         val endHour: Int?,
-        val endMinute: Int?
+        val endMinute: Int?,
+        val deviceStateEnabled: Boolean? = null,
+        val brightness: Int? = null,
+        val voiceControlEnabled: Boolean? = null,
+        val wakeUpDuration: Int? = null,
+        val voiceSensitivity: Int? = null
     ) : ParsedPayload()
 
     data class TomatoItem(val value: Int)
@@ -172,14 +177,27 @@ object ProtocolParsers {
         return ParsedPayload.ScoreboardState(null, null, null, null)
     }
 
+    // DeviceManager.java's 0x14 handler dispatches on a subcommand at
+    // offset 1: 1 = SET result ack (just a status byte, no data record),
+    // 2 = GET response carrying all 10 fields from offset 2 - confirmed via
+    // the GetNightModeEventResponse construction (search "GetNightModeEventResponse").
+    // An earlier version of this parser didn't check the subcommand at all
+    // and only ever extracted the first 5 fields, discarding
+    // deviceStateEnabled/brightness/voiceControlEnabled/wakeUpDuration/
+    // voiceSensitivity even when a real GET response carried them.
     private fun parseNightMode(payload: ByteArray): ParsedPayload {
-        if (payload.size >= 7) {
+        if (payload.u8OrZero(1) == 2 && payload.size >= 12) {
             return ParsedPayload.NightModeState(
                 enabled = payload.u8(2) != 0,
                 startHour = payload.u8(3),
                 startMinute = payload.u8(4),
                 endHour = payload.u8(5),
-                endMinute = payload.u8(6)
+                endMinute = payload.u8(6),
+                deviceStateEnabled = payload.u8(7) != 0,
+                brightness = payload.u8(8),
+                voiceControlEnabled = payload.u8(9) != 0,
+                wakeUpDuration = payload.u8(10),
+                voiceSensitivity = payload.u8(11)
             )
         }
         return ParsedPayload.NightModeState(null, null, null, null, null)
