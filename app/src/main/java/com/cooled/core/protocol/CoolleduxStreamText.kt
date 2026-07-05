@@ -4,8 +4,14 @@ package com.cooled.core.protocol
  * Port of the "stream" branch of FontUtils.getFontByteDataCoolleduxForEmoji(...)
  * (the case used when `mode` is NOT in {1,4,5,6,7,8,9,10,11,12,13} - chiefly
  * scrolling text, modes 2/3). See docs/APK_REVERSE_ENGINEERING_NOTES.md for
- * the "combine canvas" mode (`CoolleduxCombineText`) and for the still-unported
- * RTL/CJK draw path and per-language tokenizer branches.
+ * the "combine canvas" mode (`CoolleduxCombineText`).
+ *
+ * Tokenizing goes through `ScriptVisualText.getVisualText` (bidi-reorder/shape,
+ * a no-op for languageCodes other than ar/iw/vi/th/hi) then
+ * `MultiLangTextTokenizer`, matching FontUtils.java:11009-11012 exactly -
+ * languageCode ar/iw/hi/th gets ICU word-segmented tokens that may be
+ * multi-character (drawn via `GlyphRasterizer.drawString`); everything else
+ * falls back to the plain per-character `TextEmojiTokenizer`.
  *
  * Per-token shaping (read/rescale/rotate/trim for text; decode/center/rotate/
  * trim for images) is shared with combine mode - see `TokenGlyphShaper`. This
@@ -27,7 +33,8 @@ object CoolleduxStreamText {
         require(showHeight in CoolleduxGlyphPipeline.supportedShowHeights) { "Unsupported CoolLEDUX showHeight: $showHeight" }
         val bytesPerColumn = CoolleduxGlyphPipeline.bytesPerColumnFor(showHeight)
 
-        val tokens = TextEmojiTokenizer.tokenize(content.text)
+        val visualText = ScriptVisualText.getVisualText(content.languageCode, content.text)
+        val tokens = MultiLangTextTokenizer.tokenize(content.languageCode, visualText)
 
         var runningTotalColumns = 0
         val chunks = mutableListOf<Byte>()

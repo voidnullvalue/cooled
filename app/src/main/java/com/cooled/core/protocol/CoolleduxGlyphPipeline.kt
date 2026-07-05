@@ -37,17 +37,35 @@ object CoolleduxGlyphPipeline {
         if (nativeSize < showHeight) {
             glyph = FontGlyphRescale.transfer(glyph, fromSize = nativeSize, toSize = showHeight)
         }
-        glyph = FontBitmapRotation.rotate(content.textRotate, glyph, showHeight)
-        glyph = FontColumnTrimming.deleteEmptyColumns(glyph, content.textSize)
+        return shapeTail(glyph, content)
+    }
+
+    /**
+     * The rotate/trim(+double-pass) tail shared by every `showHeight`-sized
+     * glyph regardless of source. FontUtils.java:11360 (`r04 = rotate(r26.rotate,
+     * r66, r7)`) is the control-flow merge point where the font-table-read
+     * branch (after its own native-size-read + rescale, above) and the
+     * ArabicCharDotMatrixGenerator.readFontDataFromDraw branches (which draw
+     * directly at `showHeight` so need no rescale - see
+     * GlyphRasterizer.drawChar/drawString) rejoin into this identical
+     * sequence: rotate, trim, and - only for textRotate 90/270 - a second
+     * center+trim pass (FontUtils.java:11306-11335). Called from
+     * [readAndShapeGlyph] (font-table path) and from `TokenGlyphShaper` for
+     * rasterized Arabic/Hebrew/Hindi/Thai glyphs.
+     */
+    fun shapeTail(glyph: ByteArray, content: CoolLedUxTextContentProgramContent): ByteArray {
+        val showHeight = content.showHeight
+        var out = FontBitmapRotation.rotate(content.textRotate, glyph, showHeight)
+        out = FontColumnTrimming.deleteEmptyColumns(out, content.textSize)
         if (content.textRotate == 90 || content.textRotate == 270) {
             val centered = FontCentering.processBytesCentered(
-                glyph,
+                out,
                 squareSize = showHeight,
                 trimTextSize = processBytesCenteredTrimQuirk(showHeight)
             )
-            glyph = FontColumnTrimming.deleteEmptyColumns(centered, content.textSize)
+            out = FontColumnTrimming.deleteEmptyColumns(centered, content.textSize)
         }
-        return glyph
+        return out
     }
 
     /** FontUtils.processBytesCentered12/20 internally quirk-trim using the 14px/24px family; see FontCentering.kt. */

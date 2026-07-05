@@ -76,14 +76,39 @@ sealed class ShapedGlyph {
  *    (no double-trim for images), and separately trim+RGB444-encode the
  *    same rotated grid via toTrimmedRgb444Columns (a different, narrower
  *    blank-pixel test than the monochrome trim - see EmojiGlyphEncoder).
+ *
+ * Text tokens additionally branch on script, matching FontUtils's own
+ * per-character `ArabicCharDotMatrixGenerator.isLanguageSupported` gate
+ * (FontUtils.java:11621, ported as `ScriptDetection.isLanguageSupported`) and
+ * its `text.length() == 1` char-vs-word-segment split
+ * (FontUtils.java:11584-11616, immediately below the gate):
+ *  - A single character in the Arabic/Hebrew/Hindi/Thai ranges is drawn via
+ *    `GlyphRasterizer.drawChar` (the 5-arg `readFontDataFromDraw` overload,
+ *    ArabicCharDotMatrixGenerator.java:200-202) instead of the font table -
+ *    this fires for a lone foreign-script character regardless of the
+ *    content's own `languageCode`, exactly like the APK's per-char gate.
+ *  - A multi-character token (only ever produced by
+ *    `MultiLangTextTokenizer`'s ICU word-segmentation for languageCode
+ *    ar/iw/hi/th) is drawn as one shaped/ligature-joined unit via
+ *    `GlyphRasterizer.drawString` (the String `readFontDataFromDraw`
+ *    overload, ArabicCharDotMatrixGenerator.java:204-206).
+ *  - Everything else keeps reading the plain font table
+ *    (`CoolleduxGlyphPipeline.readAndShapeGlyph`), unchanged.
+ *
+ * Both rasterized branches still need the same rotate/trim tail as a
+ * font-table glyph (see `CoolleduxGlyphPipeline.shapeTail`); non-zero
+ * rotation of a multi-character (non-square) word glyph is a documented gap
+ * (see the `require` below) since `FontBitmapRotation.rotate90Clockwise`
+ * only supports square NxN bitmaps and the APK's own handling of rotated
+ * word-glyphs could not be pinned down unambiguously from the decompiled
+ * sources (FontUtils.java's `rotate(angle, r66, r7)` merge point uses a
+ * single `r7` size parameter for what is, in the word-segment case, a
+ * `text.length() * showHeight`-wide non-square bitmap).
  */
 object TokenGlyphShaper {
     fun shape(token: TextEmojiTokenizer.Token, content: CoolLedUxTextContentProgramContent): ShapedGlyph {
         if (token.isText) {
-            require(token.text.length == 1) {
-                "CoolLEDUX multi-character tokens (RTL/CJK draw path) are not yet ported"
-            }
-            return ShapedGlyph.Text(CoolleduxGlyphPipeline.readAndShapeGlyph(token.text.codePointAt(0), content))
+            return ShapedGlyph.Text(shapeText(token.text, content))
         }
 
         val showHeight = content.showHeight
@@ -96,4 +121,40 @@ object TokenGlyphShaper {
         val rgb444 = EmojiGlyphEncoder.toTrimmedRgb444Columns(rotated)
         return ShapedGlyph.Image(monochrome, rgb444, showHeight)
     }
+
+    private fun shapeText(text: String, content: CoolLedUxTextContentProgramContent): ByteArray {
+        if (text.length == 1) {
+            val c = text[0]
+            return if (needsGlyphRasterizer(c)) {
+                val raw = GlyphRasterizers.active.drawChar(
+                    languageCode = content.languageCode,
+                    char = c,
+                    size = content.showHeight,
+                    textSize = content.textSize,
+                    bold = content.isTextBold
+                )
+                CoolleduxGlyphPipeline.shapeTail(raw, content)
+            } else {
+                CoolleduxGlyphPipeline.readAndShapeGlyph(c.code, content)
+            }
+        }
+
+        require(content.textRotate == 0) {
+            "CoolLEDUX multi-character Arabic/Hebrew/Hindi/Thai word rotation " +
+                "(textRotate=${content.textRotate}) is not yet ported - see TokenGlyphShaper's class doc"
+        }
+        val raw = GlyphRasterizers.active.drawString(
+            languageCode = content.languageCode,
+            text = text,
+            width = text.length * content.showHeight,
+            height = content.showHeight,
+            textSize = content.textSize,
+            bold = content.isTextBold
+        )
+        return CoolleduxGlyphPipeline.shapeTail(raw, content)
+    }
+
+    /** Port of the per-character branch of ArabicCharDotMatrixGenerator.isLanguageSupported (FontUtils.java:11621): true for the four draw-only scripts this task wires up. Deliberately excludes Vietnamese - vi's own tokenizer/mirror/rescale path is a separate, still-unported gap (see docs/APK_PORT_STATUS.md), and routing lone Vietnamese-range characters here without also porting the languageCode=="vi" whole-string bypass (FontUtils.java:11619) would be an inconsistent half-measure. */
+    private fun needsGlyphRasterizer(c: Char): Boolean =
+        ScriptDetection.isArabic(c) || ScriptDetection.isHebrew(c) || ScriptDetection.isHindi(c) || ScriptDetection.isThai(c)
 }

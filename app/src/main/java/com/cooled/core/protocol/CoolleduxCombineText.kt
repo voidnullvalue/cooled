@@ -7,6 +7,9 @@ package com.cooled.core.protocol
  * other branch and docs/APK_REVERSE_ENGINEERING_NOTES.md for how the two were
  * told apart).
  *
+ * Tokenizing goes through `ScriptVisualText.getVisualText`/`MultiLangTextTokenizer`
+ * exactly like stream mode - see `CoolleduxStreamText`'s class doc.
+ *
  * Per-token shaping (read/rescale/rotate/trim for text; decode/center/rotate/
  * trim for images) is shared with stream mode - see `TokenGlyphShaper`. What's
  * specific to combine mode, hand-traced against
@@ -52,7 +55,8 @@ object CoolleduxCombineText {
         require(showHeight in CoolleduxGlyphPipeline.supportedShowHeights) { "Unsupported CoolLEDUX showHeight: $showHeight" }
         val bytesPerColumn = CoolleduxGlyphPipeline.bytesPerColumnFor(showHeight)
 
-        val tokens = TextEmojiTokenizer.tokenize(content.text)
+        val visualText = ScriptVisualText.getVisualText(content.languageCode, content.text)
+        val tokens = MultiLangTextTokenizer.tokenize(content.languageCode, visualText)
 
         var canvas: ByteArray? = null
         val placedGlyphs = mutableListOf<ShapedGlyph>() // space/empty text tokens excluded
