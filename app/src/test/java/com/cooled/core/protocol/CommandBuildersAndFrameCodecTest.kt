@@ -31,7 +31,11 @@ class CommandBuildersAndFrameCodecTest {
         assertPayload(byteArrayOf(0x05, 0x00), CommandBuilders.setPower(false))
         assertPayload(byteArrayOf(0x04, 100), CommandBuilders.setBrightness(999))
         assertPayload(byteArrayOf(0x04, 0), CommandBuilders.setBrightness(-50))
-        assertPayload(byteArrayOf(0x13, 0x03, 255.toByte()), CommandBuilders.setColorMode(999))
+        // 999 is not a real style index (valid range is 1-31); the real
+        // dispatch falls through to an empty table for any unrecognized
+        // index, not a clamped-to-255 mode byte (there's no such thing as
+        // a raw "mode index" on the wire at all - see ColorModeTables).
+        assertPayload(byteArrayOf(0x13, 0x03, 0, 0, 0), CommandBuilders.setColorMode(999))
     }
 
     @Test
@@ -149,5 +153,34 @@ class CommandBuildersAndFrameCodecTest {
 
     private fun assertPayload(expected: ByteArray, frame: ByteArray) {
         assertArrayEquals(expected, FrameCodec.decode(frame))
+    }
+
+    @Test
+    fun setColorModeSendsARealLiteralColorTableNotABareIndexByte() {
+        // Mode 14 is the smallest real table: TWO_COLOR = 0x0F,0x00,0x00,0x0F
+        // (4 bytes), count=2, transitionType=1, and - unlike most modes - no
+        // repeat-count byte at all (ILedClockUtils.setColorMode's `r4 = -1`
+        // case, which the original explicitly omits from the wire format).
+        assertPayload(
+            byteArrayOf(0x13, 0x03, 1, 2, 0x0F, 0x00, 0x00, 0x0F),
+            CommandBuilders.setColorMode(14)
+        )
+
+        // Mode 13 and mode 31 share the exact same 6-color/12-byte table but
+        // differ in transitionType (1 vs 4) - both also omit the
+        // repeat-count byte.
+        val sixColorBytes = byteArrayOf(0x0F, 0x00, 0x00, 0xF0.toByte(), 0x00, 0x0F, 0x0F, 0xF0.toByte(), 0x00, 0xFF.toByte(), 0x0F, 0x0F)
+        assertPayload(byteArrayOf(0x13, 0x03, 1, 6) + sixColorBytes, CommandBuilders.setColorMode(13))
+        assertPayload(byteArrayOf(0x13, 0x03, 4, 6) + sixColorBytes, CommandBuilders.setColorMode(31))
+    }
+
+    @Test
+    fun setColorModeStyles3And4FallThroughToAnEmptyTableInTheRealApk() {
+        // Confirmed by grepping every `r14 !=`/`r14 ==` comparison in
+        // ILedClockUtils.setColorMode: there is no case for style index 3
+        // or 4 at all, so both hit the same empty-table default as any
+        // out-of-range index (see ColorModeTables's doc comment).
+        assertPayload(byteArrayOf(0x13, 0x03, 0, 0, 0), CommandBuilders.setColorMode(3))
+        assertPayload(byteArrayOf(0x13, 0x03, 0, 0, 0), CommandBuilders.setColorMode(4))
     }
 }

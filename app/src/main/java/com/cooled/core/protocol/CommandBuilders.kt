@@ -102,7 +102,22 @@ object CommandBuilders {
     // different, unrelated command (setDeviceInfo sub-feature 3 toggle) -
     // confirmed by direct read of ILedClockUtils.java:5479-5508.
     fun setVolume(value: Int): ByteArray = FrameCodec.encode(byteArrayOf(0x1E.toByte(), 0x06, value.coerceIn(0, 100).toByte()))
-    fun setColorMode(modeIndex: Int): ByteArray = FrameCodec.encode(byteArrayOf(0x13.toByte(), 0x03, modeIndex.coerceIn(0, 255).toByte()))
+
+    // ILedClockUtils.setColorMode(styleIndex): sends a full literal RGB444
+    // color table for the chosen style, not a bare mode-index byte as an
+    // earlier version of this port modeled it - the device has no
+    // built-in palette to index into. Framing:
+    // [0x13, 0x03][transitionType][repeatCount, only if >=0][count][table bytes].
+    // See ColorModeTables for the per-style (table, count, transitionType,
+    // repeatCount) tuples, hand-traced from the real dispatch.
+    fun setColorMode(styleIndex: Int): ByteArray {
+        val selection = ColorModeTables.resolve(styleIndex)
+        val body = mutableListOf(0x13.toByte(), 0x03, selection.transitionType.coerceIn(0, 255).toByte())
+        selection.repeatCount?.let { body += it.coerceIn(0, 255).toByte() }
+        body += selection.count.coerceIn(0, 255).toByte()
+        body += HexTokenByteTable.parse(selection.hexTable).toList()
+        return FrameCodec.encode(body.toByteArray())
+    }
 
     fun queryTomato(): ByteArray = FrameCodec.encode(byteArrayOf(0x15.toByte(), 0x02))
     fun queryTemperatureHumidity(type: Int = 1): ByteArray = FrameCodec.encode(byteArrayOf(0x19.toByte(), type.coerceIn(0, 255).toByte()))
