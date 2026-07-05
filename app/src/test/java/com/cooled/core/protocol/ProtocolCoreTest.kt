@@ -57,11 +57,68 @@ class ProtocolCoreTest {
             )
         )
         assertTrue(info is ParsedPayload.DeviceInfo)
-        assertEquals(1024, (info as ParsedPayload.DeviceInfo).packageSize)
+        val deviceInfo = info as ParsedPayload.DeviceInfo
+        // Field layout from DeviceManager.java's getCoolLEDUXDeviceInfo handler,
+        // not the model/firmware-version/matrix-size tuple this parser used to
+        // fabricate (that layout actually belongs to the BLE scan record).
+        assertEquals(true, deviceInfo.switchOnOff)
+        assertEquals(1, deviceInfo.brightness)
+        assertEquals(9, deviceInfo.rotate)
+        assertEquals(true, deviceInfo.localMicSupported)
+        assertEquals(true, deviceInfo.localMicOnOff)
+        assertEquals(4, deviceInfo.localMicMode)
+        assertEquals(1024, deviceInfo.packageSize)
 
         val transfer = ProtocolParsers.parseFrame(FrameCodec.encode(byteArrayOf(0x03, 0x00, 0x00, 0x02, 0x00)))
         assertTrue(transfer is ParsedPayload.TransferChunkResponse)
         assertEquals(2, (transfer as ParsedPayload.TransferChunkResponse).chunkIndex)
+    }
+
+    @Test
+    fun parser_timerSwitchesUsesSixByteStridePerEntry() {
+        // Two entries, 6 bytes each starting at offset 2: [enable, hour,
+        // minute, weekdayMask, isSetDeviceOn, reserved]. An earlier version
+        // of this parser read 1 byte/item, which for 2+ switches misread
+        // later switches' fields as bogus extra "values".
+        val frame = FrameCodec.encode(
+            byteArrayOf(
+                0x0B, 2,
+                1, 8, 30, 127, 1, 0, // entry 0: on, 08:30, every day, turns device on
+                0, 20, 0, 0, 0, 0 // entry 1: disabled, 20:00, no repeat, doesn't turn device on
+            )
+        )
+        val parsed = ProtocolParsers.parseFrame(frame)
+        assertTrue(parsed is ParsedPayload.TimerSwitches)
+        val entries = (parsed as ParsedPayload.TimerSwitches).entries
+        assertEquals(2, entries.size)
+        assertEquals(ParsedPayload.TimerSwitchEntry(enabled = true, hour = 8, minute = 30, weekdayMask = 127, isSetDeviceOn = true), entries[0])
+        assertEquals(ParsedPayload.TimerSwitchEntry(enabled = false, hour = 20, minute = 0, weekdayMask = 0, isSetDeviceOn = false), entries[1])
+    }
+
+    @Test
+    fun parser_reminderDetailYearIsOneByteNotTwo() {
+        // DeviceManager.java's reminder-detail handler: id, sound, year(1
+        // byte!), month, day, hour, minute, repeatType, reserved(1 byte,
+        // discarded), duration(2 bytes), contentLen(1 byte), content. An
+        // earlier version of this parser read year as 2 bytes, shifting
+        // every later field by one.
+        val content = "Hi".encodeToByteArray()
+        val frame = FrameCodec.encode(
+            byteArrayOf(0x1A, 0x02, 5, 1, 26, 6, 15, 9, 30, 0x7F.toByte(), 0, 0x01, 0x2C, content.size.toByte()) + content
+        )
+        val parsed = ProtocolParsers.parseFrame(frame)
+        assertTrue(parsed is ParsedPayload.ReminderDetail)
+        val detail = parsed as ParsedPayload.ReminderDetail
+        assertEquals(5, detail.id)
+        assertEquals(1, detail.sound)
+        assertEquals(26, detail.year)
+        assertEquals(6, detail.month)
+        assertEquals(15, detail.day)
+        assertEquals(9, detail.hour)
+        assertEquals(30, detail.minute)
+        assertEquals(0x7F, detail.repeatType)
+        assertEquals(0x012C, detail.durationSeconds)
+        assertEquals("Hi", detail.content)
     }
 
     @Test

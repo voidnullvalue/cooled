@@ -11,19 +11,35 @@ sealed class ParsedPayload {
     data class PasswordSetResult(val success: Boolean, val code: Int) : ParsedPayload()
     data class DriveState(val opcode: Int, val state: Int) : ParsedPayload()
 
+    /**
+     * Port of the CoolLEDUX 0x1F response field layout, read directly from
+     * DeviceManager.java's inline handler (search "getCoolLEDUXDeviceInfo") -
+     * NOT a model/firmware-version/matrix-size tuple as an earlier version of
+     * this port guessed (that layout was actually the BLE scan-record
+     * layout, copied here by mistake). The real fields, in order:
+     * switchOnOff, brightness, rotate/mirror, localMicSupported,
+     * localMicOnOff, localMicMode, showDeviceId, maxProgramNumber,
+     * remoteEnable, and - only when the payload is exactly 21 bytes -
+     * packageSize as a 2-byte value at offset 19.
+     */
     data class DeviceInfo(
-        val model: Int,
-        val fwMajor: Int,
-        val fwMinor: Int,
-        val rows: Int,
-        val columns: Int,
-        val colorType: Int,
+        val switchOnOff: Boolean,
+        val brightness: Int,
+        val rotate: Int,
+        val localMicSupported: Boolean,
+        val localMicOnOff: Boolean,
+        val localMicMode: Int,
+        val showDeviceId: Boolean,
+        val maxProgramNumber: Int,
+        val remoteEnable: Boolean,
         val packageSize: Int?
     ) : ParsedPayload()
 
     data class OtaInfo(val supported: Boolean, val versionMajor: Int, val versionMinor: Int, val remoteFile: String) : ParsedPayload()
 
-    data class TimerSwitches(val values: List<Int>) : ParsedPayload()
+    /** weekdayMask bit layout matches CommandBuilders.setTimerSwitches: bit0=Monday...bit6=Sunday (DeviceManager's getTimerSwitch response handler, getBit(repeatValue, 0..6)). */
+    data class TimerSwitchEntry(val enabled: Boolean, val hour: Int, val minute: Int, val weekdayMask: Int, val isSetDeviceOn: Boolean)
+    data class TimerSwitches(val entries: List<TimerSwitchEntry>) : ParsedPayload()
     data class TimeSyncAck(val status: Int) : ParsedPayload()
     data class TimerAck(val status: Int) : ParsedPayload()
     data class VolumeState(val value: Int) : ParsedPayload()
@@ -105,10 +121,26 @@ object ProtocolParsers {
         }
     }
 
+    // DeviceManager.java's getTimerSwitch response handler (search "getTimerSwitch  number"):
+    // count at offset 1, then one 6-byte record per item starting at offset 2:
+    // [enable][hour][minute][weekdayMask][isSetDeviceOn][reserved, discarded].
+    // An earlier version of this parser read 1 byte/item, which for 2+
+    // switches misread the next switch's own fields as if they were
+    // independent flat "values".
     private fun parseTimerSwitches(payload: ByteArray): ParsedPayload {
         val count = payload.u8OrZero(1)
-        val values = (0 until count).map { idx -> payload.u8OrZero(2 + idx) }
-        return ParsedPayload.TimerSwitches(values)
+        val entries = (0 until count).mapNotNull { idx ->
+            val offset = 2 + idx * 6
+            if (payload.size < offset + 6) return@mapNotNull null
+            ParsedPayload.TimerSwitchEntry(
+                enabled = payload.u8(offset) != 0,
+                hour = payload.u8(offset + 1),
+                minute = payload.u8(offset + 2),
+                weekdayMask = payload.u8(offset + 3),
+                isSetDeviceOn = payload.u8(offset + 4) != 0
+            )
+        }
+        return ParsedPayload.TimerSwitches(entries)
     }
 
     private fun parseCountdown(payload: ByteArray): ParsedPayload {
@@ -191,18 +223,26 @@ object ProtocolParsers {
             }
 
             0x02 -> {
-                if (payload.size < 15) return ParsedPayload.ParseError(0x1A, "Reminder detail too short", payload)
+                // DeviceManager.java's reminder-detail handler (search
+                // "GetReminderResponseEvent  number"): year is a single byte
+                // (token index 4), not 2 - an earlier version of this parser
+                // read it as u16, shifting every field after it by one byte
+                // (month/day/hour/minute/repeatType each reading what was
+                // really the *next* field, duration spilling into the
+                // length byte, and content starting one byte late).
+                if (payload.size < 14) return ParsedPayload.ParseError(0x1A, "Reminder detail too short", payload)
                 val id = payload.u8(2)
                 val sound = payload.u8(3)
-                val year = payload.u8(4) shl 8 or payload.u8(5)
-                val month = payload.u8(6)
-                val day = payload.u8(7)
-                val hour = payload.u8(8)
-                val minute = payload.u8(9)
-                val repeatType = payload.u8(10)
-                val duration = payload.u16(12)
-                val len = payload.u8(14)
-                val content = payload.copyOfRange(15, minOf(15 + len, payload.size)).decodeToString()
+                val year = payload.u8(4)
+                val month = payload.u8(5)
+                val day = payload.u8(6)
+                val hour = payload.u8(7)
+                val minute = payload.u8(8)
+                val repeatType = payload.u8(9)
+                // payload.u8(10) is a reserved/discarded byte in the original too.
+                val duration = payload.u16(11)
+                val len = payload.u8(13)
+                val content = payload.copyOfRange(14, minOf(14 + len, payload.size)).decodeToString()
                 ParsedPayload.ReminderDetail(id, sound, year, month, day, hour, minute, repeatType, duration, content)
             }
 
@@ -227,14 +267,19 @@ object ProtocolParsers {
     }
 
     private fun parseDeviceInfo(payload: ByteArray): ParsedPayload {
-        val model = payload.u8OrZero(1)
-        val fwMajor = payload.u8OrZero(2)
-        val fwMinor = payload.u8OrZero(3)
-        val rows = payload.u8OrZero(4)
-        val columns = payload.u8OrZero(5)
-        val colorType = payload.u8OrZero(6)
-        val packageSize = if (payload.size >= 21) payload.u16(19) else null
-        return ParsedPayload.DeviceInfo(model, fwMajor, fwMinor, rows, columns, colorType, packageSize)
+        val packageSize = if (payload.size == 21) payload.u16(19) else null
+        return ParsedPayload.DeviceInfo(
+            switchOnOff = payload.u8OrZero(1) != 0,
+            brightness = payload.u8OrZero(2),
+            rotate = payload.u8OrZero(3),
+            localMicSupported = payload.u8OrZero(4) != 0,
+            localMicOnOff = payload.u8OrZero(5) != 0,
+            localMicMode = payload.u8OrZero(6),
+            showDeviceId = payload.u8OrZero(7) != 0,
+            maxProgramNumber = payload.u8OrZero(8),
+            remoteEnable = payload.u8OrZero(9) != 0,
+            packageSize = packageSize
+        )
     }
 
     private fun parseOtaInfo(payload: ByteArray): ParsedPayload {
