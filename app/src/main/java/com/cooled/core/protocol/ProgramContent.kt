@@ -148,18 +148,25 @@ object ProgramComposer {
     internal fun encodeContentForTest(family: DeviceFamily, content: ProgramContent): ByteArray = encodeContent(family, content)
 
     // NOT byte-exact for any family except COOLLEDUX and COOLLEDU-within-
-    // CoolleduGlyphPipeline's scope (showHeight=16, no rescale, text-only,
-    // no mirror - see CoolleduProgramBytecode/CoolleduGlyphPipeline's class
-    // docs). Every other family, and COOLLEDU outside that scope, has its
-    // own real text-content builder in the APK
-    // (CoolledMUtils/CoolledUDUtils/ILedClockUtils, plus CoolLEDU's own
-    // rescale/emoji/mirror paths, none of which have been reverse-engineered
-    // yet - each is a separate, sizable undertaking of the same shape as the
-    // CoolLEDUX text/emoji pipeline, not a quick follow-up). The
-    // `[0x54, speed, effect, len, text]` shape below is an unverified
-    // placeholder that must not be assumed correct; do not "fix" it without
-    // first doing the same smali-verified, golden-vector-tested reverse-
-    // engineering pass CoolLEDUX (and now part of CoolLEDU) got.
+    // CoolleduGlyphPipeline's scope. The underlying pipeline
+    // (CoolleduGlyphPipeline/CoolleduStreamText/CoolleduCombineText/
+    // CoolleduMirror) now supports showHeight in {16,32}, textSize rescale,
+    // and isMirror - but ProgramContent.Text (this dispatch's input type) has
+    // no textSize/isMirror fields to plumb through yet, so the
+    // `text(text, speed, effect, displayColumns)` convenience overload this
+    // branch calls always renders showHeight=16/textSize=16/isMirror=false.
+    // Callers needing the wider scope should build a
+    // CoolleduTextContentProgramContent directly and call
+    // CoolleduProgramBytecode.text(content) instead (see its doc). Still
+    // genuinely unported: CoolLEDU's emoji-token path, and every other
+    // family's own text-content builder in the APK
+    // (CoolledMUtils/CoolledUDUtils/ILedClockUtils) - each is a separate,
+    // sizable undertaking of the same shape as the CoolLEDUX text/emoji
+    // pipeline, not a quick follow-up. The `[0x54, speed, effect, len, text]`
+    // shape below is an unverified placeholder that must not be assumed
+    // correct; do not "fix" it without first doing the same smali-verified,
+    // golden-vector-tested reverse-engineering pass CoolLEDUX (and now
+    // CoolLEDU) got.
     private fun encodeContent(family: DeviceFamily, content: ProgramContent): ByteArray = when (content) {
         is ProgramContent.Text -> if (family == DeviceFamily.COOLLEDUX) {
             CoolleduxProgramBytecode.text(
@@ -191,12 +198,15 @@ object ProgramComposer {
             // and function names) - confirmed by direct side-by-side read.
             //
             // Both reuse the exact same Kotlin pipeline as CoolLEDU rather
-            // than needing their own port. Real, verified encoding - but
-            // only within CoolleduGlyphPipeline's scoped support
-            // (showHeight=16, no rescale, text-only, no mirror - see its
-            // class doc). Falls through to the unverified placeholder below
-            // for anything outside that scope rather than guessing at the
-            // unported rescale/emoji/mirror paths.
+            // than needing their own port. Real, verified encoding - text-only
+            // (CoolLEDU's emoji-token path is still unported), and only at the
+            // showHeight=16/textSize=16/isMirror=false case this dispatch's
+            // convenience overload renders (see the class doc on
+            // CoolleduProgramBytecode.text(text,...) above - the underlying
+            // pipeline itself now also supports showHeight=32/rescale/mirror,
+            // just not reachable from ProgramContent.Text yet). Falls through
+            // to the unverified placeholder below for anything outside that
+            // scope rather than guessing at the unported emoji-token path.
             //
             // NOT included: DeviceFamily.ILEDCLOCK. Despite an almost
             // identical getDataWithTextContentProgramContent framing (one

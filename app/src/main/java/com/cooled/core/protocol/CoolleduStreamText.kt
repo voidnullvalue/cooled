@@ -10,14 +10,14 @@ package com.cooled.core.protocol
  * (CoolledUUtils.getDataWithTextContentProgramContent) wraps the result in
  * just a 4-byte length prefix.
  *
- * SCOPE: text-only (see CoolleduTextTokenizer), textSize == showHeight (see
- * CoolleduGlyphPipeline), isMirror == false (the real mirror step differs
- * meaningfully between stream and combine mode and isn't ported yet).
+ * SCOPE: text-only (see CoolleduTextTokenizer). textSize/showHeight rescale
+ * is ported (see CoolleduGlyphPipeline). isMirror applies FontUtils.mirror
+ * directly to the finished flat blob in stream mode (CoolleduMirror.mirror) -
+ * see CoolleduMirror's class doc for the L355/L375/L379 trace.
  */
 object CoolleduStreamText {
     fun encode(content: CoolleduTextContentProgramContent): ByteArray {
         require(content.showHeight in CoolleduGlyphPipeline.supportedShowHeights) { "Unsupported CoolLEDU showHeight: ${content.showHeight}" }
-        require(!content.isMirror) { "CoolLEDU isMirror is not yet ported for the stream-mode text path" }
         val bytesPerColumn = CoolleduGlyphPipeline.bytesPerColumnFor(content.showHeight)
 
         val tokens = CoolleduTextTokenizer.tokenize(content.text)
@@ -31,6 +31,7 @@ object CoolleduStreamText {
             }
             chunks += glyph.toList()
         }
-        return chunks.toByteArray()
+        val rendered = chunks.toByteArray()
+        return if (content.isMirror) CoolleduMirror.mirror(rendered, bytesPerColumn) else rendered
     }
 }

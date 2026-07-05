@@ -35,10 +35,13 @@ object CoolleduProgramBytecode {
 
     /**
      * Convenience wrapper matching CoolleduxProgramBytecode.text's signature
-     * for uniform dispatch from ProgramContent.encodeContent. showHeight is
-     * forced to 16 - the only height CoolleduGlyphPipeline supports so far
-     * (see its class doc) - regardless of displayRows, since there's no
-     * rescale path yet to honor a different real display height faithfully.
+     * for uniform dispatch from ProgramContent.encodeContent. This narrow
+     * overload has no displayRows/mirror parameter to plumb through from
+     * ProgramContent.Text, so it always renders at showHeight=16/textSize=16
+     * (no rescale needed) and isMirror=false; callers that need showHeight=32,
+     * a rescale, or mirror should build a CoolleduTextContentProgramContent
+     * directly and call the other text(...) overload below - both paths are
+     * fully ported (see CoolleduGlyphPipeline/CoolleduMirror).
      */
     fun text(text: String, speed: Int, effect: Int, displayColumns: Int?): ByteArray = text(
         CoolleduTextContentProgramContent(
@@ -51,7 +54,7 @@ object CoolleduProgramBytecode {
         )
     )
 
-    /** True if [text]/[effect] would hit CoolleduGlyphPipeline/CoolleduTextTokenizer's supported scope (no rescale, no emoji tokens, no mirror) rather than throwing. */
+    /** True if [text] would hit CoolleduTextTokenizer's supported scope (text-only, no emoji tokens) rather than throwing. Rescale and mirror are supported by the underlying pipeline regardless. */
     fun supports(text: String): Boolean = runCatching { CoolleduTextTokenizer.tokenize(text) }.isSuccess
 
     fun text(content: CoolleduTextContentProgramContent): ByteArray {

@@ -3,6 +3,7 @@ package com.cooled.core.protocol
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertThrows
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class CoolleduTextTest {
@@ -98,17 +99,76 @@ class CoolleduTextTest {
     }
 
     @Test
-    fun rejectsRescaleMirrorAndEmojiTokensUntilThoseAreActuallyPorted() {
+    fun rejectsEmojiTokensUntilThoseAreActuallyPorted() {
         withFakeFontSource(mapOf('A' to byteArrayOf(0x11, 0x00))) {
-            assertThrows(IllegalArgumentException::class.java) {
-                CoolleduGlyphPipeline.readAndShapeGlyph('A'.code, CoolleduTextContentProgramContent(text = "A", textSize = 12, showHeight = 16))
-            }
-            assertThrows(IllegalArgumentException::class.java) {
-                CoolleduStreamText.encode(CoolleduTextContentProgramContent(text = "A", textSize = 16, showHeight = 16, isMirror = true))
-            }
             assertThrows(IllegalStateException::class.java) {
                 CoolleduStreamText.encode(CoolleduTextContentProgramContent(text = "hi i012", textSize = 16, showHeight = 16))
             }
+        }
+    }
+
+    @Test
+    fun rescalesFromANativeTextSizeUpToShowHeightBeforeRotateAndTrim() {
+        // FontUtils.readFontData(char, textSize) reads the *native* textSize
+        // table (16 here), then transfer16FontTo32 upsizes it before the
+        // rotate/trim tail - see CoolleduGlyphPipeline's class doc.
+        withFakeFontSource(mapOf('A' to byteArrayOf(0x11, 0x00, 0x22, 0x00))) {
+            val direct = CoolleduGlyphPipeline.readAndShapeGlyph(
+                'A'.code, CoolleduTextContentProgramContent(text = "A", textSize = 16, showHeight = 16)
+            )
+            val rescaled = CoolleduGlyphPipeline.readAndShapeGlyph(
+                'A'.code, CoolleduTextContentProgramContent(text = "A", textSize = 16, showHeight = 32)
+            )
+            // Rescaling must actually run FontGlyphRescale.transfer, not just
+            // pass the native-size bytes through unchanged.
+            val expected = FontColumnTrimming.deleteEmptyColumns(
+                FontGlyphRescale.transfer(byteArrayOf(0x11, 0x00, 0x22, 0x00), fromSize = 16, toSize = 32),
+                32
+            )
+            assertArrayEquals(expected, rescaled)
+            assertTrue(direct.isNotEmpty())
+        }
+    }
+
+    @Test
+    fun readAndShapeGlyphRejectsATextSizeTheRecoveredAssetsCannotRead() {
+        withFakeFontSource(mapOf('A' to byteArrayOf(0x11, 0x00))) {
+            // 14px non-bold has no recovered font table (only 14px-bold does) -
+            // see CoolleduGlyphPipeline's isReadableTextSize.
+            assertThrows(IllegalArgumentException::class.java) {
+                CoolleduGlyphPipeline.readAndShapeGlyph('A'.code, CoolleduTextContentProgramContent(text = "A", textSize = 14, isTextBold = false, showHeight = 16))
+            }
+        }
+    }
+
+    @Test
+    fun mirrorReversesColumnOrderOnTheFinishedStreamModeBlob() {
+        // FontUtils.mirror(byte[], bytesPerColumn) reverses column order,
+        // keeping in-column byte order intact - see CoolleduMirror's class doc.
+        withFakeFontSource(mapOf('A' to byteArrayOf(0x11, 0x00, 0x22, 0x00), 'B' to byteArrayOf(0x33, 0x00))) {
+            val plain = CoolleduStreamText.encode(CoolleduTextContentProgramContent(text = "AB", showHeight = 16, textSize = 16, textSpacing = 0))
+            val mirrored = CoolleduStreamText.encode(CoolleduTextContentProgramContent(text = "AB", showHeight = 16, textSize = 16, textSpacing = 0, isMirror = true))
+            // plain = A's two columns then B's one column; mirrored reverses
+            // the whole 3-column sequence: B, A[1], A[0].
+            assertArrayEquals(byteArrayOf(0x11, 0x00, 0x22, 0x00, 0x33, 0x00), plain)
+            assertArrayEquals(byteArrayOf(0x33, 0x00, 0x22, 0x00, 0x11, 0x00), mirrored)
+        }
+    }
+
+    @Test
+    fun mirrorSplitsIntoShowWidthRowsBeforeMirroringInCombineMode() {
+        withFakeFontSource(mapOf('A' to byteArrayOf(0x11, 0x00), 'B' to byteArrayOf(0x22, 0x00), 'C' to byteArrayOf(0x33, 0x00))) {
+            // showWidth=2 -> the 3-column canvas splits into a full 2-column
+            // row [A,B] and a zero-padded partial row [C, 0], each mirrored
+            // independently by CoolleduMirror.mirrorCombine.
+            val mirrored = CoolleduCombineText.encode(
+                CoolleduTextContentProgramContent(text = "ABC", showHeight = 16, textSize = 16, showWidth = 2, textSpacing = 0, isMirror = true)
+            )
+            val plain = CoolleduCombineText.encode(
+                CoolleduTextContentProgramContent(text = "ABC", showHeight = 16, textSize = 16, showWidth = 2, textSpacing = 0)
+            )
+            val expected = CoolleduMirror.mirrorCombine(plain, showWidth = 2, bytesPerColumn = 2)
+            assertArrayEquals(expected, mirrored)
         }
     }
 
