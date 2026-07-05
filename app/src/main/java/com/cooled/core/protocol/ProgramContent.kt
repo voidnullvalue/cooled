@@ -28,6 +28,40 @@ sealed class ProgramContent {
 
     data class Drawing(val width: Int, val height: Int, val rgbBytes: ByteArray) : ProgramContent()
     data class PresetMode(val mode: Int, val intensity: Int) : ProgramContent()
+
+    /**
+     * CoolLEDUX business-hours display template - port of
+     * CoolledUXUtils.getDataWithGraffitiBusinessHourCombineProgram(
+     *   DeviceManager.CoolleduxGraffitiProgramBusinessHourContent) and its
+     * DeviceManager.CoolleduxGraffitiProgramBusinessHourContent field layout.
+     *
+     * The APK carries the pre-rasterized pixel matrices in a HashMap<String,Object>
+     * `data` map; the meaningful keys are modeled here as typed fields:
+     *  - businessType 0/2: a single image (`imageMatrixData`), rendered as one
+     *    graffiti block sized `showHeight` high x (pixels/showHeight) wide.
+     *  - businessType 1 ("minimalism"): two stacked images (`topImageMatrixData`
+     *    over `bottomImageMatrixData`) with fixed per-device-size dimensions,
+     *    rendered as two graffiti blocks. `minimalismShowMode` becomes the top
+     *    block's mode; the bottom block's mode is a hard-coded 1.
+     *  - any other businessType: no content (matches getContentNumber()==0).
+     *
+     * Matrix colors are flat 0xRRGGBB / 0xAARRGGBB ints in row-major order, the
+     * result of toRGBList255 / toRGBList255Second flattening the APK's nested
+     * List<List<List<Integer>>> / List<List<Integer>> pixel data.
+     */
+    data class BusinessHours(
+        val businessType: Int,
+        val layerType: Int = 1,
+        val mode: Int = 2,
+        val speed: Int = 255,
+        val stayTime: Int = 3,
+        val showWidth: Int = 96,
+        val showHeight: Int = 16,
+        val minimalismShowMode: Int = 0,
+        val imageMatrixData: List<Int> = emptyList(),
+        val topImageMatrixData: List<Int> = emptyList(),
+        val bottomImageMatrixData: List<Int> = emptyList()
+    ) : ProgramContent()
 }
 
 data class CoolLedUxTextContentProgramContent(
@@ -252,6 +286,11 @@ object ProgramComposer {
         }
 
         is ProgramContent.PresetMode -> byteArrayOf(0x4D, content.mode.toByte(), content.intensity.toByte())
+
+        is ProgramContent.BusinessHours -> {
+            require(family == DeviceFamily.COOLLEDUX) { "BusinessHours content is only valid for CoolLEDUX" }
+            CoolleduxProgramBytecode.businessHours(content)
+        }
     }
 
     /** FontUtils.getFontByteDataCoolleduxForEmoji(...) modes that use the shared word-wrapped, row-centered canvas (CoolleduxCombineText) instead of the per-glyph stream (CoolleduxStreamText). */
@@ -488,6 +527,154 @@ object CoolleduxProgramBytecode {
             )
         }
         return wrapProgram(listOf(block))
+    }
+
+    /**
+     * Port of CoolledUXUtils.getDataWithGraffitiBusinessHourCombineProgram(...)
+     * wrapped in getDataWithProgram(...) for a standalone single-program upload.
+     *
+     * Control flow was hand-traced from
+     * reverse/apktool/smali_classes3/com/jtkj/led1248/light/utils/CoolledUXUtils.smali
+     * (method at smali line 11563): jadx's `-m simple` output for this method has
+     * the scrambled/label-collided control flow this file's methods are known
+     * for - it renders bogus L29/L31/L33 back-edges in the minimalism branch that
+     * do not exist in the bytecode. The smali is a clean if/else dispatch:
+     *  - businessType == 0 or == 2  -> one image block from imageMatrixData.
+     *  - businessType == 1          -> top + bottom blocks (minimalism).
+     *  - otherwise                  -> empty (0 blocks).
+     *
+     * The number of graffiti blocks equals
+     * CoolleduxGraffitiProgramBusinessHourContent.getContentNumber() (1 / 2 / 0),
+     * which is exactly the content-count byte getDataWithProgram emits - so
+     * wrapProgram(blocks) reproduces the standalone program framing.
+     */
+    fun businessHours(c: ProgramContent.BusinessHours): ByteArray =
+        wrapProgram(businessHourBlocks(c))
+
+    private fun businessHourBlocks(c: ProgramContent.BusinessHours): List<ByteArray> = when (c.businessType) {
+        // businessType 0 (:cond_8) and 2 (:goto_4) share the single-image path.
+        0, 2 -> {
+            val colors = c.imageMatrixData
+            val height = c.showHeight
+            val width = if (height == 0) 0 else colors.size / height
+            listOf(
+                graffitiContentBlock(
+                    payload = graffitiBusinessHourPayload(colors, height, width),
+                    layerType = c.layerType,
+                    startColumn = 0,
+                    startRow = 0,
+                    showWidth = width,
+                    showHeight = height,
+                    mode = c.mode,
+                    speed = c.speed,
+                    stayTime = c.stayTime
+                )
+            )
+        }
+        // businessType 1: minimalism - two stacked graffiti blocks with
+        // fixed per-device-size dimensions (only 24x48 and 32x64 are supported;
+        // any other size collapses to 0-sized blocks, matching :cond_2/:cond_5).
+        1 -> {
+            val top = c.topImageMatrixData
+            val (topHeight, topWidth) = when {
+                c.showHeight == 24 && c.showWidth == 48 -> 15 to (top.size / 15)
+                c.showHeight == 32 && c.showWidth == 64 -> 17 to (top.size / 17)
+                else -> 0 to 0
+            }
+            // Top block: startRow 0, mode = minimalismShowMode, speed = literal 255.
+            val topBlock = graffitiContentBlock(
+                payload = graffitiBusinessHourPayload(top, topHeight, topWidth),
+                layerType = c.layerType,
+                startColumn = 0,
+                startRow = 0,
+                showWidth = topWidth,
+                showHeight = topHeight,
+                mode = c.minimalismShowMode,
+                speed = 255,
+                stayTime = c.stayTime
+            )
+            val bottom = c.bottomImageMatrixData
+            val (bottomHeight, bottomWidth) = when {
+                c.showHeight == 24 && c.showWidth == 48 -> 9 to (bottom.size / 9)
+                c.showHeight == 32 && c.showWidth == 64 -> 15 to (bottom.size / 15)
+                else -> 0 to 0
+            }
+            // Bottom block: startRow = top block's height (stacked below it),
+            // mode = literal 1, speed = content.speed.
+            val bottomBlock = graffitiContentBlock(
+                payload = graffitiBusinessHourPayload(bottom, bottomHeight, bottomWidth),
+                layerType = c.layerType,
+                startColumn = 0,
+                startRow = topHeight,
+                showWidth = bottomWidth,
+                showHeight = bottomHeight,
+                mode = 1,
+                speed = c.speed,
+                stayTime = c.stayTime
+            )
+            listOf(topBlock, bottomBlock)
+        }
+        else -> emptyList()
+    }
+
+    private fun graffitiBusinessHourPayload(colors: List<Int>, height: Int, width: Int): ByteArray =
+        drawListDataFColor(graffitiBusinessHourShowDrawItems(colors, height, width), width, height)
+
+    /**
+     * Port of CoolledUXUtils.getGraffitiBusinessHourShowDrawItems(List<Integer>, int, int):
+     * transposes a column-major-indexed color list into a row-major DrawItem list.
+     * Returns empty when the color count doesn't match width*height (guard matches
+     * the APK; downstream indexing then produces an empty payload).
+     */
+    private fun graffitiBusinessHourShowDrawItems(colors: List<Int>, height: Int, width: Int): List<Int> {
+        if (colors.size != height * width) return emptyList()
+        val out = ArrayList<Int>(height * width)
+        for (row in 0 until height) {
+            for (col in 0 until width) {
+                out += colors[col * height + row]
+            }
+        }
+        return out
+    }
+
+    /**
+     * Port of CoolledUXUtils.getDrawListDataFColor(items, width, height) /
+     * getGraffitiData(...): emits every pixel column-major (column outer, row
+     * inner) as TextEmojiManagerCoolLEDUX.getColorDataWithColorWithRGB444Transfer's
+     * 2-byte pair.
+     */
+    private fun drawListDataFColor(items: List<Int>, width: Int, height: Int): ByteArray {
+        val out = ArrayList<Byte>(width * height * 2)
+        for (col in 0 until width) {
+            for (row in 0 until height) {
+                out.addAll(colorDataWithColorWithRgb444Transfer(items[row * width + col]).asIterable())
+            }
+        }
+        return out.toByteArray()
+    }
+
+    /**
+     * Port of TextEmojiManagerCoolLEDUX.getColorDataWithColorWithRGB444Transfer(int)
+     * (TextEmojiManagerCoolLEDUX.java:403) + rgb444Transfer(int) (line 413).
+     *
+     * NOTE: this is deliberately NOT OriginalLedAssetPayloadEncoder.rgb444TransferColorBytes:
+     * the APK function applies rgb444Transfer to Color.red/green/blue *unconditionally*
+     * and never consults alpha, whereas the original-asset encoder zeroes all
+     * channels when alpha==0. Business-hours matrix colors arrive as 0xRRGGBB ints
+     * (alpha byte 0), so the alpha-zeroing variant would blank every pixel - this
+     * faithful variant must be used here.
+     */
+    private fun colorDataWithColorWithRgb444Transfer(color: Int): ByteArray {
+        val r = rgb444Transfer((color ushr 16) and 0xFF)
+        val g = rgb444Transfer((color ushr 8) and 0xFF)
+        val b = rgb444Transfer(color and 0xFF)
+        return byteArrayOf(r.toByte(), ((g shl 4) or b).toByte())
+    }
+
+    private fun rgb444Transfer(channel: Int): Int = when {
+        channel >= 238 -> 15
+        channel <= 47 -> 0
+        else -> ((channel - 47) / 14) + 1
     }
 
     private fun wrapProgram(blocks: List<ByteArray>): ByteArray {
