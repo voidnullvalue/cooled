@@ -164,6 +164,71 @@ sealed class ProgramContent {
         val ampmWidth: Int = 0,
         val ampmHeight: Int = 0
     ) : ProgramContent()
+
+    /**
+     * CoolLEDUX date/weather display template - port of
+     * CoolledUXUtils.getDataWithDateCombineProgram(DeviceManager.CoolleduxDateProgramContent)
+     * and DeviceManager.CoolleduxDateProgramContent's field layout. See
+     * CoolleduxDateWeatherBytecode for the byte-exact encoder and its scope
+     * (verified only for deviceRows=16/deviceColumns=32 so far - every other
+     * physical matrix size throws rather than guessing at its per-size digit/
+     * week bitmap tables).
+     *
+     * `deviceRows`/`deviceColumns` mirror the APK's `DeviceManager.DEVICE_ROW`/
+     * `DEVICE_COLUMN` globals (the connected device's real physical matrix
+     * size, which selects the digit/week bitmap table) - a different concept
+     * from `showWidth`/`showHeight` elsewhere in this file, which size the
+     * rendered content within a display, not the physical hardware.
+     */
+    data class DateWeather(
+        val deviceRows: Int,
+        val deviceColumns: Int,
+        val layerType: Int = 1,
+        val monthFlag: Int = 0,
+        val showTime: Int = 5,
+        val numHeight: Int = 1,
+        val numWidth: Int = 1,
+        val yearNumHeight: Int = 1,
+        val yearNumWidth: Int = 1,
+        val yearColor: Int = 0,
+        val yearStartColumn: Int = 0,
+        val yearStartRow: Int = 0,
+        val yearWidth: Int = 0,
+        val yearHeight: Int = 0,
+        val showSpaceYear: Boolean = false,
+        val spaceYearColor: Int = 0,
+        val spaceYearStartColumn: Int = 0,
+        val spaceYearStartRow: Int = 0,
+        val spaceYearWidth: Int = 0,
+        val spaceYearHeight: Int = 0,
+        val monthColor: Int = 0,
+        val monthStartColumn: Int = 0,
+        val monthStartRow: Int = 0,
+        val monthWidth: Int = 0,
+        val monthHeight: Int = 0,
+        val showSpaceMonth: Boolean = true,
+        val spaceMonthColor: Int = 0,
+        val spaceMonthStartColumn: Int = 0,
+        val spaceMonthStartRow: Int = 0,
+        val spaceMonthWidth: Int = 0,
+        val spaceMonthHeight: Int = 0,
+        val dayColor: Int = 0,
+        val dayStartColumn: Int = 0,
+        val dayStartRow: Int = 0,
+        val dayWidth: Int = 0,
+        val dayHeight: Int = 0,
+        val showSpaceDay: Boolean = false,
+        val spaceDayColor: Int = 0,
+        val spaceDayStartColumn: Int = 0,
+        val spaceDayStartRow: Int = 0,
+        val spaceDayWidth: Int = 0,
+        val spaceDayHeight: Int = 0,
+        val weekColor: Int = 0,
+        val weekStartColumn: Int = 0,
+        val weekStartRow: Int = 0,
+        val weekWidth: Int = 0,
+        val weekHeight: Int = 0
+    ) : ProgramContent()
 }
 
 data class CoolLedUxTextContentProgramContent(
@@ -398,6 +463,11 @@ object ProgramComposer {
         is ProgramContent.Clock -> {
             require(family == DeviceFamily.COOLLEDUX) { "Clock content is only valid for CoolLEDUX" }
             CoolleduxProgramBytecode.clock(content)
+        }
+
+        is ProgramContent.DateWeather -> {
+            require(family == DeviceFamily.COOLLEDUX) { "DateWeather content is only valid for CoolLEDUX" }
+            CoolleduxProgramBytecode.dateWeather(content)
         }
     }
 
@@ -661,6 +731,14 @@ object CoolleduxProgramBytecode {
      */
     fun businessHours(c: ProgramContent.BusinessHours): ByteArray =
         wrapProgram(businessHourBlocks(c))
+
+    /**
+     * Port of CoolledUXUtils.getDataWithDateCombineProgram(...) wrapped in
+     * getDataWithProgram(...) for a standalone single-program upload. See
+     * CoolleduxDateWeatherBytecode for the byte-exact encoder and its scope.
+     */
+    fun dateWeather(c: ProgramContent.DateWeather): ByteArray =
+        wrapProgram(listOf(CoolleduxDateWeatherBytecode.encode(c)))
 
     private fun businessHourBlocks(c: ProgramContent.BusinessHours): List<ByteArray> = when (c.businessType) {
         // businessType 0 (:cond_8) and 2 (:goto_4) share the single-image path.
