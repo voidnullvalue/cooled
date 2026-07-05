@@ -47,6 +47,12 @@ class AppViewModel(
     private var pendingChunkIndex: Int = 0
     private var pendingStartRetries: Int = 0
     private var connectedMetadata: LedScanMetadata = LedScanMetadata()
+        set(value) {
+            field = value
+            _connectedMetadata.value = value
+        }
+    private val _connectedMetadata = MutableStateFlow(LedScanMetadata())
+    val connectedDeviceMetadata: StateFlow<LedScanMetadata> = _connectedMetadata.asStateFlow()
 
     private val _events = MutableStateFlow<List<String>>(emptyList())
     val events: StateFlow<List<String>> = _events.asStateFlow()
@@ -141,7 +147,9 @@ class AppViewModel(
 
     fun queryScoreboardStatus() = viewModelScope.launch { repo.sendQueryScoreboardStatus() }
     fun scoreboard(running: Boolean) = viewModelScope.launch { repo.sendScoreboard(running) }
-    fun resetScoreboard(left: Int, right: Int) = viewModelScope.launch { repo.resetScoreboard(left.coerceIn(0, 255), right.coerceIn(0, 255)) }
+    fun resetScoreboard(hostScore: Int, guestScore: Int, hostSets: Int = 0, guestSets: Int = 0) = viewModelScope.launch {
+        repo.resetScoreboard(hostScore.coerceIn(0, 65535), guestScore.coerceIn(0, 65535), hostSets.coerceIn(0, 255), guestSets.coerceIn(0, 255))
+    }
 
     fun volume(v: Int) = viewModelScope.launch { repo.sendVolume(v.coerceIn(0, 100)) }
     fun queryTomato() = viewModelScope.launch { repo.sendQueryTomato() }

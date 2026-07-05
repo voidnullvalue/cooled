@@ -53,8 +53,10 @@ class CommandBuildersAndFrameCodecTest {
     fun appFeatureCommandsClampPayloadFields() {
         assertPayload(byteArrayOf(0x0F, 0x02, 0, 59, 59), CommandBuilders.resetCountdown(hour = -1, minute = 99, second = 88))
         assertPayload(byteArrayOf(0x10, 0x03, 1), CommandBuilders.setStopwatchRunning(true))
-        assertPayload(byteArrayOf(0x11, 0x02, 255.toByte(), 0), CommandBuilders.resetScoreboard(left = 500, right = -10))
-        assertPayload(byteArrayOf(0x1E, 0x03, 100), CommandBuilders.setVolume(900))
+        // hostScore=500 clamps into range (0x01F4, 2 bytes) rather than truncating to 1 byte;
+        // guestScore=-10 clamps to 0 (2 bytes); hostSets/guestSets default to 0 (1 byte each).
+        assertPayload(byteArrayOf(0x11, 0x02, 0x01, 0xF4.toByte(), 0, 0, 0, 0), CommandBuilders.resetScoreboard(hostScore = 500, guestScore = -10))
+        assertPayload(byteArrayOf(0x1E, 0x06, 100), CommandBuilders.setVolume(900))
         assertPayload(byteArrayOf(0x19, 255.toByte()), CommandBuilders.queryTemperatureHumidity(300))
     }
 

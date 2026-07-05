@@ -81,10 +81,27 @@ object CommandBuilders {
     fun setStopwatchRunning(running: Boolean): ByteArray = FrameCodec.encode(byteArrayOf(0x10.toByte(), 0x03, (if (running) 1 else 0).toByte()))
 
     fun queryScoreboardStatus(): ByteArray = FrameCodec.encode(byteArrayOf(0x11.toByte(), 0x01))
-    fun resetScoreboard(left: Int = 0, right: Int = 0): ByteArray = FrameCodec.encode(byteArrayOf(0x11.toByte(), 0x02, left.coerceIn(0, 255).toByte(), right.coerceIn(0, 255).toByte()))
+
+    // ILedClockUtils/CoolledUXUtils.getScoreBoardSetCore(hostScore, visitScore,
+    // hostTotalScore, visitTotalScore): the two running scores are 2-byte
+    // fields (getHexListStringForIntWithTwo), the two set/game-win counters
+    // are 1-byte fields (getHexListStringForInt) - confirmed identical in
+    // both classes. This port used to encode all four as 1 byte, silently
+    // truncating any score above 255 and dropping the frame 2 bytes short
+    // of what real hardware expects.
+    fun resetScoreboard(hostScore: Int = 0, guestScore: Int = 0, hostSets: Int = 0, guestSets: Int = 0): ByteArray = FrameCodec.encode(
+        byteArrayOf(0x11.toByte(), 0x02) +
+            shortToBytes(hostScore.coerceIn(0, 65535)) +
+            shortToBytes(guestScore.coerceIn(0, 65535)) +
+            byteArrayOf(hostSets.coerceIn(0, 255).toByte(), guestSets.coerceIn(0, 255).toByte())
+    )
+
     fun setScoreboardRunning(running: Boolean): ByteArray = FrameCodec.encode(byteArrayOf(0x11.toByte(), 0x04, (if (running) 1 else 0).toByte()))
 
-    fun setVolume(value: Int): ByteArray = FrameCodec.encode(byteArrayOf(0x1E.toByte(), 0x03, value.coerceIn(0, 100).toByte()))
+    // ILedClockUtils.setDeviceVolume: [0x1E, 0x06, value]. 0x1E/0x03 is a
+    // different, unrelated command (setDeviceInfo sub-feature 3 toggle) -
+    // confirmed by direct read of ILedClockUtils.java:5479-5508.
+    fun setVolume(value: Int): ByteArray = FrameCodec.encode(byteArrayOf(0x1E.toByte(), 0x06, value.coerceIn(0, 100).toByte()))
     fun setColorMode(modeIndex: Int): ByteArray = FrameCodec.encode(byteArrayOf(0x13.toByte(), 0x03, modeIndex.coerceIn(0, 255).toByte()))
 
     fun queryTomato(): ByteArray = FrameCodec.encode(byteArrayOf(0x15.toByte(), 0x02))

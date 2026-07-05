@@ -185,6 +185,31 @@ class ProtocolCoreTest {
     }
 
     @Test
+    fun programComposer_startHeaderCrcAndLengthAreOverUncompressedBodyForEveryFamily() {
+        // Regression test: every family's getStartDataForProgram (CoolledMUtils,
+        // CoolledUUtils, CoolledUDUtils, ILedClockUtils, CoolledUXUtils) computes
+        // the start header's CRC/length over the *uncompressed* program body -
+        // compression only ever applies to the chunk payloads that follow. An
+        // earlier version of ProgramComposer.compose only did this for
+        // COOLLEDUX and silently hashed/measured the compressed bytes for
+        // every other family, which would fail real hardware's own CRC/length
+        // check on every non-CoolLEDUX transfer.
+        for (family in listOf(DeviceFamily.COOLLEDM, DeviceFamily.COOLLEDU, DeviceFamily.COOLLEDX, DeviceFamily.COOLLEDS, DeviceFamily.ILEDCLOCK)) {
+            val pack = ProgramComposer.compose(
+                family = family,
+                content = ProgramContent.Text("ABCDEFGHIJ", speed = 1, effect = 2),
+                index = 0,
+                count = 1,
+                showCount = 1
+            )
+            val uncompressedBody = LzssCodec.decompress(pack.compressed)
+            val start = FrameCodec.decode(pack.startHeaderFrame)
+            assertEquals("family=$family CRC", CoolLedCrc.crc32Like(uncompressedBody), readBe32(start, 1))
+            assertEquals("family=$family length", uncompressedBody.size, readBe32(start, 5))
+        }
+    }
+
+    @Test
     fun coolLedUxTextProgram_matchesRecoveredApkBlockLayout() {
         val glyphBytes = byteArrayOf(0x00, 0x01, 0x00, 0x08, 0x00, 0x08, 0x12, 0x34)
         val content = CoolLedUxTextContentProgramContent(

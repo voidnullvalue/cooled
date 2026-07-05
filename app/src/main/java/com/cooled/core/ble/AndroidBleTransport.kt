@@ -37,6 +37,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -48,10 +49,12 @@ class AndroidBleTransport(private val context: Context) : BleTransport {
     private val adapter: BluetoothAdapter? get() = manager?.adapter
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private var gatt: BluetoothGatt? = null
+    private var connectedDeviceName: String? = null
     private var isScanning = false
     private var scanWatchdog: Job? = null
     private val writeMutex = Mutex()
     @Volatile private var pendingWriteAck: CompletableDeferred<Int>? = null
+    @Volatile private var pendingDescriptorWrite: CompletableDeferred<Boolean>? = null
 
     private val _state = MutableStateFlow(ConnectionState.DISCONNECTED)
     private val _mtu = MutableStateFlow(23)
@@ -72,19 +75,38 @@ class AndroidBleTransport(private val context: Context) : BleTransport {
         PixelGridDecoders.active = AndroidPixelGridDecoder
     }
 
+    /**
+     * True only for callbacks belonging to the currently active connection.
+     * The single [callback] instance is reused across reconnects, so without
+     * this guard a callback delivered late for an already-abandoned
+     * BluetoothGatt (e.g. a write ack that arrives after we gave up and
+     * force-disconnected on timeout - see `write()`) could be mistaken for
+     * one belonging to whatever connection is active by the time it lands.
+     */
+    private fun isCurrent(g: BluetoothGatt): Boolean = g === gatt
+
     private val callback = object : BluetoothGattCallback() {
         override fun onConnectionStateChange(g: BluetoothGatt, status: Int, newState: Int) {
+            if (!isCurrent(g)) return
             if (newState == BluetoothProfile.STATE_CONNECTED) {
                 _state.value = ConnectionState.CONNECTED
                 if (hasConnectPermission()) g.discoverServices()
             } else {
                 pendingWriteAck?.complete(status)
                 pendingWriteAck = null
+                pendingDescriptorWrite?.complete(false)
+                pendingDescriptorWrite = null
+                if (hasConnectPermission()) g.close()
+                gatt = null
+                connectedDeviceName = null
+                _mtu.value = 23
+                _rx.value = RxFrame(byteArrayOf())
                 _state.value = ConnectionState.DISCONNECTED
             }
         }
 
         override fun onServicesDiscovered(g: BluetoothGatt, status: Int) {
+            if (!isCurrent(g)) return
             val service: BluetoothGattService = g.getService(BleProtocolConstants.serviceUuid) ?: run {
                 _io.value = BleIoEvent(System.currentTimeMillis(), BleIoDirection.RX, byteArrayOf(), "service ${BleProtocolConstants.serviceUuid} not found")
                 return
@@ -95,29 +117,60 @@ class AndroidBleTransport(private val context: Context) : BleTransport {
             }
             g.setCharacteristicNotification(ch, true)
             val cccd: BluetoothGattDescriptor? = ch.getDescriptor(BleProtocolConstants.cccdUuid)
-            cccd?.value = BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE
-            cccd?.let { g.writeDescriptor(it) }
-            g.requestMtu(247)
-            _state.value = ConnectionState.READY
+            if (cccd == null) {
+                _state.value = ConnectionState.READY
+                return
+            }
+            cccd.value = BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE
+            // Android's GATT client only tolerates one outstanding operation
+            // at a time - firing requestMtu() immediately after writeDescriptor()
+            // without waiting for onDescriptorWrite races the two operations
+            // against each other (a real bug this port had). Sequence them
+            // via a coroutine that awaits the descriptor-write callback.
+            scope.launch {
+                val descriptorAck = CompletableDeferred<Boolean>()
+                pendingDescriptorWrite = descriptorAck
+                val accepted = hasConnectPermission() && g.writeDescriptor(cccd)
+                val wroteOk = if (accepted) withTimeoutOrNull(2500L) { descriptorAck.await() } == true else false
+                pendingDescriptorWrite = null
+                if (!wroteOk) {
+                    _io.value = BleIoEvent(System.currentTimeMillis(), BleIoDirection.RX, byteArrayOf(), "notification descriptor write failed or timed out")
+                }
+                if (isCurrent(g) && connectedDeviceName in BleProtocolConstants.mtuNegotiationNames && hasConnectPermission()) {
+                    g.requestMtu(247)
+                }
+                if (isCurrent(g)) _state.value = ConnectionState.READY
+            }
         }
 
-        override fun onCharacteristicChanged(gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic, value: ByteArray) {
+        override fun onDescriptorWrite(g: BluetoothGatt, descriptor: BluetoothGattDescriptor, status: Int) {
+            if (!isCurrent(g)) return
+            pendingDescriptorWrite?.complete(status == BluetoothGatt.GATT_SUCCESS)
+        }
+
+        override fun onCharacteristicChanged(g: BluetoothGatt, characteristic: BluetoothGattCharacteristic, value: ByteArray) {
+            if (!isCurrent(g)) return
             _rx.value = RxFrame(value)
             _io.value = BleIoEvent(System.currentTimeMillis(), BleIoDirection.RX, value, "notify")
         }
 
         @Deprecated("Kept for API 24-32 callback compatibility")
-        override fun onCharacteristicChanged(gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic) {
+        override fun onCharacteristicChanged(g: BluetoothGatt, characteristic: BluetoothGattCharacteristic) {
+            if (!isCurrent(g)) return
             val value = characteristic.value ?: return
             _rx.value = RxFrame(value)
             _io.value = BleIoEvent(System.currentTimeMillis(), BleIoDirection.RX, value, "notify")
         }
 
-        override fun onCharacteristicWrite(gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic, status: Int) {
+        override fun onCharacteristicWrite(g: BluetoothGatt, characteristic: BluetoothGattCharacteristic, status: Int) {
+            if (!isCurrent(g)) return
             pendingWriteAck?.complete(status)
         }
 
-        override fun onMtuChanged(gatt: BluetoothGatt, mtu: Int, status: Int) { _mtu.value = mtu }
+        override fun onMtuChanged(g: BluetoothGatt, mtu: Int, status: Int) {
+            if (!isCurrent(g)) return
+            _mtu.value = mtu
+        }
     }
 
     private val scanCallback = object : ScanCallback() {
@@ -185,6 +238,13 @@ class AndroidBleTransport(private val context: Context) : BleTransport {
             return
         }
         stopScan()
+        // Close out any previous connection's GATT client before starting a
+        // new one - otherwise a stale client from an unclean prior session
+        // leaks (Android's per-app GATT client pool is small, and repeated
+        // leaks eventually surface as status-133 GATT_ERROR on every connect).
+        gatt?.close()
+        gatt = null
+        connectedDeviceName = d.name
         _state.value = ConnectionState.CONNECTING
         gatt = d.connectGatt(context, false, callback)
     }
@@ -192,11 +252,16 @@ class AndroidBleTransport(private val context: Context) : BleTransport {
     override suspend fun disconnect() {
         pendingWriteAck?.complete(BluetoothGatt.GATT_FAILURE)
         pendingWriteAck = null
+        pendingDescriptorWrite?.complete(false)
+        pendingDescriptorWrite = null
         if (hasConnectPermission()) {
             gatt?.disconnect()
             gatt?.close()
         }
         gatt = null
+        connectedDeviceName = null
+        _mtu.value = 23
+        _rx.value = RxFrame(byteArrayOf())
         _state.value = ConnectionState.DISCONNECTED
     }
 
@@ -235,9 +300,22 @@ class AndroidBleTransport(private val context: Context) : BleTransport {
             if (expectsAck) {
                 val status = withTimeoutOrNull(2500L) { ack?.await() }
                 pendingWriteAck = null
+                if (status == null) {
+                    // A genuine timeout (as opposed to an explicit non-success
+                    // status) means we can no longer be sure whether the
+                    // native write is still in flight - a late callback could
+                    // otherwise race a subsequent write on this same
+                    // connection and complete the wrong one (see PendingAck
+                    // note above `callback`). Force a clean teardown instead
+                    // of silently continuing; isCurrent()'s identity check
+                    // then guarantees any late callback for this gatt is
+                    // ignored, since a fresh connect() creates a new instance.
+                    _io.value = BleIoEvent(System.currentTimeMillis(), BleIoDirection.RX, byteArrayOf(), "write timed out split ${index + 1}/${chunks.size}; disconnecting")
+                    forceDisconnectAfterTimeout(g)
+                    return@withLock
+                }
                 if (status != BluetoothGatt.GATT_SUCCESS) {
-                    val detail = status?.toString() ?: "timeout"
-                    _io.value = BleIoEvent(System.currentTimeMillis(), BleIoDirection.RX, byteArrayOf(), "write failed split ${index + 1}/${chunks.size}: $detail")
+                    _io.value = BleIoEvent(System.currentTimeMillis(), BleIoDirection.RX, byteArrayOf(), "write failed split ${index + 1}/${chunks.size}: status=$status")
                     return@withLock
                 }
                 if (index != chunks.lastIndex) delay(25L)
@@ -248,12 +326,28 @@ class AndroidBleTransport(private val context: Context) : BleTransport {
         }
     }
 
+    private fun forceDisconnectAfterTimeout(g: BluetoothGatt) {
+        if (!isCurrent(g)) return
+        if (hasConnectPermission()) {
+            g.disconnect()
+            g.close()
+        }
+        gatt = null
+        connectedDeviceName = null
+        _mtu.value = 23
+        _rx.value = RxFrame(byteArrayOf())
+        _state.value = ConnectionState.DISCONNECTED
+    }
+
     private fun chooseWriteMode(ch: BluetoothGattCharacteristic): Int? {
-        val supportsWrite = (ch.properties and BluetoothGattCharacteristic.PROPERTY_WRITE) != 0
         val supportsWriteNoResponse = (ch.properties and BluetoothGattCharacteristic.PROPERTY_WRITE_NO_RESPONSE) != 0
+        val supportsWrite = (ch.properties and BluetoothGattCharacteristic.PROPERTY_WRITE) != 0
+        // Matches the original app's BleConnector.writeCharacteristic: NO_RESPONSE
+        // wins whenever the characteristic advertises it, even if WRITE is also
+        // present - not the other way around.
         return when {
-            supportsWrite -> BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
             supportsWriteNoResponse -> BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE
+            supportsWrite -> BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
             else -> null
         }
     }
@@ -264,7 +358,11 @@ class AndroidBleTransport(private val context: Context) : BleTransport {
         val bondedName = if (hasConnectPermission()) device.name else null
         val name = advertisedName ?: bondedName
         val metadata = LedScanRecordParser.parse(result.scanRecord?.bytes)
-        _scan.value = (_scan.value + ScanDevice(name, device.address, result.rssi, metadata)).distinctBy { it.address }
+        // update{} applies its transform in a CAS retry loop, so concurrent
+        // onScanResult deliveries (the platform can call back from more than
+        // one thread on some OEM stacks) can't silently lose one another's
+        // addition the way plain read-then-write to _scan.value could.
+        _scan.update { (it + ScanDevice(name, device.address, result.rssi, metadata)).distinctBy { d -> d.address } }
         if (_scan.value.size == 1) {
             _io.value = BleIoEvent(System.currentTimeMillis(), BleIoDirection.RX, byteArrayOf(), "scan result received")
         }

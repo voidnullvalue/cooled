@@ -113,7 +113,18 @@ object ProgramComposer {
                 useAlternateOpcode = family == DeviceFamily.COOLLEDU,
                 programType = programType,
                 extraTypeByte = extraTypeByte,
-                startSource = if (family == DeviceFamily.COOLLEDUX) body else null
+                // The start header's CRC and length are computed over the
+                // *uncompressed* body for every family, not just CoolLEDUX -
+                // confirmed identical across CoolledMUtils/CoolledUUtils/
+                // CoolledUDUtils/ILedClockUtils/CoolledUXUtils's
+                // getStartDataForProgram (all call getDataResult on the
+                // pre-compression body). Compression only ever applies to
+                // the per-chunk data that follows. An earlier version of
+                // this code only set startSource for COOLLEDUX and silently
+                // fell back to hashing/measuring the *compressed* bytes for
+                // every other family, which would fail the receiving
+                // firmware's own CRC/length check on every real transfer.
+                startSource = body
             )
         )
         val chunks = CommandBuilders.splitChunks(compressed).mapIndexed { i, c ->

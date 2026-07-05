@@ -40,6 +40,27 @@ object CapabilityMap {
             supportsClock = false,
             supportsScoreboard = false,
             supportsColorModes = false,
+            // CoolledUUtils.java has no drive-state methods at all - that's
+            // CoolledUDUtils (DeviceFamily.COOLLEDUD / "iLedBike"), a
+            // separate real device family this port used to conflate with
+            // plain CoolLEDU.
+            supportsDriveState = false,
+            supportsOta = true,
+            supportsAlarms = false,
+            supportsReminders = false,
+            supportsNightMode = false,
+            supportsCountdown = false,
+            supportsStopwatch = false,
+            supportsTomato = false,
+            supportsTempHumidity = false,
+            supportsVolume = false,
+            supportsAdvancedStartHeaders = true
+        )
+
+        DeviceFamily.COOLLEDUD -> DeviceCapabilities(
+            supportsClock = false,
+            supportsScoreboard = false,
+            supportsColorModes = false,
             supportsDriveState = true,
             supportsOta = true,
             supportsAlarms = false,
@@ -66,7 +87,9 @@ object CapabilityMap {
             supportsStopwatch = true,
             supportsTomato = false,
             supportsTempHumidity = false,
-            supportsVolume = true,
+            // CoolledUXUtils.java has zero volume-related methods - only
+            // ILedClockUtils (DeviceFamily.ILEDCLOCK) has setDeviceVolume.
+            supportsVolume = false,
             supportsAdvancedStartHeaders = true
         )
 

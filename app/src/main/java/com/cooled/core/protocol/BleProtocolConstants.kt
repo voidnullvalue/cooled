@@ -15,4 +15,15 @@ object BleProtocolConstants {
         "CoolLED536", "CoolLED", "CoolLEDX", "CoolLEDA", "CoolLEDS", "CoolLEDM", "CoolLEDU",
         "CoolLEDUX", "iDevilEyes", "iLedHat", "iLedHatC", "iLedOpen", "iLedCar", "iLedBike", "iLedClock"
     )
+
+    /**
+     * Device names the original app requests MTU 247 for (`DeviceManager$5`/
+     * `DeviceManager.java:120-170`); every other name keeps the default
+     * 20-byte `splitWriteNum` and never negotiates MTU at all. A subset of
+     * [scanNames] - CoolLED536/CoolLED/CoolLEDX/CoolLEDA/CoolLEDS are not
+     * on this list in the original.
+     */
+    val mtuNegotiationNames = setOf(
+        "CoolLEDM", "CoolLEDU", "CoolLEDUX", "iDevilEyes", "iLedHat", "iLedHatC", "iLedOpen", "iLedBike", "iLedClock", "iLedCar"
+    )
 }
