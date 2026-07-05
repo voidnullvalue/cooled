@@ -71,6 +71,99 @@ sealed class ProgramContent {
         val topImageMatrixData: List<Int> = emptyList(),
         val bottomImageMatrixData: List<Int> = emptyList()
     ) : ProgramContent()
+
+    /**
+     * CoolLEDUX live clock-face display template - port of
+     * CoolledUXUtils.getDataWithClockCombineProgram(DeviceManager.CoolleduxClockProgramContent)
+     * (reverse/jadx/sources/com/jtkj/led1248/light/utils/CoolledUXUtils.java:2594-3681,
+     * cross-checked against reverse/apktool/smali_classes3/.../CoolledUXUtils.smali
+     * lines 5610-9149 - jadx `-m simple` renders this method's mode-byte dispatch
+     * with dead-looking gotos to labels (`L10`/`L11`) that jadx prints ~1000 lines
+     * away at the very end of the method, purely a bytecode-layout artifact, not a
+     * real re-entry; smali's `:cond_*`/`:goto_*` graph resolves it unambiguously).
+     *
+     * Fields mirror DeviceManager.CoolleduxClockProgramContent 1:1 (defaults match
+     * its constructor). `isDateShowMode` is read by the real function but never
+     * consulted afterwards - confirmed via smali (the register holding it is
+     * immediately clobbered by the `isSpaceShing` read before any branch), not a
+     * decompiler artifact - so it is kept here only for field-layout fidelity and
+     * has no effect on the encoded bytes, exactly like the APK. `showAmpm` is
+     * likewise never read inside this specific builder (it presumably gates
+     * whether callers populate/attach a CoolleduxClockProgramContent at all,
+     * upstream of this function) and is kept for the same reason.
+     *
+     * `deviceRows`/`deviceColumns` stand in for the APK's DeviceManager.DEVICE_ROW/
+     * DEVICE_COLUMN static globals, which the real function reads directly instead
+     * of taking them as parameters.
+     *
+     * SCOPE (see docs/APK_REVERSE_ENGINEERING_NOTES.md, "getDataWithClockCombineProgram
+     * ... scoped, not ported"): the real function is a sequence of independent
+     * display-element blocks (hour digits, hour/minute separator, minute digits,
+     * seconds, am/pm), each of which starts from one literal comma-separated-byte
+     * digit-bitmap table and then runs a long if/else dispatch keyed on
+     * (DEVICE_ROW, DEVICE_COLUMN, styleIndex) that may swap in a size/style-specific
+     * variant table - confirmed dozens of such literal tables across the full
+     * function. Porting every literal table is a large, error-prone hand-
+     * transcription task flagged in the notes as not yet started. This port is
+     * therefore intentionally scoped to exactly the DEFAULT tables (the literals
+     * used whenever the device's (rows, columns) do not match ANY of the function's
+     * explicit overrides) - which is a real, independently well-defined, and fully
+     * smali/jadx-cross-checked subset, not a guess. `CoolleduxProgramBytecode.clock(...)`
+     * throws a clear error for any (deviceRows, deviceColumns) pair that the real
+     * function *would* special-case, rather than silently emitting the wrong digit
+     * bitmaps for that size. Everything else - header/reserved bytes, the
+     * is24HourShowMode/isSpaceShing mode-byte truth table, showTime/numHeight/
+     * numWidth, per-element field order (table+color+position for hour; color+
+     * position then the shared separator table for spaceHour; color+position for
+     * minute/spaceMinute with the conditional separator-table reuse gated by
+     * showSpaceMinuteColor; color+position for seconds/ampm; the trailing optional
+     * am/pm glyph table, empty/zero-length in the supported device-size scope) is
+     * byte-exact and independent of which literal table ends up selected.
+     */
+    data class Clock(
+        val styleIndex: Int,
+        val deviceRows: Int,
+        val deviceColumns: Int,
+        val layerType: Int = 0,
+        val is24HourShowMode: Boolean = true,
+        val isDateShowMode: Boolean = false,
+        val isSpaceShing: Boolean = false,
+        val showTime: Int = 10,
+        val numHeight: Int = 1,
+        val numWidth: Int = 1,
+        val hourColor: Int = 0,
+        val hourStartColumn: Int = 0,
+        val hourStartRow: Int = 0,
+        val hourWidth: Int = 0,
+        val hourHeight: Int = 0,
+        val spaceHourColor: Int = 0,
+        val spaceHourStartColumn: Int = 0,
+        val spaceHourStartRow: Int = 0,
+        val spaceHourWidth: Int = 0,
+        val spaceHourHeight: Int = 0,
+        val minuteColor: Int = 0,
+        val minuteStartColumn: Int = 0,
+        val minuteStartRow: Int = 0,
+        val minuteWidth: Int = 0,
+        val minuteHeight: Int = 0,
+        val showSpaceMinuteColor: Boolean = false,
+        val spaceMinuteColor: Int = 0,
+        val spaceMinuteStartColumn: Int = 0,
+        val spaceMinuteStartRow: Int = 0,
+        val spaceMinuteWidth: Int = 0,
+        val spaceMinuteHeight: Int = 0,
+        val secondsColor: Int = 0,
+        val secondsStartColumn: Int = 0,
+        val secondsStartRow: Int = 0,
+        val secondsWidth: Int = 0,
+        val secondsHeight: Int = 0,
+        val showAmpm: Boolean = false,
+        val ampmColor: Int = 0,
+        val ampmStartColumn: Int = 0,
+        val ampmStartRow: Int = 0,
+        val ampmWidth: Int = 0,
+        val ampmHeight: Int = 0
+    ) : ProgramContent()
 }
 
 data class CoolLedUxTextContentProgramContent(
@@ -300,6 +393,11 @@ object ProgramComposer {
         is ProgramContent.BusinessHours -> {
             require(family == DeviceFamily.COOLLEDUX) { "BusinessHours content is only valid for CoolLEDUX" }
             CoolleduxProgramBytecode.businessHours(content)
+        }
+
+        is ProgramContent.Clock -> {
+            require(family == DeviceFamily.COOLLEDUX) { "Clock content is only valid for CoolLEDUX" }
+            CoolleduxProgramBytecode.clock(content)
         }
     }
 
@@ -688,6 +786,152 @@ object CoolleduxProgramBytecode {
         channel >= 238 -> 15
         channel <= 47 -> 0
         else -> ((channel - 47) / 14) + 1
+    }
+
+    /**
+     * Port of CoolledUXUtils.getDataWithClockCombineProgram(...) - see the doc
+     * comment on ProgramContent.Clock for the full scope/verification notes.
+     * Wrapped as a standalone single-program upload the same way
+     * businessHours(...) wraps its blocks via wrapProgram(...).
+     */
+    fun clock(c: ProgramContent.Clock): ByteArray = wrapProgram(listOf(clockContentBlock(c)))
+
+    /**
+     * (DEVICE_ROW, DEVICE_COLUMN) pairs the real function special-cases with
+     * their own literal digit-bitmap tables (hour/separator/am-pm elements
+     * combined - the union of every explicit override guard found across the
+     * whole function; see docs/APK_REVERSE_ENGINEERING_NOTES.md). Any size
+     * matching this predicate is out of scope for this port; anything else is
+     * guaranteed - by the mechanical "guard chain only overwrites on an exact
+     * (row, column[, style]) match" shape confirmed via smali - to fall through
+     * untouched to the default literal tables this port does implement.
+     */
+    private fun isSpecialCasedClockDeviceSize(rows: Int, columns: Int): Boolean = when (rows) {
+        16 -> columns == 32 || columns == 64 || columns >= 96
+        20 -> columns == 64
+        24 -> columns == 48 || columns == 64 || columns >= 96
+        32 -> columns == 64 || columns >= 96
+        else -> false
+    }
+
+    /** Default (row/column-independent) hour-digit bitmap table - CoolledUXUtils.java:2617. 140 bytes = 10 digits x 14 bytes. */
+    private const val CLOCK_DEFAULT_HOUR_DIGIT_TABLE =
+        "127, 224, 255, 240, 192, 48, 192, 48, 255, 240, 127, 224, 0, 0, 32, 48, 96, 48, 255, 240, 255, 240, 0, 48, 0, 48, 0, 0, 96, 240, 225, 240, 195, 48, 198, 48, 252, 48, 120, 48, 0, 0, 96, 96, 224, 112, 198, 48, 198, 48, 255, 240, 121, 224, 0, 0, 31, 128, 63, 128, 97, 128, 255, 240, 255, 240, 1, 128, 0, 0, 252, 96, 252, 112, 204, 48, 204, 48, 207, 240, 199, 224, 0, 0, 127, 224, 255, 240, 204, 48, 204, 48, 207, 240, 199, 224, 0, 0, 192, 0, 192, 0, 199, 240, 207, 240, 248, 0, 240, 0, 0, 0, 123, 224, 255, 240, 198, 48, 198, 48, 255, 240, 123, 224, 0, 0, 124, 96, 254, 112, 198, 48, 198, 48, 255, 240, 127, 224, 0, 0"
+
+    /** Default (row/column-independent) hour/minute-separator bitmap table - CoolledUXUtils.java:2680. Reused verbatim for the minute/second separator when showSpaceMinuteColor is set. */
+    private const val CLOCK_DEFAULT_SEPARATOR_TABLE = "51, 0, 51, 0"
+
+    private fun clockContentBlock(c: ProgramContent.Clock): ByteArray {
+        require(!isSpecialCasedClockDeviceSize(c.deviceRows, c.deviceColumns)) {
+            "ProgramContent.Clock: device size ${c.deviceRows}x${c.deviceColumns} hits one of " +
+                "CoolledUXUtils.getDataWithClockCombineProgram's explicit per-size/per-style literal " +
+                "digit-bitmap overrides, which have not been transcribed yet (see " +
+                "docs/APK_REVERSE_ENGINEERING_NOTES.md) - only the default-table fallback path is ported."
+        }
+
+        val body = mutableListOf<Byte>()
+        body += 0x07.toByte() // CoolleduxCombineProgram.CLOCK
+        repeat(7) { body += 0x00.toByte() }
+        body += c.layerType.coerceIn(0, 255).toByte()
+        // Mode-byte truth table (CoolledUXUtils.java:2607-2613/3672-3681, smali
+        // :cond_1/:cond_2/:cond_3/:goto_1 at CoolledUXUtils.smali:5670-5714+9-
+        // -jadx's `-m simple` rendering makes this look like it falls into two
+        // dead-looking labels (L10/L11) that only appear ~1000 lines later at
+        // the very end of the method; smali confirms there is no re-entry, just
+        // an ordinary bytecode-layout artifact.
+        body += clockModeByte(c.is24HourShowMode, c.isSpaceShing)
+        body += u16(c.showTime)
+        body += u16(c.numHeight)
+        body += u16(c.numWidth)
+
+        val hourTable = CommaSeparatedByteTable.parse(CLOCK_DEFAULT_HOUR_DIGIT_TABLE)
+        body += u16(hourTable.size)
+        body += hourTable.toList()
+        body += colorDataWithColor(c.hourColor)
+        body += u16(c.hourStartColumn)
+        body += u16(c.hourStartRow)
+        body += u16(c.hourWidth)
+        body += u16(c.hourHeight)
+
+        body += colorDataWithColor(c.spaceHourColor)
+        body += u16(c.spaceHourStartColumn)
+        body += u16(c.spaceHourStartRow)
+        body += u16(c.spaceHourWidth)
+        body += u16(c.spaceHourHeight)
+
+        val separatorTable = CommaSeparatedByteTable.parse(CLOCK_DEFAULT_SEPARATOR_TABLE)
+        body += u16(separatorTable.size)
+        body += separatorTable.toList()
+
+        body += colorDataWithColor(c.minuteColor)
+        body += u16(c.minuteStartColumn)
+        body += u16(c.minuteStartRow)
+        body += u16(c.minuteWidth)
+        body += u16(c.minuteHeight)
+
+        body += colorDataWithColor(c.spaceMinuteColor)
+        body += u16(c.spaceMinuteStartColumn)
+        body += u16(c.spaceMinuteStartRow)
+        body += u16(c.spaceMinuteWidth)
+        body += u16(c.spaceMinuteHeight)
+
+        if (c.showSpaceMinuteColor) {
+            body += u16(separatorTable.size)
+            body += separatorTable.toList()
+        } else {
+            body += u16(0)
+        }
+
+        body += colorDataWithColor(c.secondsColor)
+        body += u16(c.secondsStartColumn)
+        body += u16(c.secondsStartRow)
+        body += u16(c.secondsWidth)
+        body += u16(c.secondsHeight)
+
+        body += colorDataWithColor(c.ampmColor)
+        body += u16(c.ampmStartColumn)
+        body += u16(c.ampmStartRow)
+        body += u16(c.ampmWidth)
+        body += u16(c.ampmHeight)
+
+        // Trailing optional am/pm glyph table (r0 in the decompiled source):
+        // default "" (empty) for every device size this port supports - only
+        // (16,64,style==7) and (16,>=96,style==7) ever populate it, both of
+        // which are already excluded by isSpecialCasedClockDeviceSize's
+        // row==16 && columns>=96 (and ==64) branches above, confirmed via
+        // smali (CoolledUXUtils.smali:8967-9033, :goto_13 default path).
+        body += u16(0)
+
+        return (u32(body.size + 4) + body).toByteArray()
+    }
+
+    /**
+     * Port of the is24HourShowMode/isSpaceShing mode-byte dispatch at the top
+     * of CoolledUXUtils.getDataWithClockCombineProgram, smali-confirmed
+     * (CoolledUXUtils.smali:5670-5714 for the branch entry, :9672-9681
+     * jadx-line-numbered as L10/L11/L13/L14 for the actual "01"/"02"/"00"
+     * targets jadx renders far away from their real logical position).
+     */
+    private fun clockModeByte(is24HourShowMode: Boolean, isSpaceShing: Boolean): Byte = when {
+        is24HourShowMode && isSpaceShing -> 0x03
+        is24HourShowMode && !isSpaceShing -> 0x01
+        !is24HourShowMode && isSpaceShing -> 0x02
+        else -> 0x00
+    }.toByte()
+
+    /**
+     * Port of TextEmojiManagerCoolLEDUX.getColorDataWithColor(int)
+     * (TextEmojiManagerCoolLEDUX.java:393) - a plain 2-byte RGB444-shaped
+     * quantization (channel/16 per nibble), deliberately WITHOUT the
+     * threshold-based rgb444Transfer(...) quantization
+     * getColorDataWithColorWithRGB444Transfer uses. Byte layout:
+     * [0x0 | redNibble][greenNibble<<4 | blueNibble].
+     */
+    private fun colorDataWithColor(color: Int): List<Byte> {
+        val r = ((color ushr 16) and 0xFF) / 16
+        val g = ((color ushr 8) and 0xFF) / 16
+        val b = (color and 0xFF) / 16
+        return listOf(r.toByte(), ((g shl 4) or b).toByte())
     }
 
     private fun wrapProgram(blocks: List<ByteArray>): ByteArray {
