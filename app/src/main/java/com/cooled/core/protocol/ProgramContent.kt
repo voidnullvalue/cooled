@@ -73,6 +73,49 @@ sealed class ProgramContent {
     ) : ProgramContent()
 
     /**
+     * CoolLEDUX live countdown/count-up display template - port of
+     * CoolledUXUtils.getDataWithTimeCountCombineProgram(DeviceManager.CoolleduxTimeCountProgramContent)
+     * and that class's field layout (reverse/jadx/sources/.../DeviceManager.java:2393).
+     * `showTime` (a real field on the APK class) is intentionally omitted here -
+     * it is never read by this function; it belongs to the separate
+     * countdown-start command, not this display-content template.
+     */
+    data class TimeCount(
+        val layerType: Int = 1,
+        val timeCountMode: Int = 1,
+        val numHeight: Int = 1,
+        val numWidth: Int = 1,
+        /** DeviceManager.DEVICE_ROW/DEVICE_COLUMN equivalent - scan-derived matrix dimensions (see ProgramContent.Text). */
+        val displayRows: Int? = null,
+        val displayColumns: Int? = null,
+        val hourColor: Int = 0,
+        val hourStartColumn: Int = 0,
+        val hourStartRow: Int = 0,
+        val hourWidth: Int = 0,
+        val hourHeight: Int = 0,
+        val spaceHourColor: Int = 0,
+        val spaceHourStartColumn: Int = 0,
+        val spaceHourStartRow: Int = 0,
+        val spaceHourWidth: Int = 0,
+        val spaceHourHeight: Int = 0,
+        val minuteColor: Int = 0,
+        val minuteStartColumn: Int = 0,
+        val minuteStartRow: Int = 0,
+        val minuteWidth: Int = 0,
+        val minuteHeight: Int = 0,
+        val spaceMinuteColor: Int = 0,
+        val spaceMinuteStartColumn: Int = 0,
+        val spaceMinuteStartRow: Int = 0,
+        val spaceMinuteWidth: Int = 0,
+        val spaceMinuteHeight: Int = 0,
+        val secondsColor: Int = 0,
+        val secondsStartColumn: Int = 0,
+        val secondsStartRow: Int = 0,
+        val secondsWidth: Int = 0,
+        val secondsHeight: Int = 0
+    ) : ProgramContent()
+
+    /**
      * CoolLEDUX live clock-face display template - port of
      * CoolledUXUtils.getDataWithClockCombineProgram(DeviceManager.CoolleduxClockProgramContent)
      * (reverse/jadx/sources/com/jtkj/led1248/light/utils/CoolledUXUtils.java:2594-3681,
@@ -460,6 +503,11 @@ object ProgramComposer {
             CoolleduxProgramBytecode.businessHours(content)
         }
 
+        is ProgramContent.TimeCount -> {
+            require(family == DeviceFamily.COOLLEDUX) { "TimeCount content is only valid for CoolLEDUX" }
+            CoolleduxProgramBytecode.timeCount(content)
+        }
+
         is ProgramContent.Clock -> {
             require(family == DeviceFamily.COOLLEDUX) { "Clock content is only valid for CoolLEDUX" }
             CoolleduxProgramBytecode.clock(content)
@@ -740,6 +788,65 @@ object CoolleduxProgramBytecode {
     fun dateWeather(c: ProgramContent.DateWeather): ByteArray =
         wrapProgram(listOf(CoolleduxDateWeatherBytecode.encode(c)))
 
+    /**
+     * Port of CoolledUXUtils.getDataWithTimeCountCombineProgram(
+     * DeviceManager.CoolleduxTimeCountProgramContent) wrapped in
+     * getDataWithProgram(...) for a standalone single-program upload - see
+     * TimeCountDigitTables's doc comment for the smali-verified row/column
+     * dispatch this relies on.
+     */
+    fun timeCount(c: ProgramContent.TimeCount): ByteArray = wrapProgram(listOf(timeCountContentBlock(c)))
+
+    private fun timeCountContentBlock(c: ProgramContent.TimeCount): ByteArray {
+        val (digitTable, colonTable) = TimeCountDigitTables.resolve(
+            deviceRow = c.displayRows ?: 32,
+            deviceColumn = c.displayColumns ?: 64,
+            timeCountMode = c.timeCountMode
+        )
+        val digitBytes = CommaSeparatedByteTable.parse(digitTable)
+        val colonBytes = CommaSeparatedByteTable.parse(colonTable)
+
+        val inner = mutableListOf<Byte>()
+        inner += 0x0a.toByte()
+        repeat(7) { inner += 0x00.toByte() }
+        inner += one(c.layerType)
+        inner += one(c.timeCountMode)
+        inner += u16(c.numHeight)
+        inner += u16(c.numWidth)
+        inner += u16(digitBytes.size)
+        inner += digitBytes.toList()
+        inner += colorDataWithColor(c.hourColor)
+        inner += u16(c.hourStartColumn)
+        inner += u16(c.hourStartRow)
+        inner += u16(c.hourWidth)
+        inner += u16(c.hourHeight)
+        inner += colorDataWithColor(c.spaceHourColor)
+        inner += u16(c.spaceHourStartColumn)
+        inner += u16(c.spaceHourStartRow)
+        inner += u16(c.spaceHourWidth)
+        inner += u16(c.spaceHourHeight)
+        inner += u16(colonBytes.size)
+        inner += colonBytes.toList()
+        inner += colorDataWithColor(c.minuteColor)
+        inner += u16(c.minuteStartColumn)
+        inner += u16(c.minuteStartRow)
+        inner += u16(c.minuteWidth)
+        inner += u16(c.minuteHeight)
+        inner += colorDataWithColor(c.spaceMinuteColor)
+        inner += u16(c.spaceMinuteStartColumn)
+        inner += u16(c.spaceMinuteStartRow)
+        inner += u16(c.spaceMinuteWidth)
+        inner += u16(c.spaceMinuteHeight)
+        inner += u16(colonBytes.size)
+        inner += colonBytes.toList()
+        inner += colorDataWithColor(c.secondsColor)
+        inner += u16(c.secondsStartColumn)
+        inner += u16(c.secondsStartRow)
+        inner += u16(c.secondsWidth)
+        inner += u16(c.secondsHeight)
+        return (u32(inner.size + 4) + inner).toByteArray()
+    }
+
     private fun businessHourBlocks(c: ProgramContent.BusinessHours): List<ByteArray> = when (c.businessType) {
         // businessType 0 (:cond_8) and 2 (:goto_4) share the single-image path.
         0, 2 -> {
@@ -1005,6 +1112,8 @@ object CoolleduxProgramBytecode {
      * getColorDataWithColorWithRGB444Transfer uses. Byte layout:
      * [0x0 | redNibble][greenNibble<<4 | blueNibble].
      */
+    private fun one(value: Int): Byte = (value and 0xFF).toByte()
+
     private fun colorDataWithColor(color: Int): List<Byte> {
         val r = ((color ushr 16) and 0xFF) / 16
         val g = ((color ushr 8) and 0xFF) / 16
