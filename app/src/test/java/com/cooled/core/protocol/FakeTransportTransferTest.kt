@@ -29,13 +29,16 @@ class FakeTransportTransferTest {
     }
 
     @Test
-    fun transferScript_nackThenSuccess_stateProgression() {
+    fun transferScript_chunkNackIsTerminal_notARetryTrigger() {
+        // A chunk NACK (status 0x01) is a dead-end failure in the real
+        // protocol - no subscriber anywhere resends the chunk for it. An
+        // earlier version of this test (named "nackThenSuccess") encoded
+        // the opposite, invented belief that a NACK could be recovered from
+        // by simply waiting for a later success response.
         val sm = TransferStateMachine(maxChunkRetries = 3)
         sm.startSession(1)
         sm.onParsed(ParsedPayload.TransferStartResponse(0x02, 0x00))
         sm.onParsed(ParsedPayload.TransferChunkResponse(0x03, 0, 0x01))
-        sm.onParsed(ParsedPayload.TransferChunkResponse(0x03, 0, 0x01))
-        sm.onParsed(ParsedPayload.TransferChunkResponse(0x03, 0, 0x00))
-        assertTrue(sm.state.value is TransferState.Completed)
+        assertTrue(sm.state.value is TransferState.Failed)
     }
 }

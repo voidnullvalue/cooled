@@ -77,6 +77,16 @@ class TransferStateMachine(
         }
     }
 
+    // Traced the APK's checkCoolLEDMMessages ack dispatcher and its
+    // EventAgent subscribers: a chunk-ack status of 1/2/3 posts
+    // ResponseEvent(5)/(6)/(4) respectively, and no subscriber anywhere
+    // resends the chunk for any of those codes - they are all terminal
+    // failure signals. The original's only automatic-resend mechanism is a
+    // ~5000ms no-ack-of-any-kind timeout (checkRetryTimesSendProgramData*),
+    // which never inspects a NACK's status byte because a NACK never
+    // reaches that path. This port used to treat status 0x01 as "retry the
+    // same chunk," inventing a NACK-triggers-retry behavior the real
+    // protocol doesn't have - only onTimeout() should ever trigger a retry.
     private fun onChunkAck(chunkIndex: Int, status: Int) {
         when (status) {
             0x00 -> {
@@ -86,13 +96,7 @@ class TransferStateMachine(
                 else _state.value = TransferState.SendingChunk(currentChunk, chunkCount, chunkRetriesLeft)
             }
 
-            0x01 -> {
-                chunkRetriesLeft--
-                if (chunkRetriesLeft < 0) _state.value = TransferState.Failed("Chunk $chunkIndex retry exhausted")
-                else _state.value = TransferState.SendingChunk(chunkIndex, chunkCount, chunkRetriesLeft)
-            }
-
-            0x02, 0x03 -> _state.value = TransferState.Failed("Chunk $chunkIndex rejected status=$status")
+            0x01, 0x02, 0x03 -> _state.value = TransferState.Failed("Chunk $chunkIndex rejected status=$status")
             else -> _state.value = TransferState.Failed("Chunk $chunkIndex unknown status=$status")
         }
     }

@@ -61,8 +61,7 @@ fun MoreScreen(
     isFakeMode: Boolean,
     onStartFakeTransfer: () -> Unit,
     onScriptHappy: () -> Unit,
-    onScriptNack: () -> Unit,
-    onScriptExhaust: () -> Unit,
+    onScriptChunkNackAborts: () -> Unit,
     onTimeoutTick: () -> Unit,
     events: List<String>,
     onCopyDebugLog: () -> Unit
@@ -138,8 +137,7 @@ fun MoreScreen(
                         }
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
                             OutlinedButton(onClick = onScriptHappy, modifier = Modifier.weight(1f)) { Text("Happy path") }
-                            OutlinedButton(onClick = onScriptNack, modifier = Modifier.weight(1f)) { Text("NACK retry") }
-                            OutlinedButton(onClick = onScriptExhaust, modifier = Modifier.weight(1f)) { Text("Retry exhaust") }
+                            OutlinedButton(onClick = onScriptChunkNackAborts, modifier = Modifier.weight(1f)) { Text("Chunk NACK aborts") }
                         }
                         HorizontalDivider()
                     }

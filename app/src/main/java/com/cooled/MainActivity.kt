@@ -323,8 +323,7 @@ private fun AppScreenContent(vm: AppViewModel, missingPermissions: List<String>)
                         isFakeMode = isFakeMode,
                         onStartFakeTransfer = { vm.startFakeTransfer() },
                         onScriptHappy = { vm.scriptTransferScenario("happy") },
-                        onScriptNack = { vm.scriptTransferScenario("nack_then_success") },
-                        onScriptExhaust = { vm.scriptTransferScenario("retry_exhaust") },
+                        onScriptChunkNackAborts = { vm.scriptTransferScenario("chunk_nack_aborts") },
                         onTimeoutTick = { vm.timeoutTransfer() },
                         events = events,
                         onCopyDebugLog = { clipboard.setText(AnnotatedString(vm.copyDebugLog())) }

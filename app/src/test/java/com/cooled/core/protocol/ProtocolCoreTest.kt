@@ -216,12 +216,15 @@ class ProtocolCoreTest {
     }
 
     @Test
-    fun transferStateMachine_nackThenExhaustion() {
+    fun transferStateMachine_chunkNackFailsImmediately() {
+        // A single chunk NACK is terminal in the real protocol - there's no
+        // "exhaustion" to reach, since it never retries in the first place.
+        // See TransferStateMachineTest.chunkNackIsTerminalNotARetryTrigger
+        // for the fuller explanation of why (traced against the APK's ack
+        // dispatcher).
         val sm = TransferStateMachine(maxChunkRetries = 2)
         sm.startSession(chunks = 1)
         sm.onParsed(ParsedPayload.TransferStartResponse(0x02, 0x00))
-        sm.onParsed(ParsedPayload.TransferChunkResponse(0x03, 0, 0x01))
-        sm.onParsed(ParsedPayload.TransferChunkResponse(0x03, 0, 0x01))
         sm.onParsed(ParsedPayload.TransferChunkResponse(0x03, 0, 0x01))
         assertTrue(sm.state.value is TransferState.Failed)
     }

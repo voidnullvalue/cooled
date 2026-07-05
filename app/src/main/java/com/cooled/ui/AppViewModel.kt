@@ -295,11 +295,14 @@ class AppViewModel(
                     } else {
                         sendPendingChunk(pack)
                     }
-                } else if (payload.status == 1) {
-                    appendEvent("${ts()} Program chunk ${payload.chunkIndex} NACK; resending")
-                    pendingChunkIndex = payload.chunkIndex.coerceIn(0, pack.chunkFrames.lastIndex)
-                    sendPendingChunk(pack)
                 } else {
+                    // A chunk NACK (status 1) is a dead-end failure in the
+                    // real protocol, same as any other rejected status - no
+                    // subscriber anywhere in the APK resends a chunk after a
+                    // NACK (see TransferStateMachine.onChunkAck's doc
+                    // comment). This used to resend the same chunk here,
+                    // inventing a recovery path the real protocol doesn't
+                    // have.
                     pendingProgram = null
                     pendingChunkIndex = 0
                     pendingStartRetries = 0
@@ -354,15 +357,15 @@ class AppViewModel(
                 fakeTransport.enqueueRawFrame(byteArrayOf(0x7E, 0x00, 0x7E), "unexpected-frame")
                 fakeTransport.enqueueRxPayload(byteArrayOf(0x02, 0x00), "late-start-ok")
             }
-            "nack_then_success" -> {
+            "chunk_nack_aborts" -> {
+                // A chunk NACK is a terminal failure in the real protocol,
+                // not something the device or app retries past - only the
+                // start-ack "start-ok" and one NACK are ever seen; any
+                // further enqueued responses would never be reached because
+                // the upload aborts immediately (see
+                // handleProgramTransferAck/TransferStateMachine.onChunkAck).
                 fakeTransport.enqueueRxPayload(byteArrayOf(0x02, 0x00), "start-ok")
-                fakeTransport.enqueueRxPayload(byteArrayOf(0x03, 0x00, 0x00, 0x00, 0x01), "nack-1")
-                fakeTransport.enqueueRxPayload(byteArrayOf(0x03, 0x00, 0x00, 0x00, 0x01), "nack-2")
-                fakeTransport.enqueueRxPayload(byteArrayOf(0x03, 0x00, 0x00, 0x00, 0x00), "finally-ok")
-            }
-            "retry_exhaust" -> {
-                fakeTransport.enqueueRxPayload(byteArrayOf(0x02, 0x00), "start-ok")
-                repeat(5) { fakeTransport.enqueueRxPayload(byteArrayOf(0x03, 0x00, 0x00, 0x00, 0x01), "nack") }
+                fakeTransport.enqueueRxPayload(byteArrayOf(0x03, 0x00, 0x00, 0x00, 0x01), "nack-aborts-upload")
             }
             "unexpected_packet" -> fakeTransport.enqueueRawFrame(byteArrayOf(0x7E, 0x01, 0x02, 0x03), "garbage")
         }
