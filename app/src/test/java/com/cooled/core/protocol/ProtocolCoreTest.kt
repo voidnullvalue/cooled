@@ -375,4 +375,24 @@ class ProtocolCoreTest {
         assertTrue(setAck is ParsedPayload.NightModeState)
         assertEquals(null, (setAck as ParsedPayload.NightModeState).enabled)
     }
+
+    @Test
+    fun buildOtaStartHeaderComputesCrcAndLengthOverUncompressedFirmware() {
+        // CoolledUXUtils/ILedClockUtils.getStartDataForOtaUpgrade: CRC and
+        // length are always over the *uncompressed* firmware - compression
+        // only ever applies to the chunk body sent separately. An earlier
+        // version of this builder took a parameter literally named
+        // "compressedFirmware" and computed everything from it directly,
+        // the same mistake ProgramComposer.compose had for program uploads.
+        val firmware = ByteArray(200) { (it * 7).toByte() }
+        val withPreamble = FrameCodec.decode(CommandBuilders.buildOtaStartHeader(firmware, includePreamble64 = true))
+        assertEquals(CoolLedCrc.crc32Like(firmware), readBe32(withPreamble, 1))
+        assertEquals(firmware.size, readBe32(withPreamble, 5))
+        assertEquals(64, withPreamble[9].toInt() and 0xFF)
+        assertArrayEquals(firmware.copyOfRange(0, 64), withPreamble.copyOfRange(10, 74))
+
+        // CoolledUUtils.getStartDataForOtaUpgrade has no 64-byte preamble at all.
+        val withoutPreamble = FrameCodec.decode(CommandBuilders.buildOtaStartHeader(firmware, includePreamble64 = false))
+        assertEquals(9, withoutPreamble.size)
+    }
 }

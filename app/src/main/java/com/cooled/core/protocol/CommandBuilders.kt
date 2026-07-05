@@ -210,14 +210,26 @@ object CommandBuilders {
         return FrameCodec.encode(base.toByteArray())
     }
 
-    fun buildOtaStartHeader(compressedFirmware: ByteArray, includePreamble64: Boolean): ByteArray {
-        val crc = CoolLedCrc.crc32Like(compressedFirmware)
+    // CoolledUXUtils/ILedClockUtils.getStartDataForOtaUpgrade(byte[]) vs
+    // CoolledUUtils.getStartDataForOtaUpgrade(List<String>): CRC/length are
+    // always computed over the *uncompressed* firmware (compression, via
+    // LzssCompress, only ever applies to the chunk body sent afterward via
+    // getDataPacket - never shown in this header at all), and the 64-byte
+    // preamble (present for CoolLEDUX/iLedClock, absent for CoolLEDU) is
+    // also the first 64 bytes of the *uncompressed* firmware. An earlier
+    // version of this function took a parameter literally named
+    // "compressedFirmware" and computed everything from it directly - the
+    // same compressed-vs-uncompressed mistake ProgramComposer.compose had
+    // for the program-upload path, just not yet exploitable since nothing
+    // calls this function (OTA upload isn't wired into the UI yet).
+    fun buildOtaStartHeader(firmware: ByteArray, includePreamble64: Boolean): ByteArray {
+        val crc = CoolLedCrc.crc32Like(firmware)
         val base = mutableListOf(0xFE.toByte())
         base += intToBytes(crc)
-        base += intToBytes(compressedFirmware.size)
+        base += intToBytes(firmware.size)
         if (includePreamble64) {
             base += 0x40
-            base += compressedFirmware.take(64)
+            base += firmware.take(64)
         }
         return FrameCodec.encode(base.toByteArray())
     }

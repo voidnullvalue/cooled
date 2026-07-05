@@ -25,7 +25,9 @@ import com.cooled.core.protocol.ProgramUploadFollowUp
 import com.cooled.core.protocol.TimerSwitchCommand
 import com.cooled.core.protocol.TransferState
 import com.cooled.core.protocol.TransferStateMachine
+import com.cooled.data.persistence.InMemoryRememberedDeviceStore
 import com.cooled.data.persistence.RememberedDeviceStore
+import com.cooled.data.persistence.SharedPreferencesRememberedDeviceStore
 import com.cooled.data.repositories.DeviceRepository
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -37,7 +39,7 @@ import kotlinx.coroutines.launch
 
 class AppViewModel(
     private val transport: BleTransport = FakeBleTransport(),
-    rememberedDeviceStore: RememberedDeviceStore = RememberedDeviceStore()
+    rememberedDeviceStore: RememberedDeviceStore = InMemoryRememberedDeviceStore()
 ) : ViewModel() {
     private val fake = transport as? FakeBleTransport
     private val repo = DeviceRepository(transport, rememberedDeviceStore)
@@ -63,6 +65,7 @@ class AppViewModel(
     val lastParsedSummary: StateFlow<String> = _lastParsedSummary.asStateFlow()
 
     val scanResults = repo.scanResults.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+    val rememberedAddresses = repo.remembered().stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
     val connection = repo.connectionState.stateIn(viewModelScope, SharingStarted.Eagerly, ConnectionState.DISCONNECTED)
     val mtu = repo.mtu.stateIn(viewModelScope, SharingStarted.Eagerly, 23)
     val parsed = repo.parsedRx.stateIn(viewModelScope, SharingStarted.Eagerly, ParsedPayload.Unknown(byteArrayOf()))
@@ -436,7 +439,7 @@ class AppViewModel(
             @Suppress("UNCHECKED_CAST")
             override fun <T : ViewModel> create(modelClass: Class<T>, extras: CreationExtras): T {
                 val appContext = extras[APPLICATION_KEY] ?: context.applicationContext
-                return AppViewModel(AndroidBleTransport(appContext), RememberedDeviceStore()) as T
+                return AppViewModel(AndroidBleTransport(appContext), SharedPreferencesRememberedDeviceStore(appContext)) as T
             }
         }
     }

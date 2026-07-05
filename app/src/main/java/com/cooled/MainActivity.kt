@@ -131,6 +131,7 @@ private fun MissingPermissionsBanner(missing: List<String>) {
 @Composable
 private fun AppScreenContent(vm: AppViewModel, missingPermissions: List<String>) {
     val scans by vm.scanResults.collectAsState()
+    val rememberedAddresses by vm.rememberedAddresses.collectAsState()
     val connection by vm.connection.collectAsState()
     val mtu by vm.mtu.collectAsState()
     val family by vm.family.collectAsState()
@@ -213,11 +214,13 @@ private fun AppScreenContent(vm: AppViewModel, missingPermissions: List<String>)
                 ConnectScreen(
                     scanning = isScanning,
                     scanResults = scans,
+                    rememberedAddresses = rememberedAddresses,
                     transportMode = transportMode,
                     hasBlePermissions = hasBlePermissions,
                     onScan = { isScanning = true; vm.scan() },
                     onStopScan = { isScanning = false; vm.stopScan() },
                     onConnect = { device -> isScanning = false; vm.stopScan(); vm.connect(device.address, device.name) },
+                    onReconnect = { address -> isScanning = false; vm.stopScan(); vm.connect(address, null) },
                     onOpenLocationSettings = { context.startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)) },
                     onOpenBluetoothSettings = { context.startActivity(Intent(Settings.ACTION_BLUETOOTH_SETTINGS)) },
                     onOpenAppPermissionSettings = { context.startActivity(appPermissionSettingsIntent(context.packageName)) }

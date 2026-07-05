@@ -27,6 +27,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -38,15 +39,19 @@ import com.cooled.ui.components.StatChip
 fun ConnectScreen(
     scanning: Boolean,
     scanResults: List<ScanDevice>,
+    rememberedAddresses: List<String>,
     transportMode: String,
     hasBlePermissions: Boolean,
     onScan: () -> Unit,
     onStopScan: () -> Unit,
     onConnect: (ScanDevice) -> Unit,
+    onReconnect: (String) -> Unit,
     onOpenLocationSettings: () -> Unit,
     onOpenBluetoothSettings: () -> Unit,
     onOpenAppPermissionSettings: () -> Unit
 ) {
+    val scannedAddresses = remember(scanResults) { scanResults.map { it.address }.toSet() }
+    val reconnectOnly = remember(rememberedAddresses, scannedAddresses) { rememberedAddresses.filterNot { it in scannedAddresses } }
     Column(modifier = Modifier.fillMaxSize()) {
         Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Text("cooled", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground)
@@ -78,6 +83,22 @@ fun ConnectScreen(
             AssistIconButton(Icons.Filled.LocationOn, "Location", onOpenLocationSettings)
             AssistIconButton(Icons.Filled.Bluetooth, "Bluetooth", onOpenBluetoothSettings)
             AssistIconButton(Icons.Filled.Settings, "App permissions", onOpenAppPermissionSettings)
+        }
+
+        if (reconnectOnly.isNotEmpty()) {
+            Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text("Recently connected", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                reconnectOnly.forEach { address ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(address, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
+                        OutlinedButton(onClick = { onReconnect(address) }, enabled = hasBlePermissions) { Text("Connect") }
+                    }
+                }
+            }
         }
 
         if (scanResults.isEmpty()) {
