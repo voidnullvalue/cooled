@@ -147,16 +147,19 @@ object ProgramComposer {
 
     internal fun encodeContentForTest(family: DeviceFamily, content: ProgramContent): ByteArray = encodeContent(family, content)
 
-    // NOT byte-exact for any family except COOLLEDUX. Each other family has
-    // its own real text-content builder in the APK
-    // (CoolledMUtils/CoolledUUtils/CoolledUDUtils/ILedClockUtils each define
-    // their own getDataWithTextContentProgramContent-equivalent, none of
-    // which have been reverse-engineered yet - this is a separate, sizable
-    // undertaking of the same shape as the CoolLEDUX text/emoji pipeline,
-    // not a quick follow-up). The `[0x54, speed, effect, len, text]` shape
-    // below is an unverified placeholder that must not be assumed correct;
-    // do not "fix" it without first doing the same smali-verified,
-    // golden-vector-tested reverse-engineering pass CoolLEDUX got.
+    // NOT byte-exact for any family except COOLLEDUX and COOLLEDU-within-
+    // CoolleduGlyphPipeline's scope (showHeight=16, no rescale, text-only,
+    // no mirror - see CoolleduProgramBytecode/CoolleduGlyphPipeline's class
+    // docs). Every other family, and COOLLEDU outside that scope, has its
+    // own real text-content builder in the APK
+    // (CoolledMUtils/CoolledUDUtils/ILedClockUtils, plus CoolLEDU's own
+    // rescale/emoji/mirror paths, none of which have been reverse-engineered
+    // yet - each is a separate, sizable undertaking of the same shape as the
+    // CoolLEDUX text/emoji pipeline, not a quick follow-up). The
+    // `[0x54, speed, effect, len, text]` shape below is an unverified
+    // placeholder that must not be assumed correct; do not "fix" it without
+    // first doing the same smali-verified, golden-vector-tested reverse-
+    // engineering pass CoolLEDUX (and now part of CoolLEDU) got.
     private fun encodeContent(family: DeviceFamily, content: ProgramContent): ByteArray = when (content) {
         is ProgramContent.Text -> if (family == DeviceFamily.COOLLEDUX) {
             CoolleduxProgramBytecode.text(
@@ -165,6 +168,18 @@ object ProgramComposer {
                 effect = content.effect,
                 displayColumns = content.displayColumns,
                 displayRows = content.displayRows
+            )
+        } else if (family == DeviceFamily.COOLLEDU && CoolleduProgramBytecode.supports(content.text)) {
+            // Real, verified encoding - but only within CoolleduGlyphPipeline's
+            // scoped support (showHeight=16, no rescale, text-only, no
+            // mirror - see its class doc). Falls through to the unverified
+            // placeholder below for anything outside that scope rather than
+            // guessing at the unported rescale/emoji/mirror paths.
+            CoolleduProgramBytecode.text(
+                text = content.text,
+                speed = content.speed,
+                effect = content.effect,
+                displayColumns = content.displayColumns
             )
         } else {
             val textBytes = content.text.encodeToByteArray()
