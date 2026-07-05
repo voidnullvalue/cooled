@@ -147,6 +147,16 @@ object ProgramComposer {
 
     internal fun encodeContentForTest(family: DeviceFamily, content: ProgramContent): ByteArray = encodeContent(family, content)
 
+    // NOT byte-exact for any family except COOLLEDUX. Each other family has
+    // its own real text-content builder in the APK
+    // (CoolledMUtils/CoolledUUtils/CoolledUDUtils/ILedClockUtils each define
+    // their own getDataWithTextContentProgramContent-equivalent, none of
+    // which have been reverse-engineered yet - this is a separate, sizable
+    // undertaking of the same shape as the CoolLEDUX text/emoji pipeline,
+    // not a quick follow-up). The `[0x54, speed, effect, len, text]` shape
+    // below is an unverified placeholder that must not be assumed correct;
+    // do not "fix" it without first doing the same smali-verified,
+    // golden-vector-tested reverse-engineering pass CoolLEDUX got.
     private fun encodeContent(family: DeviceFamily, content: ProgramContent): ByteArray = when (content) {
         is ProgramContent.Text -> if (family == DeviceFamily.COOLLEDUX) {
             CoolleduxProgramBytecode.text(
@@ -187,9 +197,6 @@ object ProgramComposer {
 
         is ProgramContent.PresetMode -> byteArrayOf(0x4D, content.mode.toByte(), content.intensity.toByte())
     }
-
-    private fun DeviceFamily.usesCoolLedUxProgramLayout(): Boolean =
-        this == DeviceFamily.COOLLEDUX || this == DeviceFamily.COOLLEDX || this == DeviceFamily.COOLLEDS || this == DeviceFamily.ILEDCLOCK
 
     /** FontUtils.getFontByteDataCoolleduxForEmoji(...) modes that use the shared word-wrapped, row-centered canvas (CoolleduxCombineText) instead of the per-glyph stream (CoolleduxStreamText). */
     private val combineCanvasModes = setOf(1, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13)
