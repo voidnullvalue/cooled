@@ -5,6 +5,17 @@ package com.cooled.core.protocol
  * (plain "U") family's text-program content framing, wrapping whichever of
  * CoolleduStreamText/CoolleduCombineText the content's mode selects.
  *
+ * Also confirmed (by direct side-by-side read, not assumed from naming) to
+ * apply byte-for-byte identically to CoolLEDM:
+ * CoolledMUtils.getDataWithTextContentProgramContent /
+ * FontUtils.getFontByteDataCoolledmForEmoji use the exact same field layout,
+ * tokenizer algorithm (TextEmojiManager32128.getTextEmojiItems matches
+ * TextEmojiManagerCoolLEDU.getTextEmojiItems line-for-line), and
+ * checkSegment/rotate/deleteEmptyColumn/getCenteredDataBytes call sequence -
+ * so this whole pipeline (this file, CoolleduGlyphPipeline,
+ * CoolleduStreamText, CoolleduCombineText, CoolleduTextTokenizer) is shared
+ * between both families rather than needing a separate CoolLEDM port.
+ *
  * Field layout (all integer fields big-endian), confirmed by direct read of
  * CoolledUUtils.java:1031-1057 - much flatter than CoolLEDUX's equivalent,
  * with no per-glyph framing at all:

@@ -169,12 +169,43 @@ object ProgramComposer {
                 displayColumns = content.displayColumns,
                 displayRows = content.displayRows
             )
-        } else if (family == DeviceFamily.COOLLEDU && CoolleduProgramBytecode.supports(content.text)) {
-            // Real, verified encoding - but only within CoolleduGlyphPipeline's
-            // scoped support (showHeight=16, no rescale, text-only, no
-            // mirror - see its class doc). Falls through to the unverified
-            // placeholder below for anything outside that scope rather than
-            // guessing at the unported rescale/emoji/mirror paths.
+        } else if (
+            (family == DeviceFamily.COOLLEDU || family == DeviceFamily.COOLLEDM || family == DeviceFamily.COOLLEDUD) &&
+            CoolleduProgramBytecode.supports(content.text)
+        ) {
+            // COOLLEDUD (iLedBike) is the easy case: CoolledUDUtils.
+            // getDataWithTextContentProgramContent/getTextDataForEmoji call
+            // DeviceManager.CoolleduTextContentProgramContent and
+            // FontUtils.getFontByteDataCoolleduForEmoji *directly* - the
+            // exact same types/functions CoolLEDU itself uses, not just a
+            // structurally-similar copy.
+            //
+            // COOLLEDM is the "confirmed by reading, not by name" case:
+            // CoolledMUtils.getDataWithTextContentProgramContent/
+            // FontUtils.getFontByteDataCoolledmForEmoji are a separate
+            // function with a separate name, but byte-for-byte structurally
+            // identical to CoolLEDU's own versions (same tokenizer algorithm
+            // in TextEmojiManager32128, same field set on
+            // DeviceManager.TextContentProgramContent, same checkSegment/
+            // rotate/deleteEmptyColumn/getCenteredDataBytes call sequence
+            // and function names) - confirmed by direct side-by-side read.
+            //
+            // Both reuse the exact same Kotlin pipeline as CoolLEDU rather
+            // than needing their own port. Real, verified encoding - but
+            // only within CoolleduGlyphPipeline's scoped support
+            // (showHeight=16, no rescale, text-only, no mirror - see its
+            // class doc). Falls through to the unverified placeholder below
+            // for anything outside that scope rather than guessing at the
+            // unported rescale/emoji/mirror paths.
+            //
+            // NOT included: DeviceFamily.ILEDCLOCK. Despite an almost
+            // identical getDataWithTextContentProgramContent framing (one
+            // real difference: an extra 2-byte moveSpace field, and the
+            // rendered bytes aren't length-prefixed), it calls a genuinely
+            // different, ~1000-line function
+            // (FontUtils.getFontByteDataILedClockForEmoji) - comparable in
+            // scale to the original CoolLEDUX pipeline, not reusable from
+            // this one, and not yet ported.
             CoolleduProgramBytecode.text(
                 text = content.text,
                 speed = content.speed,

@@ -138,4 +138,42 @@ class CoolleduTextTest {
         )
         assertEquals(0x54, body[0].toInt() and 0xFF)
     }
+
+    @Test
+    fun programComposerRoutesCoolledmTextThroughTheSameRealEncoderAsColledu() {
+        // CoolledMUtils.getDataWithTextContentProgramContent/FontUtils.
+        // getFontByteDataCoolledmForEmoji are confirmed structurally
+        // identical to CoolLEDU's own versions - see CoolleduProgramBytecode's
+        // class doc - so CoolLEDM routes through the exact same pipeline.
+        withFakeFontSource(mapOf('A' to byteArrayOf(0x11, 0x00))) {
+            val coolledm = ProgramComposer.encodeContentForTest(
+                com.cooled.core.model.DeviceFamily.COOLLEDM,
+                ProgramContent.Text(text = "A", speed = 1, effect = 2)
+            )
+            val colledu = ProgramComposer.encodeContentForTest(
+                com.cooled.core.model.DeviceFamily.COOLLEDU,
+                ProgramContent.Text(text = "A", speed = 1, effect = 2)
+            )
+            assertArrayEquals(colledu, coolledm)
+            assertEquals(0x01, coolledm[4].toInt() and 0xFF)
+        }
+    }
+
+    @Test
+    fun programComposerRoutesColleduudTextThroughTheSameRealEncoderAsColledu() {
+        // CoolledUDUtils (iLedBike) calls DeviceManager.CoolleduTextContentProgramContent
+        // and FontUtils.getFontByteDataCoolleduForEmoji directly - the exact
+        // same types/functions CoolLEDU itself uses, confirmed by direct read.
+        withFakeFontSource(mapOf('A' to byteArrayOf(0x11, 0x00))) {
+            val coolleduud = ProgramComposer.encodeContentForTest(
+                com.cooled.core.model.DeviceFamily.COOLLEDUD,
+                ProgramContent.Text(text = "A", speed = 1, effect = 2)
+            )
+            val colledu = ProgramComposer.encodeContentForTest(
+                com.cooled.core.model.DeviceFamily.COOLLEDU,
+                ProgramContent.Text(text = "A", speed = 1, effect = 2)
+            )
+            assertArrayEquals(colledu, coolleduud)
+        }
+    }
 }
