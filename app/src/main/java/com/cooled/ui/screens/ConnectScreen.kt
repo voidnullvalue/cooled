@@ -33,13 +33,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.cooled.core.ble.ScanDevice
+import com.cooled.data.persistence.RememberedDevice
 import com.cooled.ui.components.StatChip
 
 @Composable
 fun ConnectScreen(
     scanning: Boolean,
     scanResults: List<ScanDevice>,
-    rememberedAddresses: List<String>,
+    rememberedDevices: List<RememberedDevice>,
     transportMode: String,
     hasBlePermissions: Boolean,
     onScan: () -> Unit,
@@ -51,7 +52,7 @@ fun ConnectScreen(
     onOpenAppPermissionSettings: () -> Unit
 ) {
     val scannedAddresses = remember(scanResults) { scanResults.map { it.address }.toSet() }
-    val reconnectOnly = remember(rememberedAddresses, scannedAddresses) { rememberedAddresses.filterNot { it in scannedAddresses } }
+    val reconnectOnly = remember(rememberedDevices, scannedAddresses) { rememberedDevices.filterNot { it.address in scannedAddresses } }
     Column(modifier = Modifier.fillMaxSize()) {
         Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Text("cooled", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground)
@@ -88,14 +89,14 @@ fun ConnectScreen(
         if (reconnectOnly.isNotEmpty()) {
             Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text("Recently connected", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                reconnectOnly.forEach { address ->
+                reconnectOnly.forEach { device ->
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(address, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
-                        OutlinedButton(onClick = { onReconnect(address) }, enabled = hasBlePermissions) { Text("Connect") }
+                        Text(device.name ?: device.address, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
+                        OutlinedButton(onClick = { onReconnect(device.address) }, enabled = hasBlePermissions) { Text("Connect") }
                     }
                 }
             }

@@ -43,6 +43,30 @@ class CoolleduxFontSourceTest {
     }
 
     @Test
+    fun textFontSizeOverrideActuallyChangesWhichFontTableIsRead() {
+        // Regression coverage for the previously-missing font-size override:
+        // auto-pick for displayRows=32 selects the 32px table (bytesPerColumn=4),
+        // but an explicit override of 8 should route through the 8px table
+        // (bytesPerColumn=1) instead - producing a meaningfully smaller
+        // rendered-glyph payload for the same text, not just a cosmetic no-op.
+        val previous = CoolleduxFontSources.active
+        try {
+            CoolleduxFontSources.active = FileCoolleduxFontSource(root)
+            val auto = CoolleduxProgramBytecode.text("HELLO", speed = 9, effect = 2, displayColumns = 128, displayRows = 32)
+            val overridden = CoolleduxProgramBytecode.text("HELLO", speed = 9, effect = 2, displayColumns = 128, displayRows = 32, fontSizeOverride = 8)
+            assertTrue("8px override should produce a smaller payload than the auto-picked 32px table", overridden.size < auto.size)
+
+            // An unsupported override value must not silently corrupt the
+            // encode - it should fall back to the same auto-pick as if no
+            // override were given at all.
+            val invalidOverride = CoolleduxProgramBytecode.text("HELLO", speed = 9, effect = 2, displayColumns = 128, displayRows = 32, fontSizeOverride = 20)
+            assertArrayEquals(auto, invalidOverride)
+        } finally {
+            CoolleduxFontSources.active = previous
+        }
+    }
+
+    @Test
     fun coolleduxTextBodyFramesFiveHelloGlyphsThroughTheRealStreamModeEncoder() {
         // CoolleduxProgramBytecode.text(..., effect = 2) now routes through
         // CoolleduxStreamText (mode 2 is not a combine-canvas mode), which

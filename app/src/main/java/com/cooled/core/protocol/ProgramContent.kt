@@ -10,7 +10,16 @@ sealed class ProgramContent {
         val speed: Int,
         val effect: Int,
         val displayColumns: Int? = null,
-        val displayRows: Int? = null
+        val displayRows: Int? = null,
+        /**
+         * Explicit font size override (one of 8/12/14/16/32, matching the
+         * asset-backed glyph tables CoolleduxFontSources can actually read -
+         * see CoolleduxGlyphPipeline). Null auto-picks the largest size that
+         * fits [displayRows] (see CoolleduxProgramBytecode.text), which is
+         * usually what you want, but there was previously no way for a user
+         * to see or override that choice at all.
+         */
+        val fontSize: Int? = null
     ) : ProgramContent()
 
     data class OriginalAsset(
@@ -208,7 +217,8 @@ object ProgramComposer {
                 speed = content.speed,
                 effect = content.effect,
                 displayColumns = content.displayColumns,
-                displayRows = content.displayRows
+                displayRows = content.displayRows,
+                fontSizeOverride = content.fontSize
             )
         } else if (
             (family == DeviceFamily.COOLLEDU || family == DeviceFamily.COOLLEDM || family == DeviceFamily.COOLLEDUD) &&
@@ -475,10 +485,13 @@ data class CoolleduxProgram(
 )
 
 object CoolleduxProgramBytecode {
-    fun text(text: String, speed: Int, effect: Int, displayColumns: Int?, displayRows: Int?): ByteArray {
+    /** Font sizes with an asset-backed glyph table (see CoolleduxGlyphPipeline/CoolleduxFontSources). */
+    val supportedFontSizes = listOf(8, 12, 14, 16, 32)
+
+    fun text(text: String, speed: Int, effect: Int, displayColumns: Int?, displayRows: Int?, fontSizeOverride: Int? = null): ByteArray {
         val rows = displayRows?.coerceIn(8, 128) ?: 32
         val columns = displayColumns?.coerceIn(8, 512) ?: 128
-        val fontSize = when {
+        val fontSize = fontSizeOverride?.takeIf { it in supportedFontSizes } ?: when {
             rows >= 32 -> 32
             rows >= 16 -> 16
             rows >= 12 -> 12

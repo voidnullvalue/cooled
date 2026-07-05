@@ -65,7 +65,7 @@ class AppViewModel(
     val lastParsedSummary: StateFlow<String> = _lastParsedSummary.asStateFlow()
 
     val scanResults = repo.scanResults.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
-    val rememberedAddresses = repo.remembered().stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+    val rememberedDevices = repo.remembered().stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
     val connection = repo.connectionState.stateIn(viewModelScope, SharingStarted.Eagerly, ConnectionState.DISCONNECTED)
     val mtu = repo.mtu.stateIn(viewModelScope, SharingStarted.Eagerly, 23)
     val parsed = repo.parsedRx.stateIn(viewModelScope, SharingStarted.Eagerly, ParsedPayload.Unknown(byteArrayOf()))
@@ -109,10 +109,28 @@ class AppViewModel(
 
     fun scan() = repo.startScan()
     fun stopScan() = repo.stopScan()
-    fun connect(address: String, name: String?) = viewModelScope.launch {
-        val found = scanResults.value.firstOrNull { it.address == address }
-        connectedMetadata = found?.metadata ?: LedScanMetadata()
-        repo.connect(address)
+
+    /** Connect to a device found by a live scan - [device] already carries its real name and scan-derived matrix metadata. */
+    fun connect(device: com.cooled.core.ble.ScanDevice) = doConnect(device.address, device.name, device.metadata)
+
+    /**
+     * Quick-reconnect from the "recently connected" list, for a device not
+     * in the current scan results. Uses the name/metadata persisted from the
+     * last successful connect ([RememberedDevice]) instead of re-deriving
+     * them from a (necessarily empty, for this exact case) scan-results
+     * lookup - previously this always passed name=null, which made
+     * FamilyDetector.detect(null) return DeviceFamily.UNKNOWN and silently
+     * routed every send through the unverified placeholder encoder instead
+     * of the real per-family pipeline, and always lost the matrix size too.
+     */
+    fun reconnect(address: String) {
+        val remembered = rememberedDevices.value.firstOrNull { it.address == address }
+        doConnect(address, remembered?.name, remembered?.metadata ?: LedScanMetadata())
+    }
+
+    private fun doConnect(address: String, name: String?, metadata: LedScanMetadata) = viewModelScope.launch {
+        connectedMetadata = metadata
+        repo.connect(address, name, metadata)
         val f = repo.detectFamily(name)
         family.value = f
         capabilities.value = CapabilityMap.forFamily(f)
@@ -173,7 +191,7 @@ class AppViewModel(
     fun queryReminderDetail(id: Int) = viewModelScope.launch { repo.sendQueryReminderDetail(id.coerceIn(0, 255)) }
     fun deleteReminder(id: Int) = viewModelScope.launch { repo.sendDeleteReminder(id.coerceIn(0, 255)) }
 
-    fun sendTextProgram(text: String, speed: Int, effect: Int, programType: Int?, extraTypeByte: Int?) = viewModelScope.launch {
+    fun sendTextProgram(text: String, speed: Int, effect: Int, programType: Int?, extraTypeByte: Int?, fontSize: Int? = null) = viewModelScope.launch {
         val cleanText = text.ifBlank { "HELLO" }.take(128)
         val pack = buildProgramPackage(
             content = ProgramContent.Text(
@@ -181,12 +199,13 @@ class AppViewModel(
                 speed = speed.coerceIn(0, 255),
                 effect = effect.coerceIn(0, 255),
                 displayColumns = connectedMetadata.columns,
-                displayRows = connectedMetadata.rows
+                displayRows = connectedMetadata.rows,
+                fontSize = fontSize
             ),
             programType = programType,
             extraTypeByte = extraTypeByte
         )
-        queueProgramUpload(pack, "text='$cleanText' matrix=${connectedMetadata.columns ?: "?"}x${connectedMetadata.rows ?: "?"} speed=${speed.coerceIn(0, 255)} effect=${effect.coerceIn(0, 255)} programType=${programType ?: "none"} extra=${extraTypeByte ?: "none"}")
+        queueProgramUpload(pack, "text='$cleanText' matrix=${connectedMetadata.columns ?: "?"}x${connectedMetadata.rows ?: "?"} font=${fontSize ?: "auto"} speed=${speed.coerceIn(0, 255)} effect=${effect.coerceIn(0, 255)} programType=${programType ?: "none"} extra=${extraTypeByte ?: "none"}")
     }
 
     fun sendOriginalAssetProgram(assetPath: String, kind: String, speed: Int, effect: Int, programType: Int?, extraTypeByte: Int?) = viewModelScope.launch {

@@ -18,6 +18,7 @@ import androidx.compose.material.icons.filled.Upload
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -29,6 +30,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.cooled.core.assets.OriginalLedAsset
 import com.cooled.core.assets.OriginalLedAssetSummary
+import com.cooled.core.protocol.CoolleduxProgramBytecode
 import com.cooled.core.protocol.TransferState
 import com.cooled.ui.components.NumberField
 import com.cooled.ui.components.SectionCard
@@ -41,6 +43,8 @@ fun DisplayScreen(
     onUploadSpeedChange: (String) -> Unit,
     uploadEffect: String,
     onUploadEffectChange: (String) -> Unit,
+    uploadFontSize: Int?,
+    onUploadFontSizeChange: (Int?) -> Unit,
     onSendTextProgram: () -> Unit,
     assetSummary: OriginalLedAssetSummary,
     assetUploadPath: String,
@@ -62,7 +66,7 @@ fun DisplayScreen(
             SectionCard(
                 "Upload text",
                 icon = Icons.Filled.TextFields,
-                subtitle = "Effect 1 and 4-13 hold the text still, word-wrapped and centered on the panel. Every other effect number scrolls it across instead."
+                subtitle = "Effect 1 and 4-13 hold the text still, word-wrapped and centered on the panel. Every other effect number scrolls it across instead. Font size only applies to CoolLEDUX panels - Auto picks the largest size that fits your panel's row count."
             ) {
                 OutlinedTextField(
                     value = uploadText,
@@ -73,6 +77,21 @@ fun DisplayScreen(
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     NumberField(uploadSpeed, onUploadSpeedChange, "Speed (0-255)")
                     NumberField(uploadEffect, onUploadEffectChange, "Effect (0-255)")
+                }
+                Text("Font size", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    FilterChip(
+                        selected = uploadFontSize == null,
+                        onClick = { onUploadFontSizeChange(null) },
+                        label = { Text("Auto") }
+                    )
+                    CoolleduxProgramBytecode.supportedFontSizes.forEach { size ->
+                        FilterChip(
+                            selected = uploadFontSize == size,
+                            onClick = { onUploadFontSizeChange(size) },
+                            label = { Text("${size}px") }
+                        )
+                    }
                 }
                 Button(onClick = onSendTextProgram, modifier = Modifier.fillMaxWidth()) {
                     Icon(Icons.Filled.Upload, contentDescription = null, modifier = Modifier.height(18.dp))

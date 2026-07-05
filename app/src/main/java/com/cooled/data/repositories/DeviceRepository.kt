@@ -1,6 +1,7 @@
 package com.cooled.data.repositories
 
 import com.cooled.core.ble.BleTransport
+import com.cooled.core.ble.LedScanMetadata
 import com.cooled.core.ble.ScanDevice
 import com.cooled.core.model.DeviceFamily
 import com.cooled.core.model.FamilyDetector
@@ -13,6 +14,7 @@ import com.cooled.core.protocol.ProgramPackage
 import com.cooled.core.protocol.ProgramStartRequest
 import com.cooled.core.protocol.ProtocolParsers
 import com.cooled.core.protocol.TimerSwitchCommand
+import com.cooled.data.persistence.RememberedDevice
 import com.cooled.data.persistence.RememberedDeviceStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -29,9 +31,17 @@ class DeviceRepository(
     fun startScan() = transport.startScan()
     fun stopScan() = transport.stopScan()
 
-    suspend fun connect(address: String) {
+    /**
+     * [name]/[metadata] are persisted alongside the address so a later
+     * quick-reconnect (see [remembered]) doesn't need a live scan-result hit
+     * to know the device's family (name-prefix detected) or matrix size
+     * (scan-derived) - both used to silently reset to unknown/default on
+     * reconnect, routing every subsequent send through the wrong family's
+     * encoder or the wrong canvas size.
+     */
+    suspend fun connect(address: String, name: String?, metadata: LedScanMetadata) {
         transport.connect(address)
-        store.remember(address)
+        store.remember(RememberedDevice(address, name, metadata))
     }
 
     suspend fun disconnect() = transport.disconnect()

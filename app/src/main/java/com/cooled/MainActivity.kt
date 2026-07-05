@@ -131,7 +131,7 @@ private fun MissingPermissionsBanner(missing: List<String>) {
 @Composable
 private fun AppScreenContent(vm: AppViewModel, missingPermissions: List<String>) {
     val scans by vm.scanResults.collectAsState()
-    val rememberedAddresses by vm.rememberedAddresses.collectAsState()
+    val rememberedDevices by vm.rememberedDevices.collectAsState()
     val connection by vm.connection.collectAsState()
     val mtu by vm.mtu.collectAsState()
     val family by vm.family.collectAsState()
@@ -155,6 +155,7 @@ private fun AppScreenContent(vm: AppViewModel, missingPermissions: List<String>)
     var uploadText by rememberSaveable { mutableStateOf("HELLO") }
     var uploadSpeed by rememberSaveable { mutableStateOf("255") }
     var uploadEffect by rememberSaveable { mutableStateOf("2") }
+    var uploadFontSize by rememberSaveable { mutableStateOf<Int?>(null) }
     var scoreboardLeft by rememberSaveable { mutableStateOf("0") }
     var scoreboardRight by rememberSaveable { mutableStateOf("0") }
     var scoreboardClockMinute by rememberSaveable { mutableStateOf("5") }
@@ -217,13 +218,13 @@ private fun AppScreenContent(vm: AppViewModel, missingPermissions: List<String>)
                 ConnectScreen(
                     scanning = isScanning,
                     scanResults = scans,
-                    rememberedAddresses = rememberedAddresses,
+                    rememberedDevices = rememberedDevices,
                     transportMode = transportMode,
                     hasBlePermissions = hasBlePermissions,
                     onScan = { isScanning = true; vm.scan() },
                     onStopScan = { isScanning = false; vm.stopScan() },
-                    onConnect = { device -> isScanning = false; vm.stopScan(); vm.connect(device.address, device.name) },
-                    onReconnect = { address -> isScanning = false; vm.stopScan(); vm.connect(address, null) },
+                    onConnect = { device -> isScanning = false; vm.stopScan(); vm.connect(device) },
+                    onReconnect = { address -> isScanning = false; vm.stopScan(); vm.reconnect(address) },
                     onOpenLocationSettings = { context.startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)) },
                     onOpenBluetoothSettings = { context.startActivity(Intent(Settings.ACTION_BLUETOOTH_SETTINGS)) },
                     onOpenAppPermissionSettings = { context.startActivity(appPermissionSettingsIntent(context.packageName)) }
@@ -263,7 +264,9 @@ private fun AppScreenContent(vm: AppViewModel, missingPermissions: List<String>)
                         onUploadSpeedChange = { uploadSpeed = it },
                         uploadEffect = uploadEffect,
                         onUploadEffectChange = { uploadEffect = it },
-                        onSendTextProgram = { vm.sendTextProgram(uploadText, uploadSpeed.toIntOrNull() ?: 255, uploadEffect.toIntOrNull() ?: 2, null, null) },
+                        uploadFontSize = uploadFontSize,
+                        onUploadFontSizeChange = { uploadFontSize = it },
+                        onSendTextProgram = { vm.sendTextProgram(uploadText, uploadSpeed.toIntOrNull() ?: 255, uploadEffect.toIntOrNull() ?: 2, null, null, uploadFontSize) },
                         assetSummary = ledAssetSummary,
                         assetUploadPath = assetUploadPath,
                         onAssetSelected = { asset -> assetUploadPath = asset.path; assetUploadKind = asset.kind },
