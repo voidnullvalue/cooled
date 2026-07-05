@@ -48,6 +48,13 @@ fun MoreScreen(
     onScoreboardStart: () -> Unit,
     onScoreboardStop: () -> Unit,
     onQueryScoreboard: () -> Unit,
+    scoreboardClockMinute: String,
+    onScoreboardClockMinuteChange: (String) -> Unit,
+    scoreboardClockSecond: String,
+    onScoreboardClockSecondChange: (String) -> Unit,
+    scoreboardClockCountsDown: Boolean,
+    onScoreboardClockCountsDownChange: (Boolean) -> Unit,
+    onSetScoreboardTime: () -> Unit,
     volume: Float,
     onVolumeChange: (Float) -> Unit,
     onSendVolume: (Int) -> Unit,
@@ -74,7 +81,11 @@ fun MoreScreen(
     ) {
         if (capabilities.supportsScoreboard) {
             item {
-                SectionCard("Scoreboard", icon = Icons.Filled.Scoreboard) {
+                SectionCard(
+                    "Scoreboard",
+                    icon = Icons.Filled.Scoreboard,
+                    subtitle = "Left/Right are the two team scores. The clock below is the scoreboard's own separate on-panel timer, not related to Left/Right."
+                ) {
                     Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
                         NumberField(scoreboardLeft, onScoreboardLeftChange, "Left")
                         NumberField(scoreboardRight, onScoreboardRightChange, "Right")
@@ -85,6 +96,19 @@ fun MoreScreen(
                         OutlinedButton(onClick = onScoreboardStop, modifier = Modifier.weight(1f)) { Text("Stop") }
                         OutlinedButton(onClick = onQueryScoreboard, modifier = Modifier.weight(1f)) { Text("Query") }
                     }
+                    androidx.compose.material3.HorizontalDivider()
+                    Text("On-panel clock", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth(), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                        NumberField(scoreboardClockMinute, onScoreboardClockMinuteChange, "Minute")
+                        NumberField(scoreboardClockSecond, onScoreboardClockSecondChange, "Second")
+                        Button(onClick = onSetScoreboardTime) { Text("Set") }
+                    }
+                    com.cooled.ui.components.ToggleRow(
+                        "Counts down",
+                        checked = scoreboardClockCountsDown,
+                        onCheckedChange = onScoreboardClockCountsDownChange,
+                        caption = "Off = counts up from the set time instead"
+                    )
                 }
             }
         }

@@ -44,9 +44,75 @@ sealed class ParsedPayload {
     data class TimerAck(val status: Int) : ParsedPayload()
     data class VolumeState(val value: Int) : ParsedPayload()
 
-    data class CountdownState(val subcommand: Int, val minute: Int?, val second: Int?, val running: Boolean?) : ParsedPayload()
-    data class StopwatchState(val subcommand: Int, val minute: Int?, val second: Int?, val running: Boolean?) : ParsedPayload()
-    data class ScoreboardState(val left: Int?, val right: Int?, val mode: Int?, val running: Boolean?) : ParsedPayload()
+    /**
+     * Port of DeviceManager.java's 0x0F response handler (search "coutdown>>>statusValue").
+     * An earlier version of this parser modeled a much smaller (minute,
+     * second, running) shape at fixed offsets that don't match any real
+     * sub-response. The actual layout, keyed by subcommand:
+     *  - 0x01 (query status) or 0x03 (start/stop ack): both carry the same
+     *    9-byte record - isStartOrStop, then the *configured* setHour/
+     *    setMinute/setSeconds and the *currently remaining*
+     *    leftHour/leftMinute/leftSeconds (six separate time fields, not one).
+     *  - 0x02 (reset ack): a bare success/failure byte (0 = success).
+     *  - 0x04: a bare ack with no data at all - real APK behavior (no
+     *    corresponding request is currently built by CommandBuilders).
+     */
+    data class CountdownState(
+        val subcommand: Int,
+        val isStartOrStop: Boolean? = null,
+        val setHour: Int? = null,
+        val setMinute: Int? = null,
+        val setSeconds: Int? = null,
+        val leftHour: Int? = null,
+        val leftMinute: Int? = null,
+        val leftSeconds: Int? = null,
+        val acknowledged: Boolean? = null
+    ) : ParsedPayload()
+
+    /**
+     * Port of DeviceManager.java's 0x10 response handler (search "stopwatch>>>statusValue").
+     * Same correction as CountdownState: an earlier version of this parser
+     * didn't match any real sub-response shape.
+     *  - 0x01 (query status) or 0x03 (start/stop ack): isStartOrStop, hour,
+     *    minute, seconds (6-byte record).
+     *  - 0x02 (reset ack): a bare success/failure byte (0 = success).
+     */
+    data class StopwatchState(
+        val subcommand: Int,
+        val isStartOrStop: Boolean? = null,
+        val hour: Int? = null,
+        val minute: Int? = null,
+        val seconds: Int? = null,
+        val acknowledged: Boolean? = null
+    ) : ParsedPayload()
+
+    /**
+     * Port of DeviceManager.java's 0x11 response handler (search "scoreBoard>>>hostScoreValue").
+     * An earlier version of this parser modeled a 4-field (left, right,
+     * mode, running) shape at fixed offsets that don't match the real
+     * 14-byte query response at all.
+     *  - 0x01 (query status): hostScore/visitScore (2-byte fields),
+     *    hostTotalScore/visitTotalScore (1-byte set/game-win counters),
+     *    deviceMinute/deviceSeconds (the scoreboard's own running clock),
+     *    isStartOrStop, setMinute/setSeconds (the configured clock time),
+     *    isCountDown (whether that clock counts down vs. up).
+     *  - 0x02 (reset ack), 0x03 (set-time ack), 0x04 (start/stop ack): all
+     *    a bare success/failure byte (0 = success).
+     */
+    data class ScoreboardState(
+        val subcommand: Int,
+        val hostScore: Int? = null,
+        val visitScore: Int? = null,
+        val hostTotalScore: Int? = null,
+        val visitTotalScore: Int? = null,
+        val deviceMinute: Int? = null,
+        val deviceSeconds: Int? = null,
+        val isStartOrStop: Boolean? = null,
+        val setMinute: Int? = null,
+        val setSeconds: Int? = null,
+        val isCountDown: Boolean? = null,
+        val acknowledged: Boolean? = null
+    ) : ParsedPayload()
 
     data class NightModeState(
         val enabled: Boolean?,
@@ -150,31 +216,56 @@ object ProtocolParsers {
 
     private fun parseCountdown(payload: ByteArray): ParsedPayload {
         val sub = payload.u8OrZero(1)
-        if (sub == 0x03 && payload.size >= 5) {
-            return ParsedPayload.CountdownState(sub, payload.u8(2), payload.u8(3), payload.u8(4) != 0)
+        return when {
+            (sub == 0x01 || sub == 0x03) && payload.size >= 9 -> ParsedPayload.CountdownState(
+                subcommand = sub,
+                isStartOrStop = payload.u8(2) == 1,
+                setHour = payload.u8(3),
+                setMinute = payload.u8(4),
+                setSeconds = payload.u8(5),
+                leftHour = payload.u8(6),
+                leftMinute = payload.u8(7),
+                leftSeconds = payload.u8(8)
+            )
+            sub == 0x02 && payload.size >= 3 -> ParsedPayload.CountdownState(subcommand = sub, acknowledged = payload.u8(2) == 0)
+            else -> ParsedPayload.CountdownState(subcommand = sub)
         }
-        return ParsedPayload.CountdownState(sub, null, null, null)
     }
 
     private fun parseStopwatch(payload: ByteArray): ParsedPayload {
         val sub = payload.u8OrZero(1)
-        if (sub == 0x03 && payload.size >= 5) {
-            return ParsedPayload.StopwatchState(sub, payload.u8(2), payload.u8(3), payload.u8(4) != 0)
+        return when {
+            (sub == 0x01 || sub == 0x03) && payload.size >= 6 -> ParsedPayload.StopwatchState(
+                subcommand = sub,
+                isStartOrStop = payload.u8(2) == 1,
+                hour = payload.u8(3),
+                minute = payload.u8(4),
+                seconds = payload.u8(5)
+            )
+            sub == 0x02 && payload.size >= 3 -> ParsedPayload.StopwatchState(subcommand = sub, acknowledged = payload.u8(2) == 0)
+            else -> ParsedPayload.StopwatchState(subcommand = sub)
         }
-        return ParsedPayload.StopwatchState(sub, null, null, null)
     }
 
     private fun parseScoreboard(payload: ByteArray): ParsedPayload {
         val sub = payload.u8OrZero(1)
-        if (payload.size >= 6) {
-            return ParsedPayload.ScoreboardState(
-                left = payload.u8(2),
-                right = payload.u8(3),
-                mode = payload.u8(4),
-                running = payload.u8(5) != 0
+        return when {
+            sub == 0x01 && payload.size >= 14 -> ParsedPayload.ScoreboardState(
+                subcommand = sub,
+                hostScore = payload.u16(2),
+                visitScore = payload.u16(4),
+                hostTotalScore = payload.u8(6),
+                visitTotalScore = payload.u8(7),
+                deviceMinute = payload.u8(8),
+                deviceSeconds = payload.u8(9),
+                isStartOrStop = payload.u8(10) == 1,
+                setMinute = payload.u8(11),
+                setSeconds = payload.u8(12),
+                isCountDown = payload.u8(13) == 1
             )
+            (sub == 0x02 || sub == 0x03 || sub == 0x04) && payload.size >= 3 -> ParsedPayload.ScoreboardState(subcommand = sub, acknowledged = payload.u8(2) == 0)
+            else -> ParsedPayload.ScoreboardState(subcommand = sub)
         }
-        return ParsedPayload.ScoreboardState(null, null, null, null)
     }
 
     // DeviceManager.java's 0x14 handler dispatches on a subcommand at

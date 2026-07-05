@@ -98,6 +98,13 @@ object CommandBuilders {
 
     fun setScoreboardRunning(running: Boolean): ByteArray = FrameCodec.encode(byteArrayOf(0x11.toByte(), 0x04, (if (running) 1 else 0).toByte()))
 
+    // ILedClockUtils/CoolledUXUtils.getScoreBoardSetTime(minute, second,
+    // isCountDown): configures the scoreboard's own on-device clock -
+    // previously missing from this port entirely.
+    fun setScoreboardTime(minute: Int, second: Int, isCountDown: Boolean): ByteArray = FrameCodec.encode(
+        byteArrayOf(0x11.toByte(), 0x03, minute.coerceIn(0, 255).toByte(), second.coerceIn(0, 255).toByte(), (if (isCountDown) 1 else 0).toByte())
+    )
+
     // ILedClockUtils.setDeviceVolume: [0x1E, 0x06, value]. 0x1E/0x03 is a
     // different, unrelated command (setDeviceInfo sub-feature 3 toggle) -
     // confirmed by direct read of ILedClockUtils.java:5479-5508.

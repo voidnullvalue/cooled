@@ -395,4 +395,81 @@ class ProtocolCoreTest {
         val withoutPreamble = FrameCodec.decode(CommandBuilders.buildOtaStartHeader(firmware, includePreamble64 = false))
         assertEquals(9, withoutPreamble.size)
     }
+
+    @Test
+    fun parseCountdownMatchesTheRealNineByteQueryAndStartStopAckRecord() {
+        // DeviceManager.java's 0x0F handler (search "coutdown>>>statusValue") -
+        // an earlier version of this parser modeled a much smaller
+        // (minute, second, running) shape that doesn't match any real
+        // sub-response at all.
+        for (sub in listOf(0x01, 0x03)) {
+            val parsed = ProtocolParsers.parseFrame(FrameCodec.encode(byteArrayOf(0x0F, sub.toByte(), 1, 0, 10, 30, 0, 9, 45)))
+            assertTrue(parsed is ParsedPayload.CountdownState)
+            val state = parsed as ParsedPayload.CountdownState
+            assertEquals(sub, state.subcommand)
+            assertEquals(true, state.isStartOrStop)
+            assertEquals(0, state.setHour); assertEquals(10, state.setMinute); assertEquals(30, state.setSeconds)
+            assertEquals(0, state.leftHour); assertEquals(9, state.leftMinute); assertEquals(45, state.leftSeconds)
+        }
+
+        val resetAck = ProtocolParsers.parseFrame(FrameCodec.encode(byteArrayOf(0x0F, 0x02, 0)))
+        assertTrue(resetAck is ParsedPayload.CountdownState)
+        assertEquals(true, (resetAck as ParsedPayload.CountdownState).acknowledged)
+    }
+
+    @Test
+    fun parseStopwatchMatchesTheRealSixByteQueryAndStartStopAckRecord() {
+        for (sub in listOf(0x01, 0x03)) {
+            val parsed = ProtocolParsers.parseFrame(FrameCodec.encode(byteArrayOf(0x10, sub.toByte(), 1, 0, 5, 12)))
+            assertTrue(parsed is ParsedPayload.StopwatchState)
+            val state = parsed as ParsedPayload.StopwatchState
+            assertEquals(true, state.isStartOrStop)
+            assertEquals(0, state.hour); assertEquals(5, state.minute); assertEquals(12, state.seconds)
+        }
+
+        val resetAck = ProtocolParsers.parseFrame(FrameCodec.encode(byteArrayOf(0x10, 0x02, 0)))
+        assertTrue(resetAck is ParsedPayload.StopwatchState)
+        assertEquals(true, (resetAck as ParsedPayload.StopwatchState).acknowledged)
+    }
+
+    @Test
+    fun parseScoreboardMatchesTheRealFourteenByteQueryRecord() {
+        // DeviceManager.java's 0x11 handler (search "scoreBoard>>>hostScoreValue") -
+        // an earlier version of this parser modeled a 4-field (left, right,
+        // mode, running) shape at fixed offsets that don't match the real
+        // response at all.
+        val payload = byteArrayOf(
+            0x11, 0x01,
+            0x01, 0x2C, // hostScore = 0x012C = 300
+            0x00, 0x0A, // visitScore = 10
+            3, 2, // hostTotalScore, visitTotalScore
+            5, 30, // deviceMinute, deviceSeconds
+            1, // isStartOrStop
+            10, 0, // setMinute, setSeconds
+            1 // isCountDown
+        )
+        val parsed = ProtocolParsers.parseFrame(FrameCodec.encode(payload))
+        assertTrue(parsed is ParsedPayload.ScoreboardState)
+        val state = parsed as ParsedPayload.ScoreboardState
+        assertEquals(300, state.hostScore); assertEquals(10, state.visitScore)
+        assertEquals(3, state.hostTotalScore); assertEquals(2, state.visitTotalScore)
+        assertEquals(5, state.deviceMinute); assertEquals(30, state.deviceSeconds)
+        assertEquals(true, state.isStartOrStop)
+        assertEquals(10, state.setMinute); assertEquals(0, state.setSeconds)
+        assertEquals(true, state.isCountDown)
+
+        for (sub in listOf(0x02, 0x03, 0x04)) {
+            val ack = ProtocolParsers.parseFrame(FrameCodec.encode(byteArrayOf(0x11, sub.toByte(), 0)))
+            assertTrue(ack is ParsedPayload.ScoreboardState)
+            assertEquals(true, (ack as ParsedPayload.ScoreboardState).acknowledged)
+        }
+    }
+
+    @Test
+    fun setScoreboardTimeMatchesIledClockUtilsGetScoreBoardSetTime() {
+        assertArrayEquals(
+            byteArrayOf(0x11, 0x03, 10, 30, 1),
+            FrameCodec.decode(CommandBuilders.setScoreboardTime(minute = 10, second = 30, isCountDown = true))
+        )
+    }
 }

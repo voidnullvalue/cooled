@@ -109,11 +109,20 @@ fun HomeScreen(
 
         if (capabilities.supportsColorModes) {
             item {
-                SectionCard("Color mode", icon = Icons.Filled.Palette) {
+                SectionCard(
+                    "Color mode",
+                    icon = Icons.Filled.Palette,
+                    subtitle = "Style 1-31. Sends the device a full color pattern, not just a number - see below for what each style looks like."
+                ) {
                     Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
-                        NumberField(colorMode, onColorModeChange, "Mode")
+                        NumberField(colorMode, onColorModeChange, "Style")
                         Button(onClick = onSendColorMode) { Text("Apply") }
                     }
+                    Text(
+                        colorMode.toIntOrNull()?.let { com.cooled.core.protocol.ColorModeTables.describe(it) } ?: "Enter a style number 1-31",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
             }
         }

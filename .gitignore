@@ -12,3 +12,8 @@
 # machine-specific: re-extract from the cached AGP Maven artifact instead).
 # The wrapper script (toolchain/aapt2-bin/aapt2) that qemu-runs it IS committed.
 /toolchain/aapt2-bin/aapt2-x86_64
+
+# Gradle/build machine-local caches - were accidentally committed early on.
+/.gradle/
+/app/build/
+/.kotlin/

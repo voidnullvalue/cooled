@@ -117,4 +117,29 @@ object ColorModeTables {
         31 -> ColorModeSelection(ColorModeLiterals.SIX_COLOR, count = 6, transitionType = 4, repeatCount = null)
         else -> ColorModeSelection("", count = 0, transitionType = 0, repeatCount = 0)
     }
+
+    /**
+     * Short human-readable label for a style index, for surfacing in the UI
+     * instead of a bare number - the APK's own UI doesn't name these either
+     * (they're just numbered slots in a picker), so these names describe
+     * the actual color pattern rather than translating an official name.
+     */
+    fun describe(styleIndex: Int): String = when (styleIndex) {
+        1, 2, 5, 6 -> "Rainbow wheel"
+        3, 4 -> "Unused (no effect on real hardware)"
+        7, 8 -> "Pulse (red, green, blue)"
+        9, 10, 11, 12 -> "Rainbow cycle"
+        13 -> "Six-color cycle"
+        14 -> "Two-color cycle"
+        15, 16 -> "Rainbow cycle (fast transition)"
+        17, 18 -> "Wipe (rainbow, partial-width)"
+        19, 20 -> "Fade in/out (red)"
+        21, 22 -> "Fade in/out (green)"
+        23, 24 -> "Fade in/out (blue)"
+        25, 26 -> "Fade in/out (yellow)"
+        27, 28 -> "Fade in/out (magenta)"
+        29, 30 -> "Multi-color fade sequence"
+        31 -> "Six-color cycle (fast transition)"
+        else -> "Unrecognized - falls back to no effect on real hardware"
+    }
 }

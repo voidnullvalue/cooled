@@ -157,6 +157,9 @@ private fun AppScreenContent(vm: AppViewModel, missingPermissions: List<String>)
     var uploadEffect by rememberSaveable { mutableStateOf("2") }
     var scoreboardLeft by rememberSaveable { mutableStateOf("0") }
     var scoreboardRight by rememberSaveable { mutableStateOf("0") }
+    var scoreboardClockMinute by rememberSaveable { mutableStateOf("5") }
+    var scoreboardClockSecond by rememberSaveable { mutableStateOf("0") }
+    var scoreboardClockCountsDown by rememberSaveable { mutableStateOf(true) }
     var assetUploadPath by rememberSaveable { mutableStateOf("") }
     var assetUploadKind by rememberSaveable { mutableStateOf("payload-asset") }
     var assetRefresh by rememberSaveable { mutableIntStateOf(0) }
@@ -313,6 +316,15 @@ private fun AppScreenContent(vm: AppViewModel, missingPermissions: List<String>)
                         onScoreboardStart = { vm.scoreboard(true) },
                         onScoreboardStop = { vm.scoreboard(false) },
                         onQueryScoreboard = { vm.queryScoreboardStatus() },
+                        scoreboardClockMinute = scoreboardClockMinute,
+                        onScoreboardClockMinuteChange = { scoreboardClockMinute = it },
+                        scoreboardClockSecond = scoreboardClockSecond,
+                        onScoreboardClockSecondChange = { scoreboardClockSecond = it },
+                        scoreboardClockCountsDown = scoreboardClockCountsDown,
+                        onScoreboardClockCountsDownChange = { scoreboardClockCountsDown = it },
+                        onSetScoreboardTime = {
+                            vm.setScoreboardTime(scoreboardClockMinute.toIntOrNull() ?: 0, scoreboardClockSecond.toIntOrNull() ?: 0, scoreboardClockCountsDown)
+                        },
                         volume = volume,
                         onVolumeChange = { volume = it },
                         onSendVolume = { vm.volume(it) },

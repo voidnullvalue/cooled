@@ -65,6 +65,7 @@ class DeviceRepository(
     suspend fun resetScoreboard(hostScore: Int = 0, guestScore: Int = 0, hostSets: Int = 0, guestSets: Int = 0) =
         transport.write(CommandBuilders.resetScoreboard(hostScore, guestScore, hostSets, guestSets))
     suspend fun sendScoreboard(running: Boolean) = transport.write(CommandBuilders.setScoreboardRunning(running))
+    suspend fun setScoreboardTime(minute: Int, second: Int, isCountDown: Boolean) = transport.write(CommandBuilders.setScoreboardTime(minute, second, isCountDown))
     suspend fun sendVolume(value: Int) = transport.write(CommandBuilders.setVolume(value))
     suspend fun sendQueryTomato() = transport.write(CommandBuilders.queryTomato())
     suspend fun sendQueryTempHumidity() = transport.write(CommandBuilders.queryTemperatureHumidity())

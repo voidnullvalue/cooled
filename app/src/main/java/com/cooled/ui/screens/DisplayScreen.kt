@@ -59,7 +59,11 @@ fun DisplayScreen(
         }
 
         item {
-            SectionCard("Upload text", icon = Icons.Filled.TextFields) {
+            SectionCard(
+                "Upload text",
+                icon = Icons.Filled.TextFields,
+                subtitle = "Effect 1 and 4-13 hold the text still, word-wrapped and centered on the panel. Every other effect number scrolls it across instead."
+            ) {
                 OutlinedTextField(
                     value = uploadText,
                     onValueChange = onUploadTextChange,
@@ -67,8 +71,8 @@ fun DisplayScreen(
                     modifier = Modifier.fillMaxWidth()
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    NumberField(uploadSpeed, onUploadSpeedChange, "Speed")
-                    NumberField(uploadEffect, onUploadEffectChange, "Effect")
+                    NumberField(uploadSpeed, onUploadSpeedChange, "Speed (0-255)")
+                    NumberField(uploadEffect, onUploadEffectChange, "Effect (0-255)")
                 }
                 Button(onClick = onSendTextProgram, modifier = Modifier.fillMaxWidth()) {
                     Icon(Icons.Filled.Upload, contentDescription = null, modifier = Modifier.height(18.dp))

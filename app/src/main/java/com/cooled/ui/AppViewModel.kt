@@ -153,6 +153,9 @@ class AppViewModel(
     fun resetScoreboard(hostScore: Int, guestScore: Int, hostSets: Int = 0, guestSets: Int = 0) = viewModelScope.launch {
         repo.resetScoreboard(hostScore.coerceIn(0, 65535), guestScore.coerceIn(0, 65535), hostSets.coerceIn(0, 255), guestSets.coerceIn(0, 255))
     }
+    fun setScoreboardTime(minute: Int, second: Int, isCountDown: Boolean) = viewModelScope.launch {
+        repo.setScoreboardTime(minute.coerceIn(0, 255), second.coerceIn(0, 255), isCountDown)
+    }
 
     fun volume(v: Int) = viewModelScope.launch { repo.sendVolume(v.coerceIn(0, 100)) }
     fun queryTomato() = viewModelScope.launch { repo.sendQueryTomato() }
@@ -409,9 +412,21 @@ class AppViewModel(
         is ParsedPayload.TimeSyncAck -> "Time sync status=$status"
         is ParsedPayload.TimerAck -> "Timer status=$status"
         is ParsedPayload.VolumeState -> "Volume=$value"
-        is ParsedPayload.CountdownState -> "Countdown sub=$subcommand time=${minute ?: "?"}:${second ?: "?"} running=${running ?: "?"}"
-        is ParsedPayload.StopwatchState -> "Stopwatch sub=$subcommand time=${minute ?: "?"}:${second ?: "?"} running=${running ?: "?"}"
-        is ParsedPayload.ScoreboardState -> "Scoreboard left=${left ?: "?"} right=${right ?: "?"} mode=${mode ?: "?"} running=${running ?: "?"}"
+        is ParsedPayload.CountdownState -> if (acknowledged != null) {
+            "Countdown reset ${if (acknowledged) "OK" else "failed"}"
+        } else {
+            "Countdown running=${isStartOrStop ?: "?"} set=${setHour ?: "?"}:${setMinute ?: "?"}:${setSeconds ?: "?"} left=${leftHour ?: "?"}:${leftMinute ?: "?"}:${leftSeconds ?: "?"}"
+        }
+        is ParsedPayload.StopwatchState -> if (acknowledged != null) {
+            "Stopwatch reset ${if (acknowledged) "OK" else "failed"}"
+        } else {
+            "Stopwatch running=${isStartOrStop ?: "?"} time=${hour ?: "?"}:${minute ?: "?"}:${seconds ?: "?"}"
+        }
+        is ParsedPayload.ScoreboardState -> if (acknowledged != null) {
+            "Scoreboard ack (sub=$subcommand) ${if (acknowledged) "OK" else "failed"}"
+        } else {
+            "Scoreboard $hostScore-$visitScore sets=$hostTotalScore-$visitTotalScore clock=${deviceMinute ?: "?"}:${deviceSeconds ?: "?"} running=${isStartOrStop ?: "?"} countDown=${isCountDown ?: "?"}"
+        }
         is ParsedPayload.NightModeState -> "Night mode enabled=${enabled ?: "?"} ${startHour ?: "?"}:${startMinute ?: "?"}-${endHour ?: "?"}:${endMinute ?: "?"} deviceState=${deviceStateEnabled ?: "?"} brightness=${brightness ?: "?"} voiceControl=${voiceControlEnabled ?: "?"} wakeUp=${wakeUpDuration ?: "?"} voiceSensitivity=${voiceSensitivity ?: "?"}"
         is ParsedPayload.TomatoClockState -> "Tomato items=${items.map { it.value }.joinToString()}"
         is ParsedPayload.AlarmList -> "Alarms count=${alarms.size}"
